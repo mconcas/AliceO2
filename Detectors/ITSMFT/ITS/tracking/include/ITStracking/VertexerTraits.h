@@ -106,11 +106,6 @@ class VertexerTraits
   std::vector<ClusterLines> mTrackletClusters;
 };
 
-// inline VertexerTraits::~VertexerTraits()
-// {
-//   // nothing
-// }
-
 inline void VertexerTraits::initialise(ROframe* event)
 {
   reset();

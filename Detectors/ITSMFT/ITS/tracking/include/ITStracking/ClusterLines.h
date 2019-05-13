@@ -81,6 +81,34 @@ inline GPU_HOST_DEVICE Line::Line(const Tracklet& tracklet, const Cluster* inner
     cosinesDirector[index] *= inverseNorm;
 }
 
+struct CentroidReference final {
+  GPU_HOST   CentroidReference(const std::array<float, 3> point, const int tId1, const int tId2);
+  GPU_DEVICE CentroidReference(const float* point, const int tId1, const int tId2);
+
+  float mCentroid[3];
+  int mTrackIds[2];
+};
+
+inline GPU_HOST CentroidReference::CentroidReference(const std::array<float, 3> point, const int tId1, const int tId2)
+{
+  mTrackIds[0] = tId1;
+  mTrackIds[1] = tId2;
+
+  for (unsigned int index{0}; index < 3; ++index) {
+    mCentroid[index] = point[index];
+  }
+}
+
+inline GPU_DEVICE CentroidReference::CentroidReference(const float* point, const int tId1, const int tId2)
+{
+  mTrackIds[0] = tId1;
+  mTrackIds[1] = tId2;
+
+  for (unsigned int index{0}; index < 3; ++index) {
+    mCentroid[index] = point[index];
+  }
+}
+
 class ClusterLines final
 {
  public:
