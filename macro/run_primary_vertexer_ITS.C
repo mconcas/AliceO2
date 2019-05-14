@@ -11,6 +11,7 @@
 #include "DataFormatsParameters/GRPObject.h"
 #include "SimulationDataFormat/MCEventHeader.h"
 #include "SimulationDataFormat/MCTruthContainer.h"
+#include "SimulationDataFormat/MCTrack.h"
 
 #include "ITSBase/GeometryTGeo.h"
 #include "ITStracking/IOUtils.h"
@@ -24,27 +25,48 @@
 
 using Vertex = o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>;
 
+struct miniTrack {
+  miniTrack(int, float, int);
+  void print();
+  int mMCLabel;
+  float mPt;
+  int mPDGCode;
+};
+
+inline miniTrack::miniTrack(int label, float pt, int code) : mMCLabel{ label }, mPt{ pt }, mPDGCode{ code } {};
+inline void miniTrack::print() { std::cout << "label: " << mMCLabel << " pT: " << mPt << " PDG: " << mPDGCode << std::endl; };
+
 int run_primary_vertexer_ITS(const bool useGPU = false,
                              const bool useMCcheck = false,
                              const int inspEvt = -1,
                              const int numEvents = 1,
+                             const std::string path = "./",
                              const std::string inputClustersITS = "o2clus_its.root",
                              const std::string inputGRP = "o2sim_grp.root",
+<<<<<<< HEAD
                              const std::string simfilename = "o2sim.root",
                              const std::string paramfilename = "O2geometry.root",
                              const std::string path = "./")
 {
 
+=======
+                             const std::string paramfilename = "o2sim_par.root",
+                             const std::string simfilename = "o2sim.root")
+{
+>>>>>>> X
   std::string outfile;
   if (useGPU) {
     outfile = "vertexer_gpu_data.root";
   } else {
     outfile = "vertexer_serial_data.root";
   }
+
   const auto grp = o2::parameters::GRPObject::loadFrom(path + inputGRP);
   const bool isITS = grp->isDetReadOut(o2::detectors::DetID::ITS);
   const bool isContITS = grp->isDetContinuousReadOut(o2::detectors::DetID::ITS);
   std::cout << "ITS is in " << (isContITS ? "CONTINUOS" : "TRIGGERED") << " readout mode" << std::endl;
+
+  // add clusters to chain
   TChain itsClusters("o2sim");
   itsClusters.AddFile((path + inputClustersITS).data());
 
@@ -55,6 +77,7 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
   gman->fillMatrixCache(o2::utils::bit2Mask(o2::TransformType::T2L, o2::TransformType::T2GRot,
                                             o2::TransformType::L2G)); // request cached transforms
 
+<<<<<<< HEAD
   // Get event header
   TChain mcHeaderTree("o2sim");
   mcHeaderTree.AddFile((path + simfilename).data());
@@ -63,6 +86,10 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
     LOG(FATAL) << "Did not find MC event header in the input header file." << FairLogger::endl;
   }
   mcHeaderTree.SetBranchAddress("MCEventHeader.", &mcHeader);
+=======
+  TFile simfile((path + simfilename).data());
+  TTree* itsSim = (TTree*)simfile.Get("o2sim");
+>>>>>>> X
 
   // get clusters
   std::vector<o2::itsmft::Cluster>* clusters = nullptr;
@@ -81,6 +108,10 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
   //get labels
   o2::dataformats::MCTruthContainer<o2::MCCompLabel>* labels = nullptr;
   itsClusters.SetBranchAddress("ITSClusterMCTruth", &labels);
+
+  // get MC tracks
+  std::vector<o2::MCTrackT<float>>* mctracks = nullptr;
+  itsSim->SetBranchAddress("MCTrack", &mctracks);
 
   TFile* outputfile = new TFile(outfile.data(), "recreate");
 
