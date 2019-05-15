@@ -25,16 +25,23 @@
 
 using Vertex = o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>;
 
-struct miniTrack {
-  miniTrack(int, float, int);
-  void print();
-  int mMCLabel;
-  float mPt;
-  int mPDGCode;
-};
-
-inline miniTrack::miniTrack(int label, float pt, int code) : mMCLabel{ label }, mPt{ pt }, mPDGCode{ code } {};
-inline void miniTrack::print() { std::cout << "label: " << mMCLabel << " pT: " << mPt << " PDG: " << mPDGCode << std::endl; };
+// struct miniTrack {
+//   miniTrack(int, float, float, int);
+//   void print();
+//   int mMCLabel;
+//   float mPt;
+//   float mRapidity;
+//   int mPDGCode;
+// };
+// 
+// inline miniTrack::miniTrack(int label, float pt, float rapidity, int code) : mMCLabel{ label },
+//                                                                              mPt{ pt },
+//                                                                              mRapidity{ rapidity },
+//                                                                              mPDGCode{ code } {};
+// inline void miniTrack::print()
+// {
+//   std::cout << "label: " << mMCLabel << " pT: " << mPt << " rapidity: " << mRapidity << " PDG: " << mPDGCode << std::endl;
+// };
 
 int run_primary_vertexer_ITS(const bool useGPU = false,
                              const bool useMCcheck = false,
@@ -43,17 +50,10 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
                              const std::string path = "./",
                              const std::string inputClustersITS = "o2clus_its.root",
                              const std::string inputGRP = "o2sim_grp.root",
-<<<<<<< HEAD
                              const std::string simfilename = "o2sim.root",
-                             const std::string paramfilename = "O2geometry.root",
-                             const std::string path = "./")
-{
-
-=======
                              const std::string paramfilename = "o2sim_par.root",
                              const std::string simfilename = "o2sim.root")
 {
->>>>>>> X
   std::string outfile;
   if (useGPU) {
     outfile = "vertexer_gpu_data.root";
@@ -61,7 +61,7 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
     outfile = "vertexer_serial_data.root";
   }
 
-  const auto grp = o2::parameters::GRPObject::loadFrom(path + inputGRP);
+  const auto grp = o2::parameters::GRPObject::loadFrom((path + inputGRP).data());
   const bool isITS = grp->isDetReadOut(o2::detectors::DetID::ITS);
   const bool isContITS = grp->isDetContinuousReadOut(o2::detectors::DetID::ITS);
   std::cout << "ITS is in " << (isContITS ? "CONTINUOS" : "TRIGGERED") << " readout mode" << std::endl;
@@ -77,7 +77,6 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
   gman->fillMatrixCache(o2::utils::bit2Mask(o2::TransformType::T2L, o2::TransformType::T2GRot,
                                             o2::TransformType::L2G)); // request cached transforms
 
-<<<<<<< HEAD
   // Get event header
   TChain mcHeaderTree("o2sim");
   mcHeaderTree.AddFile((path + simfilename).data());
@@ -86,10 +85,9 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
     LOG(FATAL) << "Did not find MC event header in the input header file." << FairLogger::endl;
   }
   mcHeaderTree.SetBranchAddress("MCEventHeader.", &mcHeader);
-=======
+  
   TFile simfile((path + simfilename).data());
-  TTree* itsSim = (TTree*)simfile.Get("o2sim");
->>>>>>> X
+  TTree* simTree = (TTree*)simfile.Get("o2sim");
 
   // get clusters
   std::vector<o2::itsmft::Cluster>* clusters = nullptr;
@@ -111,15 +109,28 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
 
   // get MC tracks
   std::vector<o2::MCTrackT<float>>* mctracks = nullptr;
-  itsSim->SetBranchAddress("MCTrack", &mctracks);
+  simTree->SetBranchAddress("MCTrack", &mctracks);
 
-  TFile* outputfile = new TFile(outfile.data(), "recreate");
+  TFile* outputfile = new TFile((path + outfile).data(), "recreate");
 
   TTree outTree("o2sim", "Vertexer Vertices");
   std::vector<o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>>* verticesITS =
     new std::vector<o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>>;
   outTree.Branch("ITSVertices", &verticesITS);
 
+  // const int nent { simTree->GetEntries() };
+  // std::vector<std::vector<miniTrack>> miniTks;
+  // miniTks.resize(nent);
+  // // Montecarlo track information
+  // for (int iTrackVec{ 0 }; iTrackVec < nent; ++iTrackVec) {
+  //   simTree->GetEntry(iTrackVec);
+  //   for (auto& mctrack : *mctracks) {
+  //     if (mctrack.getMotherTrackId() == -1) {
+  //       miniTks[iTrackVec].emplace_back(mctrack., mctrack., mctrack., mctrack.);
+  //     }
+  //   }
+  // }
+  
   // DEBUG
   TNtuple tracklets("Tracklets", "Tracklets", "oX:oY:oZ:c1:c2:c3:DCAvtx:DCAz");
   TNtuple comb01("comb01", "comb01", "tanLambda:phi");
