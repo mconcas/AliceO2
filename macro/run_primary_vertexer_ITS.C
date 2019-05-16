@@ -25,40 +25,22 @@
 
 using Vertex = o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>;
 
-// struct miniTrack {
-//   miniTrack(int, float, float, int);
-//   void print();
-//   int mMCLabel;
-//   float mPt;
-//   float mRapidity;
-//   int mPDGCode;
-// };
-// 
-// inline miniTrack::miniTrack(int label, float pt, float rapidity, int code) : mMCLabel{ label },
-//                                                                              mPt{ pt },
-//                                                                              mRapidity{ rapidity },
-//                                                                              mPDGCode{ code } {};
-// inline void miniTrack::print()
-// {
-//   std::cout << "label: " << mMCLabel << " pT: " << mPt << " rapidity: " << mRapidity << " PDG: " << mPDGCode << std::endl;
-// };
-
-int run_primary_vertexer_ITS(const bool useGPU = false,
+int run_primary_vertexer_ITS(const std::string path = "./",
+                             const bool debugOut = true,
+                             const bool useGPU = false,
                              const bool useMCcheck = false,
                              const int inspEvt = -1,
                              const int numEvents = 1,
-                             const std::string path = "./",
                              const std::string inputClustersITS = "o2clus_its.root",
                              const std::string inputGRP = "o2sim_grp.root",
                              const std::string simfilename = "o2sim.root",
-                             const std::string paramfilename = "o2sim_par.root",
-                             const std::string simfilename = "o2sim.root")
+                             const std::string paramfilename = "O2geometry.root")
 {
   std::string outfile;
   if (useGPU) {
-    outfile = "vertexer_gpu_data.root";
+    outfile = path + "vertexer_gpu_data.root";
   } else {
-    outfile = "vertexer_serial_data.root";
+    outfile = path + "vertexer_serial_data.root";
   }
 
   const auto grp = o2::parameters::GRPObject::loadFrom((path + inputGRP).data());
@@ -85,7 +67,7 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
     LOG(FATAL) << "Did not find MC event header in the input header file." << FairLogger::endl;
   }
   mcHeaderTree.SetBranchAddress("MCEventHeader.", &mcHeader);
-  
+
   TFile simfile((path + simfilename).data());
   TTree* simTree = (TTree*)simfile.Get("o2sim");
 
@@ -111,7 +93,7 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
   std::vector<o2::MCTrackT<float>>* mctracks = nullptr;
   simTree->SetBranchAddress("MCTrack", &mctracks);
 
-  TFile* outputfile = new TFile((path + outfile).data(), "recreate");
+  TFile* outputfile = new TFile(outfile.data(), "recreate");
 
   TTree outTree("o2sim", "Vertexer Vertices");
   std::vector<o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>>* verticesITS =
@@ -130,7 +112,7 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
   //     }
   //   }
   // }
-  
+
   // DEBUG
   TNtuple tracklets("Tracklets", "Tracklets", "oX:oY:oZ:c1:c2:c3:DCAvtx:DCAz");
   TNtuple comb01("comb01", "comb01", "tanLambda:phi");
@@ -144,7 +126,7 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
   std::uint32_t roFrame = 0;
 
   const int stopAt = (inspEvt == -1) ? itsClusters.GetEntries() : inspEvt + numEvents;
-  o2::its::ROframe frame(-123);
+  // o2::ITS::ROframe frame(-123);
 
   o2::its::VertexerTraits* traits = nullptr;
   // if (useGPU) {
@@ -152,66 +134,72 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
   // } else {
   traits = o2::its::createVertexerTraits();
   // }
-  const o2::its::Line zAxis{ std::array<float, 3>{ 0.f, 0.f, -1.f }, std::array<float, 3>{ 0.f, 0.f, 1.f } };
-  o2::its::Vertexer vertexer(traits);
-
+  const o2::ITS::Line zAxis{ std::array<float, 3>{ 0.f, 0.f, -1.f }, std::array<float, 3>{ 0.f, 0.f, 1.f } };
+  o2::ITS::Vertexer vertexer(traits);
+  int counter{ 0 };
   for (auto& rof : *rofs) {
     itsClusters.GetEntry(rof.getROFEntry().getEvent());
     mcHeaderTree.GetEntry(rof.getROFEntry().getEvent());
-    int nclUsed = o2::its::IOUtils::loadROFrameData(rof, frame, clusters, labels);
-    // float total = vertexer.clustersToVertices(frame, true);
+    o2::ITS::ROframe frame(counter++);
+    std::cout<< "\nROFrame: " << frame.getROFrameId() << std::endl;
+    o2::ITS::IOUtils::loadROFrameData(rof, frame, clusters, labels);
+    // float total = vertexer.clustersToVertices(frame);
     vertexer.initialiseVertexer(&frame);
     vertexer.findTracklets(useMCcheck);
-    // vertexer.findTrivialMCTracklets();
-    //     vertexer.processLines();
-    //     std::vector<std::array<float, 6>> linesdata = vertexer.getLinesData();
-    //     std::vector<std::array<float, 4>> centroidsData = vertexer.getCentroids();
-    //     std::vector<o2::its::Line> lines = vertexer.getLines();
-    //     std::vector<o2::its::Tracklet> c01 = vertexer.getTracklets01();
-    //     std::vector<o2::its::Tracklet> c12 = vertexer.getTracklets12();
-    //     std::array<std::vector<o2::its::Cluster>, 3> clusters = vertexer.getClusters();
-    //     std::vector<std::array<float, 7>> dtlambdas = vertexer.getDeltaTanLambdas();
-    //
-    //     for (auto& line : lines)
-    //       tracklets.Fill(line.originPoint[0], line.originPoint[1], line.originPoint[2], line.cosinesDirector[0], line.cosinesDirector[1], line.cosinesDirector[2],
-    //                      o2::its::Line::getDistanceFromPoint(line, std::array<float, 3>{ 0.f, 0.f, 0.f }), o2::its::Line::getDCA(line, zAxis));
-    //     for (int i{ 0 }; i < static_cast<int>(c01.size()); ++i) {
-    //       comb01.Fill(c01[i].tanLambda, c01[i].phiCoordinate);
-    //       clusPhi01.Fill(clusters[0][c01[i].firstClusterIndex].phiCoordinate, clusters[1][c01[i].secondClusterIndex].phiCoordinate);
-    //     }
-    //     for (int i{ 0 }; i < static_cast<int>(c12.size()); ++i) {
-    //       comb12.Fill(c12[i].tanLambda, c12[i].phiCoordinate);
-    //       clusPhi12.Fill(clusters[1][c12[i].firstClusterIndex].phiCoordinate, clusters[2][c12[i].secondClusterIndex].phiCoordinate);
-    //     }
-    //     for (auto& delta : dtlambdas) {
-    //       trackdeltaTanLambdas.Fill(delta.data());
-    //     }
-    //     for (auto& centroid : centroidsData) {
-    //       auto cdata = centroid.data();
-    //       centroids.Fill(roFrame, cdata[0], cdata[1], cdata[2], cdata[3]);
-    //     }
-    //     for (auto& linedata: linesdata) {
-    //       linesData.Fill(linedata.data());
-    //     }
-    //
     vertexer.findVertices();
     vertexer.dumpTraits();
-    // std::cout << " - TOTAL elapsed time: " << total << "ms." << std::endl;
-    std::vector<Vertex> vertITS = vertexer.exportVertices();
-    verticesITS->swap(vertITS);
-    // std::array<float,3> trueVertex{mcHeader->GetX(),mcHeader->GetY(),mcHeader->GetZ()}; // UNCOMMENT TO GET THE MC VERTEX POS FOR CURRENT ROFRAME
-    outTree.Fill();
+    // vertexer.findTrivialMCTracklets();
+    if (debugOut) {
+      vertexer.processLines();
+      std::vector<std::array<float, 6>> linesdata = vertexer.getLinesData();
+      std::vector<std::array<float, 4>> centroidsData = vertexer.getCentroids();
+      std::vector<o2::ITS::Line> lines = vertexer.getLines();
+      std::vector<o2::ITS::Tracklet> c01 = vertexer.getTracklets01();
+      std::vector<o2::ITS::Tracklet> c12 = vertexer.getTracklets12();
+      std::array<std::vector<o2::ITS::Cluster>, 3> clusters = vertexer.getClusters();
+      std::vector<std::array<float, 7>> dtlambdas = vertexer.getDeltaTanLambdas();
+
+      for (auto& line : lines)
+        tracklets.Fill(line.originPoint[0], line.originPoint[1], line.originPoint[2], line.cosinesDirector[0], line.cosinesDirector[1], line.cosinesDirector[2],
+                       o2::ITS::Line::getDistanceFromPoint(line, std::array<float, 3>{ 0.f, 0.f, 0.f }), o2::ITS::Line::getDCA(line, zAxis));
+      for (int i{ 0 }; i < static_cast<int>(c01.size()); ++i) {
+        comb01.Fill(c01[i].tanLambda, c01[i].phiCoordinate);
+        clusPhi01.Fill(clusters[0][c01[i].firstClusterIndex].phiCoordinate, clusters[1][c01[i].secondClusterIndex].phiCoordinate);
+      }
+      for (int i{ 0 }; i < static_cast<int>(c12.size()); ++i) {
+        comb12.Fill(c12[i].tanLambda, c12[i].phiCoordinate);
+        clusPhi12.Fill(clusters[1][c12[i].firstClusterIndex].phiCoordinate, clusters[2][c12[i].secondClusterIndex].phiCoordinate);
+      }
+      for (auto& delta : dtlambdas) {
+        trackdeltaTanLambdas.Fill(delta.data());
+      }
+      for (auto& centroid : centroidsData) {
+        auto cdata = centroid.data();
+        centroids.Fill(roFrame, cdata[0], cdata[1], cdata[2], cdata[3]);
+      }
+      for (auto& linedata : linesdata) {
+        linesData.Fill(linedata.data());
+      }
+      std::vector<Vertex> vertITS = vertexer.exportVertices();
+      verticesITS->swap(vertITS);
+      // std::array<float,3> trueVertex{mcHeader->GetX(),mcHeader->GetY(),mcHeader->GetZ()}; // UNCOMMENT TO GET THE MC VERTEX POS FOR CURRENT ROFRAME
+      outTree.Fill();
+    }
+    // std::cout << " - TOTAL elapsed time: " << total << " ms." << std::endl
+    //           << std::endl;
   }
 
   outTree.Write();
-  //   tracklets.Write();
-  //   comb01.Write();
-  //   comb12.Write();
-  //   clusPhi01.Write();
-  //   clusPhi12.Write();
-  //   trackdeltaTanLambdas.Write();
-  //   centroids.Write();
-  // linesData.Write();
+  if (debugOut) {
+    tracklets.Write();
+    comb01.Write();
+    comb12.Write();
+    clusPhi01.Write();
+    clusPhi12.Write();
+    trackdeltaTanLambdas.Write();
+    centroids.Write();
+    linesData.Write();
+  }
   outputfile->Close();
   return 0;
 }

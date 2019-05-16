@@ -332,7 +332,7 @@ void VertexerTraits::computeTrackletsPureMontecarlo()
 {
 
   std::cout << "Running in Montecarlo trivial mode\n";
-  std::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
+  // std::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
 
   std::vector<int> foundTracklets01;
   std::vector<int> foundTracklets12;
@@ -383,7 +383,7 @@ void VertexerTraits::computeTracklets(const bool useMCLabel)
   // computeTrackletsPureMontecarlo();
   if (useMCLabel)
     std::cout << "Running in Montecarlo check mode\n";
-  std::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
+  // std::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
 
   std::vector<int> foundTracklets01;
   std::vector<int> foundTracklets12;

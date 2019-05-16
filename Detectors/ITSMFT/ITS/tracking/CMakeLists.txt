@@ -20,6 +20,7 @@ Set(LINKDEF src/TrackingLinkDef.h)
 #\DEBUG
 
 set(NO_DICT_SRCS # sources not for the dictionary
+    src/Algorithms.cxx
     src/Cluster.cxx
     src/ROframe.cxx
     src/IOUtils.cxx
