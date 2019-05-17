@@ -12,20 +12,30 @@
 /// \brief
 ///
 
+#include <iterator>
 #include "ITStracking/Algorithms.h"
 
-namespace O2
+namespace o2
 {
 namespace ITS
 {
 
-GPU_HOST CentroidGraph::CentroidGraph(std::vector<Centroid> centroids) {
-  
+Centroid::Centroid(int indices[2], float position[3])
+{
+  for (int i{ 0 }; i < 2; ++i) {
+    mIndices[i] = indices[i];
+  }
+  for (int i{ 0 }; i < 3; ++i) {
+    mPosition[i] = position[i];
+  }
 }
 
-GPU_HOST_DEVICE Centroid::Centroid(Centroid* centroids, const in size); {
-
+float Centroid::ComputeDistance(const Centroid& c1, const Centroid& c2)
+{
+  return MATH_SQRT((c1.mPosition[0] - c2.mPosition[0]) * (c1.mPosition[0] - c2.mPosition[0]) +
+                   (c1.mPosition[1] - c2.mPosition[1]) * (c1.mPosition[1] - c2.mPosition[1]) +
+                   (c1.mPosition[2] - c2.mPosition[2]) * (c1.mPosition[2] - c2.mPosition[2]));
 }
 
-}
-}
+} // namespace ITS
+} // namespace o2

@@ -8,14 +8,15 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#ifndef O2_ITSMFT_RECONSTRUCTION_CA_LINE_H_
-#define O2_ITSMFT_RECONSTRUCTION_CA_LINE_H_
+#ifndef O2_ITSMFT_TRACKING_CA_LINE_H_
+#define O2_ITSMFT_TRACKING_CA_LINE_H_
 
 #include <array>
 #include <vector>
 #include "ITStracking/Cluster.h"
 #include "ITStracking/Definitions.h"
 #include "ITStracking/Tracklet.h"
+#include "ITStracking/Algorithms.h"
 
 namespace o2
 {
@@ -81,33 +82,33 @@ inline GPU_HOST_DEVICE Line::Line(const Tracklet& tracklet, const Cluster* inner
     cosinesDirector[index] *= inverseNorm;
 }
 
-struct CentroidReference final {
-  GPU_HOST   CentroidReference(const std::array<float, 3> point, const int tId1, const int tId2);
-  GPU_DEVICE CentroidReference(const float* point, const int tId1, const int tId2);
+// struct CentroidReference final {
+//   GPU_HOST   CentroidReference(const std::array<float, 3> point, const int tId1, const int tId2);
+//   GPU_DEVICE CentroidReference(const float* point, const int tId1, const int tId2);
 
-  float mCentroid[3];
-  int mTrackIds[2];
-};
+//   float mCentroid[3];
+//   int mTrackIds[2];
+// };
 
-inline GPU_HOST CentroidReference::CentroidReference(const std::array<float, 3> point, const int tId1, const int tId2)
-{
-  mTrackIds[0] = tId1;
-  mTrackIds[1] = tId2;
+// inline GPU_HOST CentroidReference::CentroidReference(const std::array<float, 3> point, const int tId1, const int tId2)
+// {
+//   mTrackIds[0] = tId1;
+//   mTrackIds[1] = tId2;
 
-  for (unsigned int index{0}; index < 3; ++index) {
-    mCentroid[index] = point[index];
-  }
-}
+//   for (unsigned int index{0}; index < 3; ++index) {
+//     mCentroid[index] = point[index];
+//   }
+// }
 
-inline GPU_DEVICE CentroidReference::CentroidReference(const float* point, const int tId1, const int tId2)
-{
-  mTrackIds[0] = tId1;
-  mTrackIds[1] = tId2;
+// inline GPU_DEVICE CentroidReference::CentroidReference(const float* point, const int tId1, const int tId2)
+// {
+//   mTrackIds[0] = tId1;
+//   mTrackIds[1] = tId2;
 
-  for (unsigned int index{0}; index < 3; ++index) {
-    mCentroid[index] = point[index];
-  }
-}
+//   for (unsigned int index{0}; index < 3; ++index) {
+//     mCentroid[index] = point[index];
+//   }
+// }
 
 class ClusterLines final
 {
@@ -134,4 +135,4 @@ class ClusterLines final
 
 } // namespace its
 } // namespace o2
-#endif /* O2_ITSMFT_RECONSTRUCTION_CA_LINE_H_ */
+#endif /* O2_ITSMFT_TRACKING_CA_LINE_H_ */
