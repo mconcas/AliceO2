@@ -13,11 +13,12 @@
 ///
 
 #include <iterator>
-#include "ITStracking/Algorithms.h"
+#include "ITStracking/Graph.h"
+#include "ITStracking/Definitions.h"
 
 namespace o2
 {
-namespace ITS
+namespace its
 {
 
 Centroid::Centroid(int indices[2], float position[3])
@@ -37,5 +38,5 @@ float Centroid::ComputeDistance(const Centroid& c1, const Centroid& c2)
                    (c1.mPosition[2] - c2.mPosition[2]) * (c1.mPosition[2] - c2.mPosition[2]));
 }
 
-} // namespace ITS
+} // namespace its
 } // namespace o2

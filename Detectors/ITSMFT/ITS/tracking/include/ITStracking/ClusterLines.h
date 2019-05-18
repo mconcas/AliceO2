@@ -16,7 +16,7 @@
 #include "ITStracking/Cluster.h"
 #include "ITStracking/Definitions.h"
 #include "ITStracking/Tracklet.h"
-#include "ITStracking/Algorithms.h"
+#include "ITStracking/Graph.h"
 
 namespace o2
 {

@@ -18,14 +18,15 @@
 #include <array>
 #include <cmath>
 #include <functional>
+#include <iostream>
 #include <utility>
 #include <vector>
 
-#include "ITStracking/Definitions.h"
+
 
 namespace o2
 {
-namespace ITS
+namespace its
 {
 
 typedef std::pair<int, int> Edge;
@@ -43,30 +44,28 @@ class Graph
 {
  public:
   Graph() = delete;
-  template <typename... Args>
-  Graph(const std::vector<T>& vertices, bool (*linkFunction)(T&, T&, Args...), Args&&... args);
+  Graph(const std::vector<T>& vertices, std::function<bool(const T&, const T&)> linkFunction);
 
  private:
-  std::vector<GraphVertex<Centroid>> mGraphVertices;
   std::vector<std::pair<int, int>> mVerticesEdgeData; //
   std::vector<Edge> mEdges;                           // Adjacency list
 };
 
 template <typename T>
-template <typename... Args>
-Graph<T>::Graph(const std::vector<T>& vertices, bool (*linkFunction)(T& v1, T& v2, Args...), Args&&... args)
+Graph<T>::Graph(const std::vector<T>& vertices, std::function<bool(const T& v1, const T& v2)> linkFunction)
 {
+  mVerticesEdgeData.resize(vertices.size());
   int tot_nedges{ 0 };
-  for (int iVertex1{ 0 }; iVertex1 < vertices.size() - 1; ++iVertex1) {
+  for (size_t iVertex1{ 0 }; iVertex1 < vertices.size(); ++iVertex1) {
     int nedges{ 0 };
-    for (int iVertex2{ iVertex1 }; iVertex2 < vertices.size(); ++iVertex2) {
-      if ((this->*linkFunction)(vertices[iVertex1], vertices[iVertex2], std::forward<Args>(args)...)) {
+    for (size_t iVertex2{ 0 }; iVertex2 < vertices.size(); ++iVertex2) {
+      if (iVertex1 != iVertex2 && linkFunction(vertices[iVertex1], vertices[iVertex2])) {
         mEdges.emplace_back(std::make_pair(iVertex1, iVertex2));
         ++nedges;
       }
     }
     tot_nedges += nedges;
-    mVerticesEdgeData[i] = std::make_pair(nedges, totedges);
+    mVerticesEdgeData[iVertex1] = std::make_pair(nedges, tot_nedges);
   }
 }
 
@@ -91,6 +90,6 @@ class DBScan3D
 {
 };
 
-} // namespace ITS
+} // namespace its
 } // namespace o2
 #endif
