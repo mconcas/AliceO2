@@ -22,6 +22,7 @@ Set(LINKDEF src/TrackingLinkDef.h)
 set(NO_DICT_SRCS # sources not for the dictionary
     src/Cluster.cxx
     src/Graph.cxx
+    src/DBScan.cxx
     src/ROframe.cxx
     src/IOUtils.cxx
     src/Label.cxx

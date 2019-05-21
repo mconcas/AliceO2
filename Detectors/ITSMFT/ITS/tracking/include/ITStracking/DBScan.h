@@ -8,18 +8,20 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 ///
-/// \file Graph.cxx
+/// \file DBScan.h
 /// \brief
 ///
 
-#include <iterator>
+// #include "ITStracking/Graph.h"
 
-// #include "ITStracking/Definitions.h"
+struct Centroid final {
+  Centroid() = default;
+  Centroid(int indices[2], float position[3]);
+  static float ComputeDistance(const Centroid& c1, const Centroid& c2);
+  int mIndices[2];
+  float mPosition[3];
+};
 
-namespace o2
+class DBScan3D
 {
-namespace its
-{
-
-} // namespace its
-} // namespace o2
+};

@@ -8,7 +8,7 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 ///
-/// \file Algorithms.h
+/// \file Graph.h
 /// \brief
 ///
 
@@ -19,10 +19,9 @@
 #include <cmath>
 #include <functional>
 #include <iostream>
+#include <thread>
 #include <utility>
 #include <vector>
-
-
 
 namespace o2
 {
@@ -31,65 +30,91 @@ namespace its
 
 typedef std::pair<int, int> Edge;
 
-struct Centroid final {
-  Centroid() = default;
-  Centroid(int indices[2], float position[3]);
-  static float ComputeDistance(const Centroid& c1, const Centroid& c2);
-  int mIndices[2];
-  float mPosition[3];
-};
-
 template <typename T>
 class Graph
 {
  public:
   Graph() = delete;
-  Graph(const std::vector<T>& vertices, std::function<bool(const T&, const T&)> linkFunction);
+  Graph(const std::vector<T>&, std::function<bool(const T&, const T&)>, const size_t nThreads = 1);
+  std::vector<std::vector<std::pair<int, int>>> getEdges() const { return mEdges; }
 
  private:
-  std::vector<std::pair<int, int>> mVerticesEdgeData; //
-  std::vector<Edge> mEdges;                           // Adjacency list
+  void init(std::function<bool(const T&, const T&)>);
+  void findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, const size_t vId, const size_t size);
+
+  // Multithread block
+  size_t mNThreads;
+  char mIsMultiThread;
+  std::vector<std::thread> mExecutors;
+
+  // Common data members
+  const std::vector<T>& mVertices;
+  std::function<bool(const T&, const T&)> mLinkFunction;
+  std::vector<std::pair<int, int>> mVerticesEdgeLUT; //
+  std::vector<std::vector<Edge>> mEdges;             // Adjacency list
 };
 
 template <typename T>
-Graph<T>::Graph(const std::vector<T>& vertices, std::function<bool(const T& v1, const T& v2)> linkFunction)
+Graph<T>::Graph(const std::vector<T>& vertices, std::function<bool(const T& v1, const T& v2)> linkFunction, const size_t nThreads) : mVertices(vertices),
+                                                                                                                                     mIsMultiThread{ nThreads > 1 ? true : false },
+                                                                                                                                     mNThreads{ nThreads }
 {
-  mVerticesEdgeData.resize(vertices.size());
+  init(linkFunction);
+}
+
+template <typename T>
+void Graph<T>::init(std::function<bool(const T& v1, const T& v2)> linkFunction)
+{
+
+  // Graph initialization
+  mLinkFunction = linkFunction;
+  const size_t size = { mVertices.size() };
+  mVerticesEdgeLUT.resize(size);
+  mEdges.resize(size);
+
   int tot_nedges{ 0 };
-  for (size_t iVertex1{ 0 }; iVertex1 < vertices.size(); ++iVertex1) {
-    int nedges{ 0 };
-    for (size_t iVertex2{ 0 }; iVertex2 < vertices.size(); ++iVertex2) {
-      if (iVertex1 != iVertex2 && linkFunction(vertices[iVertex1], vertices[iVertex2])) {
-        mEdges.emplace_back(std::make_pair(iVertex1, iVertex2));
-        ++nedges;
-      }
+  if (!mIsMultiThread) {
+    std::cout << "Single thread implementation" << std::endl;
+    for (size_t iVertex{ 0 }; iVertex < size; ++iVertex) {
+      findVertexEdges(mEdges[iVertex], mVertices[iVertex], iVertex, size);
+      tot_nedges += static_cast<int>(mEdges[iVertex].size());
+      mVerticesEdgeLUT[iVertex] = std::make_pair(static_cast<int>(mEdges[iVertex].size()), tot_nedges);
     }
-    tot_nedges += nedges;
-    mVerticesEdgeData[iVertex1] = std::make_pair(nedges, tot_nedges);
+  } else {
+    std::cout << "Multithread implementation" << std::endl;
+    mNThreads = std::min(static_cast<const size_t>(std::thread::hardware_concurrency()), mNThreads);
+    mExecutors.resize(mNThreads);
+    const size_t stride{ static_cast<size_t>(std::ceil(mVertices.size() / static_cast<size_t>(mExecutors.size()))) };
+    for (size_t iExecutor{ 0 }; iExecutor < mExecutors.size(); ++iExecutor) {
+      mExecutors[iExecutor] = std::thread(
+        [iExecutor, stride, this](const auto& linkFunction) {
+          for (size_t iVertex1{ iExecutor * stride }; iVertex1 < stride * (iExecutor + 1) && iVertex1 < mVertices.size(); ++iVertex1) {
+            for (size_t iVertex2{ 0 }; iVertex2 < mVertices.size(); ++iVertex2) {
+              if (iVertex1 != iVertex2 && linkFunction(mVertices[iVertex1], mVertices[iVertex2])) {
+                mEdges[iVertex1].emplace_back(iVertex1, iVertex2);
+              }
+            }
+          }
+        },
+        mLinkFunction);
+    }
+  }
+  for (auto&& thread : mExecutors) {
+    thread.join();
   }
 }
 
-// template <typename T>
-// class GraphVertex
-// {
-//  public:
-//   GraphVertex() = delete;
-//   T GetPayload() const { return mPayload; }
-//   template <typename... Args>
-//   GraphVertex(Args&&... args) : mPayload{ std::forward<Args>(args)... }
-//   {
-//     mVisited = false;
-//   }
-
-//  private:
-//   T mPayload;
-//   char mVisited;
-//   // three possible statuses: core, border, noise
-// };
-class DBScan3D
+template <typename T>
+void Graph<T>::findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, const size_t vId, const size_t size)
 {
-};
+  for (size_t iVertex2{ 0 }; iVertex2 < size; ++iVertex2) {
+    if (vId != iVertex2 && mLinkFunction(vertex, mVertices[iVertex2])) {
+      localEdges.emplace_back(std::make_pair(vId, iVertex2));
+    }
+  }
+}
 
 } // namespace its
 } // namespace o2
+
 #endif
