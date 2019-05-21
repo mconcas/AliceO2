@@ -35,11 +35,11 @@ class Graph
 {
  public:
   Graph() = delete;
-  Graph(const std::vector<T>&, std::function<bool(const T&, const T&)>, const size_t nThreads = 1);
+  Graph(const std::vector<T>&/*, std::function<bool(const T&, const T&)>*/, const size_t nThreads = 1);
+  void init(std::function<bool(const T&, const T&)>);
   std::vector<std::vector<std::pair<int, int>>> getEdges() const { return mEdges; }
 
  private:
-  void init(std::function<bool(const T&, const T&)>);
   void findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, const size_t vId, const size_t size);
 
   // Multithread block
@@ -55,11 +55,11 @@ class Graph
 };
 
 template <typename T>
-Graph<T>::Graph(const std::vector<T>& vertices, std::function<bool(const T& v1, const T& v2)> linkFunction, const size_t nThreads) : mVertices(vertices),
+Graph<T>::Graph(const std::vector<T>& vertices/*, std::function<bool(const T& v1, const T& v2)> linkFunction*/, const size_t nThreads) : mVertices(vertices),
                                                                                                                                      mIsMultiThread{ nThreads > 1 ? true : false },
                                                                                                                                      mNThreads{ nThreads }
 {
-  init(linkFunction);
+  // init(linkFunction);
 }
 
 template <typename T>
@@ -86,6 +86,7 @@ void Graph<T>::init(std::function<bool(const T& v1, const T& v2)> linkFunction)
     mExecutors.resize(mNThreads);
     const size_t stride{ static_cast<size_t>(std::ceil(mVertices.size() / static_cast<size_t>(mExecutors.size()))) };
     for (size_t iExecutor{ 0 }; iExecutor < mExecutors.size(); ++iExecutor) {
+      // We cannot pass a template function to std::thread, using lambda instead
       mExecutors[iExecutor] = std::thread(
         [iExecutor, stride, this](const auto& linkFunction) {
           for (size_t iVertex1{ iExecutor * stride }; iVertex1 < stride * (iExecutor + 1) && iVertex1 < mVertices.size(); ++iVertex1) {
