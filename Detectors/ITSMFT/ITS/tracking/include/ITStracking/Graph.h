@@ -35,9 +35,11 @@ class Graph
 {
  public:
   Graph() = delete;
-  Graph(const std::vector<T>&/*, std::function<bool(const T&, const T&)>*/, const size_t nThreads = 1);
-  void init(std::function<bool(const T&, const T&)>);
-  std::vector<std::vector<std::pair<int, int>>> getEdges() const { return mEdges; }
+  explicit Graph(const std::vector<T>&, const size_t nThreads = 1);
+  void Init(std::function<bool(const T&, const T&)>);
+  // virtual void ClassifyVertices();
+  std::vector<std::vector<Edge>> getEdges() const { return mEdges; }
+  std::vector<std::pair<int, int>> mVerticesEdgeLUT;
 
  private:
   void findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, const size_t vId, const size_t size);
@@ -50,27 +52,25 @@ class Graph
   // Common data members
   const std::vector<T>& mVertices;
   std::function<bool(const T&, const T&)> mLinkFunction;
-  std::vector<std::pair<int, int>> mVerticesEdgeLUT; //
-  std::vector<std::vector<Edge>> mEdges;             // Adjacency list
+  std::vector<std::vector<Edge>> mEdges;
 };
 
 template <typename T>
-Graph<T>::Graph(const std::vector<T>& vertices/*, std::function<bool(const T& v1, const T& v2)> linkFunction*/, const size_t nThreads) : mVertices(vertices),
-                                                                                                                                     mIsMultiThread{ nThreads > 1 ? true : false },
-                                                                                                                                     mNThreads{ nThreads }
+Graph<T>::Graph(const std::vector<T>& vertices, const size_t nThreads) : mVertices(vertices),
+                                                                         mIsMultiThread{ nThreads > 1 ? true : false },
+                                                                         mNThreads{ nThreads }
 {
-  // init(linkFunction);
 }
 
 template <typename T>
-void Graph<T>::init(std::function<bool(const T& v1, const T& v2)> linkFunction)
+void Graph<T>::Init(std::function<bool(const T& v1, const T& v2)> linkFunction)
 {
 
   // Graph initialization
   mLinkFunction = linkFunction;
   const size_t size = { mVertices.size() };
-  mVerticesEdgeLUT.resize(size);
   mEdges.resize(size);
+  mVerticesEdgeLUT.resize(size);
 
   int tot_nedges{ 0 };
   if (!mIsMultiThread) {

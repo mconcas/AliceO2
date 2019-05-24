@@ -8,15 +8,12 @@ O2_SETUP(NAME ${MODULE_NAME})
 
 #DEBUG
 set(SRC
-    src/ClusterLines.cxx
+
 )
 
 set(HEADERS
-    include/${MODULE_NAME}/ClusterLines.h
-    include/${MODULE_NAME}/Tracklet.h
+    include/${MODULE_NAME}/DBScan.h
 )
-
-Set(LINKDEF src/TrackingLinkDef.h)
 #\DEBUG
 
 set(NO_DICT_SRCS # sources not for the dictionary
@@ -50,7 +47,7 @@ set(NO_DICT_HEADERS
     include/${MODULE_NAME}/Tracklet.h
     )
 
-# Set(LINKDEF src/${MODULE_NAME}LinkDef.h)
+Set(LINKDEF src/${MODULE_NAME}LinkDef.h)
 Set(LIBRARY_NAME ${MODULE_NAME})
 Set(BUCKET_NAME its_tracking_bucket)
 O2_GENERATE_LIBRARY()

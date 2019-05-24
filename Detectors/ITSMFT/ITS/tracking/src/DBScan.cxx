@@ -12,11 +12,15 @@
 /// \brief
 ///
 
-#include "ITStracking/Graph.h"
 #include "ITStracking/DBScan.h"
 #include "ITStracking/Definitions.h"
 
-Centroid::Centroid(int indices[2], float position[3])
+namespace o2
+{
+namespace its
+{
+
+Centroid::Centroid(int* indices, float* position)
 {
   for (int i{ 0 }; i < 2; ++i) {
     mIndices[i] = indices[i];
@@ -32,3 +36,5 @@ float Centroid::ComputeDistance(const Centroid& c1, const Centroid& c2)
                    (c1.mPosition[1] - c2.mPosition[1]) * (c1.mPosition[1] - c2.mPosition[1]) +
                    (c1.mPosition[2] - c2.mPosition[2]) * (c1.mPosition[2] - c2.mPosition[2]));
 }
+} // namespace its
+} // namespace o2
