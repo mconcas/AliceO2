@@ -35,9 +35,9 @@ class Graph
 {
  public:
   Graph() = delete;
-  explicit Graph(const std::vector<T>&, const size_t nThreads = 1);
-  void Init(std::function<bool(const T&, const T&)>);
-  // virtual void ClassifyVertices();
+  explicit Graph(const size_t nThreads = 1);
+  void Init(std::vector<T>&);
+  void computeEdges(std::function<bool(const T& v1, const T& v2)>);
   std::vector<std::vector<Edge>> getEdges() const { return mEdges; }
   std::vector<std::pair<int, int>> mVerticesEdgeLUT;
 
@@ -50,48 +50,57 @@ class Graph
   std::vector<std::thread> mExecutors;
 
   // Common data members
-  const std::vector<T>& mVertices;
+  std::vector<T>* mVertices = nullptr;
   std::function<bool(const T&, const T&)> mLinkFunction;
   std::vector<std::vector<Edge>> mEdges;
 };
 
 template <typename T>
-Graph<T>::Graph(const std::vector<T>& vertices, const size_t nThreads) : mVertices(vertices),
-                                                                         mIsMultiThread{ nThreads > 1 ? true : false },
-                                                                         mNThreads{ nThreads }
+Graph<T>::Graph(const size_t nThreads) : mNThreads{ nThreads }
 {
+  mIsMultiThread = nThreads > 1 ? true : false;
 }
 
 template <typename T>
-void Graph<T>::Init(std::function<bool(const T& v1, const T& v2)> linkFunction)
+void Graph<T>::Init(std::vector<T>& vertices) // std::function<bool(const T& v1, const T& v2)> linkFunction
 {
 
   // Graph initialization
-  mLinkFunction = linkFunction;
-  const size_t size = { mVertices.size() };
-  mEdges.resize(size);
-  mVerticesEdgeLUT.resize(size);
+  mVertices = &vertices;
+  if (mIsMultiThread) {
+    mNThreads = std::min(static_cast<const size_t>(std::thread::hardware_concurrency()), mNThreads);
+    mExecutors.resize(mNThreads);
+  }
 
+  mEdges.resize(vertices.size());
+  mVerticesEdgeLUT.resize(vertices.size());
+}
+
+template <typename T>
+void Graph<T>::computeEdges(std::function<bool(const T& v1, const T& v2)> linkFunction)
+{
+  mLinkFunction = linkFunction;
   int tot_nedges{ 0 };
+  const size_t size = { mVertices->size() };
   if (!mIsMultiThread) {
-    std::cout << "Single thread implementation" << std::endl;
+    std::cout << "\tSingle thread implementation" << std::endl;
     for (size_t iVertex{ 0 }; iVertex < size; ++iVertex) {
-      findVertexEdges(mEdges[iVertex], mVertices[iVertex], iVertex, size);
+      findVertexEdges(mEdges[iVertex], (*mVertices)[iVertex], iVertex, size);
       tot_nedges += static_cast<int>(mEdges[iVertex].size());
       mVerticesEdgeLUT[iVertex] = std::make_pair(static_cast<int>(mEdges[iVertex].size()), tot_nedges);
     }
   } else {
-    std::cout << "Multithread implementation" << std::endl;
+    std::cout << "\tMultithread implementation" << std::endl;
     mNThreads = std::min(static_cast<const size_t>(std::thread::hardware_concurrency()), mNThreads);
     mExecutors.resize(mNThreads);
-    const size_t stride{ static_cast<size_t>(std::ceil(mVertices.size() / static_cast<size_t>(mExecutors.size()))) };
+    const size_t stride{ static_cast<size_t>(std::ceil(mVertices->size() / static_cast<size_t>(mExecutors.size()))) };
     for (size_t iExecutor{ 0 }; iExecutor < mExecutors.size(); ++iExecutor) {
-      // We cannot pass a template function to std::thread, using lambda instead
+      // We cannot pass a template function to std::thread(), using lambda instead
       mExecutors[iExecutor] = std::thread(
         [iExecutor, stride, this](const auto& linkFunction) {
-          for (size_t iVertex1{ iExecutor * stride }; iVertex1 < stride * (iExecutor + 1) && iVertex1 < mVertices.size(); ++iVertex1) {
-            for (size_t iVertex2{ 0 }; iVertex2 < mVertices.size(); ++iVertex2) {
-              if (iVertex1 != iVertex2 && linkFunction(mVertices[iVertex1], mVertices[iVertex2])) {
+          for (size_t iVertex1{ iExecutor * stride }; iVertex1 < stride * (iExecutor + 1) && iVertex1 < mVertices->size(); ++iVertex1) {
+            for (size_t iVertex2{ 0 }; iVertex2 < mVertices->size(); ++iVertex2) {
+              if (iVertex1 != iVertex2 && linkFunction((*mVertices)[iVertex1], (*mVertices)[iVertex2])) {
                 mEdges[iVertex1].emplace_back(iVertex1, iVertex2);
               }
             }
@@ -104,12 +113,11 @@ void Graph<T>::Init(std::function<bool(const T& v1, const T& v2)> linkFunction)
     thread.join();
   }
 }
-
 template <typename T>
 void Graph<T>::findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, const size_t vId, const size_t size)
 {
   for (size_t iVertex2{ 0 }; iVertex2 < size; ++iVertex2) {
-    if (vId != iVertex2 && mLinkFunction(vertex, mVertices[iVertex2])) {
+    if (vId != iVertex2 && mLinkFunction(vertex, (*mVertices)[iVertex2])) {
       localEdges.emplace_back(std::make_pair(vId, iVertex2));
     }
   }
