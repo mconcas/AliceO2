@@ -36,10 +36,13 @@ class Graph
  public:
   Graph() = delete;
   explicit Graph(const size_t nThreads = 1);
-  void Init(std::vector<T>&);
+  void init(std::vector<T>&);
   void computeEdges(std::function<bool(const T& v1, const T& v2)>);
   std::vector<std::vector<Edge>> getEdges() const { return mEdges; }
-  std::vector<std::pair<int, int>> mVerticesEdgeLUT;
+  char isMultiThreading() const { return mIsMultiThread; }
+
+  std::vector<T>* mVertices = nullptr; // Observer pointer
+  std::vector<std::thread> mExecutors; // Difficult to pass
 
  private:
   void findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, const size_t vId, const size_t size);
@@ -47,10 +50,9 @@ class Graph
   // Multithread block
   size_t mNThreads;
   char mIsMultiThread;
-  std::vector<std::thread> mExecutors;
 
   // Common data members
-  std::vector<T>* mVertices = nullptr;
+  std::vector<std::pair<int, int>> mVerticesEdgeLUT;
   std::function<bool(const T&, const T&)> mLinkFunction;
   std::vector<std::vector<Edge>> mEdges;
 };
@@ -62,7 +64,7 @@ Graph<T>::Graph(const size_t nThreads) : mNThreads{ nThreads }
 }
 
 template <typename T>
-void Graph<T>::Init(std::vector<T>& vertices) // std::function<bool(const T& v1, const T& v2)> linkFunction
+void Graph<T>::init(std::vector<T>& vertices)
 {
 
   // Graph initialization
@@ -80,7 +82,7 @@ template <typename T>
 void Graph<T>::computeEdges(std::function<bool(const T& v1, const T& v2)> linkFunction)
 {
   mLinkFunction = linkFunction;
-  int tot_nedges{ 0 };
+  int tot_nedges = 0;
   const size_t size = { mVertices->size() };
   if (!mIsMultiThread) {
     std::cout << "\tSingle thread implementation" << std::endl;

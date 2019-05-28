@@ -15,6 +15,7 @@
 #ifndef O2_ITS_TRACKING_DBSCAN_H_
 #define O2_ITS_TRACKING_DBSCAN_H_
 
+#include <algorithm>
 #include "ITStracking/Graph.h"
 
 namespace o2
@@ -22,18 +23,22 @@ namespace o2
 namespace its
 {
 
+typedef std::pair<int, unsigned char> State;
+
 template <typename T>
 class DBScan : Graph<T>
 {
  public:
   DBScan() = delete;
   explicit DBScan(const size_t nThreads);
-  void Init(std::vector<T>&);
+  void init(std::vector<T>&, std::function<bool(const T& v1, const T& v2)>);
   void ClassifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction);
+  void ClassifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction, std::function<bool(State&, State&)> sortFunction);
+  std::vector<State> getStates() const { return mStates; }
 
  private:
-  std::vector<std::vector<unsigned char>> mStates;
-  std::function<unsigned char(std::vector<std::vector<Edge>>&)> mClassFunction;
+  std::vector<State> mStates;
+  std::function<unsigned char(std::vector<Edge>&)> mClassFunction;
 };
 
 template <typename T>
@@ -42,33 +47,34 @@ DBScan<T>::DBScan(const size_t nThreads) : Graph<T>(nThreads)
 }
 
 template <typename T>
-void DBScan<T>::Init(std::vector<T>& vertices)
+void DBScan<T>::init(std::vector<T>& vertices, std::function<bool(const T& v1, const T& v2)> discFunction)
 {
-  this->Graph<T>::Init(vertices);
+  this->Graph<T>::init(vertices);
+  this->Graph<T>::computeEdges(discFunction);
 }
 
 template <typename T>
 void DBScan<T>::ClassifyVertices(std::function<unsigned char(std::vector<Edge>& edges)> classFunction)
 {
   mClassFunction = classFunction;
-  const size_t size = { this->mVertices.size() };
+  const size_t size = { this->mVertices->size() };
   mStates.resize(size);
 
-  if (!this->mIsMultiThread) {
+  if (!this->isMultiThreading()) {
     std::cout << "\tClassifying elements" << std::endl;
     for (size_t iVertex{ 0 }; iVertex < size; ++iVertex) {
-      mStates[iVertex] = classFunction(this->mEdges[iVertex]);
+      mStates[iVertex] = std::make_pair<int, unsigned char>(iVertex, classFunction(this->getEdges()[iVertex]));
     }
   } else {
     std::cout << "\tClassifying elements in parallel" << std::endl;
-    const size_t stride{ static_cast<size_t>(std::ceil(this->mVertices.size() / static_cast<size_t>(this->mExecutors.size()))) };
+    const size_t stride{ static_cast<size_t>(std::ceil(this->mVertices->size() / static_cast<size_t>(this->mExecutors.size()))) };
     for (size_t iExecutor{ 0 }; iExecutor < this->mExecutors.size(); ++iExecutor) {
       // We cannot pass a template function to std::thread(), using lambda instead
       this->mExecutors[iExecutor] = std::thread(
         [iExecutor, stride, this](const auto& classFunction) {
-          for (size_t iVertex{ iExecutor * stride }; iVertex < stride * (iExecutor + 1) && iVertex < this->mVertices.size(); ++iVertex) {
-            for (size_t iEdge{ 0 }; iEdge < this->mEdges[iVertex].size(); ++iEdge) {
-              classFunction(this->mEdges[iEdge]);
+          for (size_t iVertex{ iExecutor * stride }; iVertex < stride * (iExecutor + 1) && iVertex < this->mVertices->size(); ++iVertex) {
+            for (size_t iEdge{ 0 }; iEdge < this->getEdges()[iVertex].size(); ++iEdge) {
+              mStates[iVertex] = std::make_pair<int, unsigned char> (iVertex, classFunction(this->getEdges()[iEdge]));
             }
           }
         },
@@ -80,10 +86,18 @@ void DBScan<T>::ClassifyVertices(std::function<unsigned char(std::vector<Edge>& 
   }
 }
 
+template <typename T>
+void DBScan<T>::ClassifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction, std::function<bool(State&, State&)> sortFunction)
+{
+  ClassifyVertices(classFunction);
+  std::sort(mStates.begin(), mStates.end(), sortFunction);
+
+}
+
 struct Centroid final {
   Centroid() = default;
   Centroid(int* indices, float* position);
-  void Init();
+  void init();
   static float ComputeDistance(const Centroid& c1, const Centroid& c2);
 
   int mIndices[2];
