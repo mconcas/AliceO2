@@ -19,6 +19,7 @@
 #include <cmath>
 #include <functional>
 #include <iostream>
+#include <queue>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -37,6 +38,7 @@ class Graph
   Graph() = delete;
   explicit Graph(const size_t nThreads = 1);
   void init(std::vector<T>&);
+  std::vector<int> getCluster(const int);
   void computeEdges(std::function<bool(const T& v1, const T& v2)>);
   std::vector<std::vector<Edge>> getEdges() const { return mEdges; }
   char isMultiThreading() const { return mIsMultiThread; }
@@ -52,9 +54,9 @@ class Graph
   char mIsMultiThread;
 
   // Common data members
-  std::vector<std::pair<int, int>> mVerticesEdgeLUT;
   std::function<bool(const T&, const T&)> mLinkFunction;
   std::vector<std::vector<Edge>> mEdges;
+  std::vector<char> mVisited;
 };
 
 template <typename T>
@@ -75,7 +77,7 @@ void Graph<T>::init(std::vector<T>& vertices)
   }
 
   mEdges.resize(vertices.size());
-  mVerticesEdgeLUT.resize(vertices.size());
+  mVisited.resize(vertices.size(), false);
 }
 
 template <typename T>
@@ -89,7 +91,6 @@ void Graph<T>::computeEdges(std::function<bool(const T& v1, const T& v2)> linkFu
     for (size_t iVertex{ 0 }; iVertex < size; ++iVertex) {
       findVertexEdges(mEdges[iVertex], (*mVertices)[iVertex], iVertex, size);
       tot_nedges += static_cast<int>(mEdges[iVertex].size());
-      mVerticesEdgeLUT[iVertex] = std::make_pair(static_cast<int>(mEdges[iVertex].size()), tot_nedges);
     }
   } else {
     std::cout << "\tMultithread implementation" << std::endl;
@@ -123,6 +124,34 @@ void Graph<T>::findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, c
       localEdges.emplace_back(std::make_pair(vId, iVertex2));
     }
   }
+}
+
+template <typename T>
+std::vector<int> Graph<T>::getCluster(const int vertexId)
+{
+  std::queue<int> idQueue;
+  std::vector<int> indices;
+  idQueue.emplace(vertexId);
+  mVisited[vertexId] = true;
+  // indices.emplace_back(vertexId);
+  if (!mIsMultiThread) {
+    // std::cout << "\tSingle thread clustering" << std::endl;
+    // Consume the queue
+    while (!idQueue.empty()) {
+      const int id = idQueue.front();
+      idQueue.pop();
+      
+      for (Edge edge : mEdges[id]) {
+        if (!mVisited[edge.second]) {
+          idQueue.emplace(edge.second);
+          indices.emplace_back(edge.second);
+          mVisited[edge.second] = true;
+        }
+      }
+    }
+  }
+  std::fill(mVisited.begin(), mVisited.end(), false);
+  return indices;
 }
 
 } // namespace its
