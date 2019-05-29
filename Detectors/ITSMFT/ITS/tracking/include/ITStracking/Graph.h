@@ -87,13 +87,13 @@ void Graph<T>::computeEdges(std::function<bool(const T& v1, const T& v2)> linkFu
   int tot_nedges = 0;
   const size_t size = { mVertices->size() };
   if (!mIsMultiThread) {
-    std::cout << "\tSingle thread implementation" << std::endl;
+    std::cout << "\tComputing edges" << std::endl;
     for (size_t iVertex{ 0 }; iVertex < size; ++iVertex) {
       findVertexEdges(mEdges[iVertex], (*mVertices)[iVertex], iVertex, size);
       tot_nedges += static_cast<int>(mEdges[iVertex].size());
     }
   } else {
-    std::cout << "\tMultithread implementation" << std::endl;
+    std::cout << "\tComputing edges in parallel" << std::endl;
     mNThreads = std::min(static_cast<const size_t>(std::thread::hardware_concurrency()), mNThreads);
     mExecutors.resize(mNThreads);
     const size_t stride{ static_cast<size_t>(std::ceil(mVertices->size() / static_cast<size_t>(mExecutors.size()))) };
@@ -129,28 +129,29 @@ void Graph<T>::findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, c
 template <typename T>
 std::vector<int> Graph<T>::getCluster(const int vertexId)
 {
-  std::queue<int> idQueue;
   std::vector<int> indices;
-  idQueue.emplace(vertexId);
-  mVisited[vertexId] = true;
-  // indices.emplace_back(vertexId);
+
   if (!mIsMultiThread) {
-    // std::cout << "\tSingle thread clustering" << std::endl;
+    std::queue<int> idQueue;
+    std::vector<char> visited;
+    visited.resize(mVertices->size(), false);
+    idQueue.emplace(vertexId);
+    visited[vertexId] = true;
+    std::cout << "\tSingle thread clustering" << std::endl;
     // Consume the queue
     while (!idQueue.empty()) {
       const int id = idQueue.front();
       idQueue.pop();
-      
       for (Edge edge : mEdges[id]) {
-        if (!mVisited[edge.second]) {
+        if (!visited[edge.second]) {
           idQueue.emplace(edge.second);
           indices.emplace_back(edge.second);
-          mVisited[edge.second] = true;
+          visited[edge.second] = true;
         }
       }
     }
+    // std::fill(mVisited.begin(), mVisited.end(), false);
   }
-  std::fill(mVisited.begin(), mVisited.end(), false);
   return indices;
 }
 

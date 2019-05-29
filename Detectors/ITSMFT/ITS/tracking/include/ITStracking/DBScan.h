@@ -32,8 +32,8 @@ class DBScan : Graph<T>
   DBScan() = delete;
   explicit DBScan(const size_t nThreads);
   void init(std::vector<T>&, std::function<bool(const T& v1, const T& v2)>);
-  void ClassifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction);
-  void ClassifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction, std::function<bool(State&, State&)> sortFunction);
+  void classifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction);
+  void classifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction, std::function<bool(State&, State&)> sortFunction);
   std::vector<State> getStates() const { return mStates; }
 
  private:
@@ -54,7 +54,7 @@ void DBScan<T>::init(std::vector<T>& vertices, std::function<bool(const T& v1, c
 }
 
 template <typename T>
-void DBScan<T>::ClassifyVertices(std::function<unsigned char(std::vector<Edge>& edges)> classFunction)
+void DBScan<T>::classifyVertices(std::function<unsigned char(std::vector<Edge>& edges)> classFunction)
 {
   mClassFunction = classFunction;
   const size_t size = { this->mVertices->size() };
@@ -73,9 +73,7 @@ void DBScan<T>::ClassifyVertices(std::function<unsigned char(std::vector<Edge>& 
       this->mExecutors[iExecutor] = std::thread(
         [iExecutor, stride, this](const auto& classFunction) {
           for (size_t iVertex{ iExecutor * stride }; iVertex < stride * (iExecutor + 1) && iVertex < this->mVertices->size(); ++iVertex) {
-            for (size_t iEdge{ 0 }; iEdge < this->getEdges()[iVertex].size(); ++iEdge) {
-              mStates[iVertex] = std::make_pair<int, unsigned char> (iVertex, classFunction(this->getEdges()[iEdge]));
-            }
+            mStates[iVertex] = std::make_pair<int, unsigned char>(iVertex, classFunction(this->getEdges()[iVertex]));
           }
         },
         mClassFunction);
@@ -87,11 +85,10 @@ void DBScan<T>::ClassifyVertices(std::function<unsigned char(std::vector<Edge>& 
 }
 
 template <typename T>
-void DBScan<T>::ClassifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction, std::function<bool(State&, State&)> sortFunction)
+void DBScan<T>::classifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction, std::function<bool(State&, State&)> sortFunction)
 {
-  ClassifyVertices(classFunction);
+  classifyVertices(classFunction);
   std::sort(mStates.begin(), mStates.end(), sortFunction);
-
 }
 
 struct Centroid final {
