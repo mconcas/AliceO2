@@ -31,7 +31,7 @@ namespace o2
 namespace its
 {
 
-typedef std::pair<int, int> Edge;
+typedef int Edge;
 
 class Barrier
 {
@@ -69,7 +69,8 @@ class Graph
 
   // Common data members
   std::function<bool(const T&, const T&)> mLinkFunction;
-  std::vector<std::vector<Edge>> mEdges; // -> TODO: use vector of int.
+  // std::vector<std::vector<Edge>> mEdges; // -> TODO: use vector of int.
+  std::vector<std::vector<Edge>> mEdges;
   std::vector<char> mVisited;
 };
 
@@ -118,7 +119,7 @@ void Graph<T>::computeEdges(std::function<bool(const T& v1, const T& v2)> linkFu
           for (size_t iVertex1{ iExecutor * stride }; iVertex1 < stride * (iExecutor + 1) && iVertex1 < mVertices->size(); ++iVertex1) {
             for (size_t iVertex2{ 0 }; iVertex2 < mVertices->size(); ++iVertex2) {
               if (iVertex1 != iVertex2 && linkFunction((*mVertices)[iVertex1], (*mVertices)[iVertex2])) {
-                mEdges[iVertex1].emplace_back(iVertex1, iVertex2);
+                mEdges[iVertex1].emplace_back(iVertex2);
               }
             }
           }
@@ -135,7 +136,7 @@ void Graph<T>::findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, c
 {
   for (size_t iVertex2{ 0 }; iVertex2 < size; ++iVertex2) {
     if (vId != iVertex2 && mLinkFunction(vertex, (*mVertices)[iVertex2])) {
-      localEdges.emplace_back(std::make_pair(vId, iVertex2));
+      localEdges.emplace_back(/*std::make_pair(vId,*/ iVertex2);
     }
   }
 }
@@ -159,10 +160,10 @@ std::vector<int> Graph<T>::getCluster(const int vertexId)
       const int id = idQueue.front();
       idQueue.pop();
       for (Edge edge : mEdges[id]) {
-        if (!visited[edge.second]) {
-          idQueue.emplace(edge.second);
-          indices.emplace_back(edge.second);
-          visited[edge.second] = true;
+        if (!visited[edge]) {
+          idQueue.emplace(edge);
+          indices.emplace_back(edge);
+          visited[edge] = true;
         }
       }
     }
@@ -192,8 +193,8 @@ std::vector<int> Graph<T>::getCluster(const int vertexId)
             for (size_t iVertex{ executorId * stride }; iVertex < stride * (executorId + 1) && iVertex < this->mVertices->size(); ++iVertex) {
               if (flags[iVertex]) {
                 for (auto& edge : mEdges[iVertex]) {
-                  if (!visited[edge.second]) {
-                    frontier[edge.second] = true;
+                  if (!visited[edge]) {
+                    frontier[edge] = true;
                   }
                 }
               }

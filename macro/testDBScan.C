@@ -22,7 +22,7 @@ void dumpEdges(const std::vector<std::vector<o2::its::Edge>>& edgesVector)
 {
   for (size_t i{ 0 }; i < edgesVector.size(); ++i) {
     for (auto& edge : edgesVector[i])
-      std::cout << edge.first << " -> " << edge.second << std::endl;
+      std::cout << i << " -> " << edge << std::endl;
   }
 }
 
@@ -46,17 +46,16 @@ void dumpStates(const std::vector<State>& states)
   }
 }
 
-void checkEdgeConsistency(const std::vector<std::vector<std::pair<int, int>>>& edges_s, const std::vector<std::vector<std::pair<int, int>>>& edges_p, bool debug = false)
+void checkEdgeConsistency(const std::vector<std::vector<int>>& edges_s, const std::vector<std::vector<int>>& edges_p, bool debug = false)
 {
-  std::cout<<"\tChecking Edges consistency...";
+  std::cout << "\tChecking Edges consistency...";
   for (size_t i{ 0 }; i < edges_p.size(); ++i) {
     if (edges_s[i].size() != 0 && edges_p[i].size() != 0) {
       if (edges_s[i].size() == edges_p[i].size()) {
         for (size_t j{ 0 }; j < edges_p[i].size(); ++j) {
-          if ((edges_s[i][j].first != edges_p[i][j].first) ||
-              (edges_s[i][j].second != edges_p[i][j].second)) {
+          if (edges_s[i][j] != edges_p[i][j]) {
             std::cout << "\tserial\t\tparallel\n"
-                      << edges_s[i][j].first << " -> " << edges_s[i][j].second << "\t\t" << edges_p[i][j].first << " -> " << edges_p[i][j].second << std::endl;
+                      << i << " -> " << edges_s[i][j] << "\t\t" << i << " -> " << edges_p[i][j] << std::endl;
           }
         }
       } else {
@@ -67,12 +66,12 @@ void checkEdgeConsistency(const std::vector<std::vector<std::pair<int, int>>>& e
         std::cout << "Edge[" << i << "] size: serial is " << edges_s[i].size() << "; parallel is " << edges_p[i].size() << std::endl;
     }
   }
-  std::cout<<" done\n";
+  std::cout << " done\n";
 }
 
 void checkStateConsistency(const std::vector<State>& states_s, const std::vector<State>& states_p)
 {
-  std::cout<<"\tChecking States consistency...";
+  std::cout << "\tChecking States consistency...";
   for (size_t i{ 0 }; i < states_p.size(); ++i) {
     if ((states_s[i].first != states_p[i].first) ||
         (states_s[i].second != states_p[i].second)) {
@@ -80,12 +79,12 @@ void checkStateConsistency(const std::vector<State>& states_s, const std::vector
                 << states_s[i].first << " -> " << states_s[i].second << "\t\t" << states_p[i].first << " -> " << states_p[i].second << std::endl;
     }
   }
-  std::cout<<" done\n";
+  std::cout << " done\n";
 }
 
 void checkClusterConsistency(o2::its::Graph<o2::its::Centroid>* graph_serial, o2::its::Graph<o2::its::Centroid>* graph_parallel, const size_t range)
 {
-  std::cout<<"\tChecking Clusters consistency...";
+  std::cout << "\tChecking Clusters consistency...";
   for (size_t i{ 0 }; i < range; ++i) {
     auto cluster_s = graph_serial->getCluster(i);
     auto cluster_p = graph_parallel->getCluster(i);
@@ -111,7 +110,7 @@ void checkClusterConsistency(o2::its::Graph<o2::its::Centroid>* graph_serial, o2
       }
     }
   }
-  std::cout<<" done\n";
+  std::cout << " done\n";
 }
 
 void testDBScan()
