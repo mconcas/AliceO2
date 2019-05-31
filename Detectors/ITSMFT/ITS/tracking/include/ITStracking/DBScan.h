@@ -61,12 +61,12 @@ void DBScan<T>::classifyVertices(std::function<unsigned char(std::vector<Edge>& 
   mStates.resize(size);
 
   if (!this->isMultiThreading()) {
-    std::cout << "\tClassifying elements" << std::endl;
+    // std::cout << "\tClassifying elements" << std::endl;
     for (size_t iVertex{ 0 }; iVertex < size; ++iVertex) {
       mStates[iVertex] = std::make_pair<int, unsigned char>(iVertex, classFunction(this->getEdges()[iVertex]));
     }
   } else {
-    std::cout << "\tClassifying elements in parallel" << std::endl;
+    // std::cout << "\tClassifying elements in parallel" << std::endl;
     const size_t stride{ static_cast<size_t>(std::ceil(this->mVertices->size() / static_cast<size_t>(this->mExecutors.size()))) };
     for (size_t iExecutor{ 0 }; iExecutor < this->mExecutors.size(); ++iExecutor) {
       // We cannot pass a template function to std::thread(), using lambda instead

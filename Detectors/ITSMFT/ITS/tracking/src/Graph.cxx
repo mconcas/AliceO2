@@ -15,11 +15,22 @@
 // #include <iterator>
 
 // #include "ITStracking/Definitions.h"
+#include "ITStracking/Graph.h"
 
 namespace o2
 {
 namespace its
 {
+
+void Barrier::Wait()
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    if (--count == 0) {
+      condition.notify_all();
+    } else {
+      condition.wait(lock, [this] { return count == 0; });
+    }
+  }
 
 } // namespace its
 } // namespace o2

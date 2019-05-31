@@ -17,8 +17,10 @@
 
 #include <array>
 #include <cmath>
+#include <condition_variable>
 #include <functional>
 #include <iostream>
+#include <mutex>
 #include <queue>
 #include <thread>
 #include <utility>
@@ -30,6 +32,18 @@ namespace its
 {
 
 typedef std::pair<int, int> Edge;
+
+class Barrier
+{
+ public:
+  explicit Barrier(std::size_t count) : count(count) {}
+  void Wait();
+
+ private:
+  std::mutex mutex;
+  std::condition_variable condition;
+  std::size_t count;
+};
 
 template <typename T>
 class Graph
@@ -55,7 +69,7 @@ class Graph
 
   // Common data members
   std::function<bool(const T&, const T&)> mLinkFunction;
-  std::vector<std::vector<Edge>> mEdges;
+  std::vector<std::vector<Edge>> mEdges; // -> TODO: use vector of int.
   std::vector<char> mVisited;
 };
 
@@ -87,13 +101,13 @@ void Graph<T>::computeEdges(std::function<bool(const T& v1, const T& v2)> linkFu
   int tot_nedges = 0;
   const size_t size = { mVertices->size() };
   if (!mIsMultiThread) {
-    std::cout << "\tComputing edges" << std::endl;
+    // std::cout << "\tComputing edges" << std::endl;
     for (size_t iVertex{ 0 }; iVertex < size; ++iVertex) {
       findVertexEdges(mEdges[iVertex], (*mVertices)[iVertex], iVertex, size);
       tot_nedges += static_cast<int>(mEdges[iVertex].size());
     }
   } else {
-    std::cout << "\tComputing edges in parallel" << std::endl;
+    // std::cout << "\tComputing edges in parallel" << std::endl;
     mNThreads = std::min(static_cast<const size_t>(std::thread::hardware_concurrency()), mNThreads);
     mExecutors.resize(mNThreads);
     const size_t stride{ static_cast<size_t>(std::ceil(mVertices->size() / static_cast<size_t>(mExecutors.size()))) };
@@ -129,15 +143,17 @@ void Graph<T>::findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, c
 template <typename T>
 std::vector<int> Graph<T>::getCluster(const int vertexId)
 {
+  // This method uses a BFS algorithm to return all the graph
+  // vertex ids belonging to a graph
   std::vector<int> indices;
 
   if (!mIsMultiThread) {
     std::queue<int> idQueue;
-    std::vector<char> visited;
-    visited.resize(mVertices->size(), false);
+    std::vector<char> visited(mVertices->size(), false);
     idQueue.emplace(vertexId);
     visited[vertexId] = true;
-    std::cout << "\tSingle thread clustering" << std::endl;
+    // std::cout << "\tSingle thread clustering" << std::endl;
+
     // Consume the queue
     while (!idQueue.empty()) {
       const int id = idQueue.front();
@@ -150,7 +166,50 @@ std::vector<int> Graph<T>::getCluster(const int vertexId)
         }
       }
     }
-    // std::fill(mVisited.begin(), mVisited.end(), false);
+  } else {
+    const size_t stride{ static_cast<size_t>(std::ceil(this->mVertices->size() / static_cast<size_t>(this->mExecutors.size()))) };
+
+    std::vector<char> visited(mVertices->size(), false);
+    std::vector<char> frontier(mVertices->size(), false);
+    std::vector<char> flags(mVertices->size(), false);
+
+    frontier[vertexId] = true;
+
+    while (std::any_of(frontier.begin(), frontier.end(), [](const char t) { return t; })) {
+      flags.resize(mVertices->size(), false);
+      Barrier barrier(mExecutors.size());
+      for (size_t iExecutor{ 0 }; iExecutor < this->mExecutors.size(); ++iExecutor) {
+        mExecutors[iExecutor] = std::thread(
+          [&stride, &frontier, &visited, &barrier, &flags, this](const int executorId) {
+            for (size_t iVertex{ executorId * stride }; iVertex < stride * (executorId + 1) && iVertex < this->mVertices->size(); ++iVertex) {
+              if (frontier[iVertex]) {
+                flags[iVertex] = true;
+                frontier[iVertex] = false;
+                visited[iVertex] = true;
+              }
+            }
+            barrier.Wait();
+            for (size_t iVertex{ executorId * stride }; iVertex < stride * (executorId + 1) && iVertex < this->mVertices->size(); ++iVertex) {
+              if (flags[iVertex]) {
+                for (auto& edge : mEdges[iVertex]) {
+                  if (!visited[edge.second]) {
+                    frontier[edge.second] = true;
+                  }
+                }
+              }
+            }
+          },
+          iExecutor);
+      }
+      for (auto&& thread : mExecutors) {
+        thread.join();
+      }
+    }
+    for (size_t iVisited{ 0 }; iVisited < visited.size(); ++iVisited) {
+      if (visited[iVisited] && static_cast<int>(iVisited) != vertexId) {
+        indices.emplace_back(iVisited);
+      }
+    }
   }
   return indices;
 }
