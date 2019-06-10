@@ -118,7 +118,7 @@ void testDBScan()
   std::cout << " --- Test Graph Class ---" << std::endl;
 
   std::default_random_engine generator;
-  std::uniform_int_distribution<int> id_dist(1, 10000);
+  std::uniform_int_distribution<int> id_dist(1, 100000);
   std::uniform_real_distribution<float> coord_dist(-10.f, 10.f);
   std::vector<o2::its::Centroid> centroids;
   for (size_t i{ 0 }; i < 1000; ++i) {
@@ -159,9 +159,9 @@ void testDBScan()
   // dbscan_serial.classifyVertices([nContribs](std::vector<o2::its::Edge>& edges) { return edges.size() == 0 ? 0 : edges.size() > nContribs ? 2 : 1; });
   // dbscan_parallel.classifyVertices([nContribs](std::vector<o2::its::Edge>& edges) { std::cout<<"> "<<edges.size()<<std::endl; return edges.size() == 0 ? 0 : edges.size() > nContribs ? 2 : 1; });
 
-  dbscan_serial.classifyVertices([nContribs](std::vector<o2::its::Edge>& edges) { return edges.size() == 0 ? 0 : edges.size() > nContribs ? 2 : 1; },
+  dbscan_serial.classifyVertices([nContribs](std::vector<o2::its::Edge>& edges) { return edges.size() == 0 ? 0 : edges.size() > static_cast<size_t>(nContribs) ? 2 : 1; },
                                  [](State& s1, State& s2) { return static_cast<int>(s1.second) > static_cast<int>(s2.second); });
-  dbscan_parallel.classifyVertices([nContribs](std::vector<o2::its::Edge>& edges) { return edges.size() == 0 ? 0 : edges.size() > nContribs ? 2 : 1; },
+  dbscan_parallel.classifyVertices([nContribs](std::vector<o2::its::Edge>& edges) { return edges.size() == 0 ? 0 : edges.size() > static_cast<size_t>(nContribs) ? 2 : 1; },
                                    [](State& s1, State& s2) { return static_cast<int>(s1.second) > static_cast<int>(s2.second); });
 
   // dumpStates(dbscan_serial.getStates());
