@@ -9,7 +9,7 @@ typedef std::pair<int, unsigned char> State;
 void dumpClusters(o2::its::Graph<o2::its::Centroid>* graph, size_t range)
 {
   for (size_t i{ 0 }; i < range; ++i) {
-    auto cluster = graph->getCluster(i);
+    auto cluster = graph->getClusterIndices(i);
     std::cout << "cluster starting from " << i << ": ";
     for (auto id : cluster) {
       std::cout << id << " ";
@@ -86,8 +86,8 @@ void checkClusterConsistency(o2::its::Graph<o2::its::Centroid>* graph_serial, o2
 {
   std::cout << "\tChecking Clusters consistency...";
   for (size_t i{ 0 }; i < range; ++i) {
-    auto cluster_s = graph_serial->getCluster(i);
-    auto cluster_p = graph_parallel->getCluster(i);
+    auto cluster_s = graph_serial->getClusterIndices(i);
+    auto cluster_p = graph_parallel->getClusterIndices(i);
     if (cluster_s.size() != cluster_p.size()) {
       std::cout << "Not even the same lenght for clusters: " << i << std::endl;
       std::cout << "\tSerial cluster starting from " << i << ": ";
@@ -127,7 +127,7 @@ void testDBScan()
     centroids.emplace_back(indices, coordinates);
   }
 
-  const float radius{ 3.5f };
+  const float radius{ 4.5f };
   o2::its::Graph<o2::its::Centroid> centroids_graph_serial(1);
   o2::its::Graph<o2::its::Centroid> centroids_graph_parallel(4);
 
@@ -154,7 +154,7 @@ void testDBScan()
   dbscan_serial.init(centroids, [radius](const o2::its::Centroid& c1, const o2::its::Centroid& c2) { return o2::its::Centroid::ComputeDistance(c1, c2) < radius; });
   dbscan_parallel.init(centroids, [radius](const o2::its::Centroid& c1, const o2::its::Centroid& c2) { return o2::its::Centroid::ComputeDistance(c1, c2) < radius; });
 
-  const int nContribs{ 3 };
+  const int nContribs{ 65 };
 
   // dbscan_serial.classifyVertices([nContribs](std::vector<o2::its::Edge>& edges) { return edges.size() == 0 ? 0 : edges.size() > nContribs ? 2 : 1; });
   // dbscan_parallel.classifyVertices([nContribs](std::vector<o2::its::Edge>& edges) { std::cout<<"> "<<edges.size()<<std::endl; return edges.size() == 0 ? 0 : edges.size() > nContribs ? 2 : 1; });
@@ -169,5 +169,9 @@ void testDBScan()
   // dumpStates(dbscan_parallel.getStates());
 
   checkStateConsistency(dbscan_serial.getStates(), dbscan_parallel.getStates());
+  std::vector<std::vector<int>> clusters_serial = dbscan_serial.findAllClusters();
+  std::vector<std::vector<int>> clusters_parallel = dbscan_parallel.findAllClusters();
+  std::cout << "Serial clusters found: " << clusters_serial.size() << std::endl;
+  std::cout << "Serial clusters found: " << clusters_parallel.size() << std::endl;
 }
 #endif

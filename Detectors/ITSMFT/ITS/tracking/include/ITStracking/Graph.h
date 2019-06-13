@@ -52,7 +52,9 @@ class Graph
   Graph() = delete;
   explicit Graph(const size_t nThreads = 1);
   void init(std::vector<T>&);
-  std::vector<int> getCluster(const int);
+  std::vector<char> getCluster(const int);
+  std::vector<int> getClusterIndices(const int);
+  std::vector<int> getClusterIndices(const std::vector<char>, const int);
   void computeEdges(std::function<bool(const T& v1, const T& v2)>);
   std::vector<std::vector<Edge>> getEdges() const { return mEdges; }
   char isMultiThreading() const { return mIsMultiThread; }
@@ -142,15 +144,16 @@ void Graph<T>::findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, c
 }
 
 template <typename T>
-std::vector<int> Graph<T>::getCluster(const int vertexId)
+std::vector<char> Graph<T>::getCluster(const int vertexId)
 {
   // This method uses a BFS algorithm to return all the graph
   // vertex ids belonging to a graph
   std::vector<int> indices;
+  std::vector<char> visited(mVertices->size(), false);
 
   if (!mIsMultiThread) {
     std::queue<int> idQueue;
-    std::vector<char> visited(mVertices->size(), false);
+    // std::vector<char> visited(mVertices->size(), false);
     idQueue.emplace(vertexId);
     visited[vertexId] = true;
     // std::cout << "\tSingle thread clustering" << std::endl;
@@ -169,8 +172,7 @@ std::vector<int> Graph<T>::getCluster(const int vertexId)
     }
   } else {
     const size_t stride{ static_cast<size_t>(std::ceil(this->mVertices->size() / static_cast<size_t>(this->mExecutors.size()))) };
-
-    std::vector<char> visited(mVertices->size(), false);
+    // std::vector<char> visited(mVertices->size(), false);
     std::vector<char> frontier(mVertices->size(), false);
     std::vector<char> flags(mVertices->size(), false);
 
@@ -206,13 +208,33 @@ std::vector<int> Graph<T>::getCluster(const int vertexId)
         thread.join();
       }
     }
-    for (size_t iVisited{ 0 }; iVisited < visited.size(); ++iVisited) {
-      if (visited[iVisited] && static_cast<int>(iVisited) != vertexId) {
-        indices.emplace_back(iVisited);
-      }
+    // for (size_t iVisited{ 0 }; iVisited < visited.size(); ++iVisited) {
+    //   if (visited[iVisited] && static_cast<int>(iVisited) != vertexId) {
+    //     indices.emplace_back(iVisited);
+    //   }
+    // }
+  }
+  return visited;
+}
+
+template <typename T>
+std::vector<int> Graph<T>::getClusterIndices(const std::vector<char> visited, const int vertexId)
+{
+  // Return a smaller vector only with the IDs of the vertices belonging to cluster
+  std::vector<int> indices;
+  for (size_t iVisited{ 0 }; iVisited < visited.size(); ++iVisited) {
+    if (visited[iVisited] && static_cast<int>(iVisited) != vertexId) {
+      indices.emplace_back(iVisited);
     }
   }
   return indices;
+}
+
+template <typename T>
+std::vector<int> Graph<T>::getClusterIndices(const int vertexId)
+{
+  std::vector<char> visited = std::move(getCluster(vertexId));
+  return getClusterIndices(visited, vertexId);
 }
 
 } // namespace its

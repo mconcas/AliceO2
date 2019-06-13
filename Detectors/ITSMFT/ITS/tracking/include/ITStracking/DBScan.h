@@ -35,6 +35,8 @@ class DBScan : Graph<T>
   void classifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction);
   void classifyVertices(std::function<unsigned char(std::vector<Edge>&)> classFunction, std::function<bool(State&, State&)> sortFunction);
   std::vector<State> getStates() const { return mStates; }
+  std::vector<int> getCores();
+  std::vector<std::vector<int>> findAllClusters();
 
  private:
   std::vector<State> mStates;
@@ -89,6 +91,32 @@ void DBScan<T>::classifyVertices(std::function<unsigned char(std::vector<Edge>&)
 {
   classifyVertices(classFunction);
   std::sort(mStates.begin(), mStates.end(), sortFunction);
+}
+
+template <typename T>
+std::vector<int> DBScan<T>::getCores()
+{
+  std::vector<State> cores;
+  std::vector<int> coreIndices;
+  std::copy_if(mStates.begin(), mStates.end(), std::back_inserter(cores), [](const State& state) { return state.second == 2; });
+  std::transform(cores.begin(), cores.end(), std::back_inserter(coreIndices), [](const State& state) -> int { return state.first; });
+  return coreIndices;
+}
+
+template <typename T>
+std::vector<std::vector<int>> DBScan<T>::findAllClusters()
+{
+  std::vector<int> cores = getCores();
+  std::vector<char> usedVertices(this->mVertices->size(), false);
+  std::vector<std::vector<int>> clusters;
+  for (size_t core{ 0 }; core < cores.size(); ++core) {
+    if (!usedVertices[core]) {
+      std::vector<char> clusterFlags = this->getCluster(core);
+      std::transform(usedVertices.begin(), usedVertices.end(), clusterFlags.begin(), usedVertices.begin(), std::logical_and<bool>() );
+      clusters.emplace_back(this->getClusterIndices(clusterFlags, core));
+    }
+  }
+  return clusters;
 }
 
 struct Centroid final {
