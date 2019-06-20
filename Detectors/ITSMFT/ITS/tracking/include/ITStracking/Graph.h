@@ -52,9 +52,9 @@ class Graph
   Graph() = delete;
   explicit Graph(const size_t nThreads = 1);
   void init(std::vector<T>&);
-  std::vector<char> getCluster(const int);
+  std::vector<unsigned char> getCluster(const int);
   std::vector<int> getClusterIndices(const int);
-  std::vector<int> getClusterIndices(const std::vector<char>, const int);
+  std::vector<int> getClusterIndices(const std::vector<unsigned char> /* , const int*/);
   void computeEdges(std::function<bool(const T& v1, const T& v2)>);
   std::vector<std::vector<Edge>> getEdges() const { return mEdges; }
   char isMultiThreading() const { return mIsMultiThread; }
@@ -71,9 +71,8 @@ class Graph
 
   // Common data members
   std::function<bool(const T&, const T&)> mLinkFunction;
-  // std::vector<std::vector<Edge>> mEdges; // -> TODO: use vector of int.
   std::vector<std::vector<Edge>> mEdges;
-  std::vector<char> mVisited;
+  std::vector<unsigned char> mVisited;
 };
 
 template <typename T>
@@ -104,13 +103,11 @@ void Graph<T>::computeEdges(std::function<bool(const T& v1, const T& v2)> linkFu
   int tot_nedges = 0;
   const size_t size = { mVertices->size() };
   if (!mIsMultiThread) {
-    // std::cout << "\tComputing edges" << std::endl;
     for (size_t iVertex{ 0 }; iVertex < size; ++iVertex) {
       findVertexEdges(mEdges[iVertex], (*mVertices)[iVertex], iVertex, size);
       tot_nedges += static_cast<int>(mEdges[iVertex].size());
     }
   } else {
-    // std::cout << "\tComputing edges in parallel" << std::endl;
     mNThreads = std::min(static_cast<const size_t>(std::thread::hardware_concurrency()), mNThreads);
     mExecutors.resize(mNThreads);
     const size_t stride{ static_cast<size_t>(std::ceil(mVertices->size() / static_cast<size_t>(mExecutors.size()))) };
@@ -138,25 +135,23 @@ void Graph<T>::findVertexEdges(std::vector<Edge>& localEdges, const T& vertex, c
 {
   for (size_t iVertex2{ 0 }; iVertex2 < size; ++iVertex2) {
     if (vId != iVertex2 && mLinkFunction(vertex, (*mVertices)[iVertex2])) {
-      localEdges.emplace_back(/*std::make_pair(vId,*/ iVertex2);
+      localEdges.emplace_back(iVertex2);
     }
   }
 }
 
 template <typename T>
-std::vector<char> Graph<T>::getCluster(const int vertexId)
+std::vector<unsigned char> Graph<T>::getCluster(const int vertexId)
 {
   // This method uses a BFS algorithm to return all the graph
   // vertex ids belonging to a graph
   std::vector<int> indices;
-  std::vector<char> visited(mVertices->size(), false);
+  std::vector<unsigned char> visited(mVertices->size(), false);
 
   if (!mIsMultiThread) {
     std::queue<int> idQueue;
-    // std::vector<char> visited(mVertices->size(), false);
     idQueue.emplace(vertexId);
     visited[vertexId] = true;
-    // std::cout << "\tSingle thread clustering" << std::endl;
 
     // Consume the queue
     while (!idQueue.empty()) {
@@ -171,13 +166,12 @@ std::vector<char> Graph<T>::getCluster(const int vertexId)
       }
     }
   } else {
-    const size_t stride{ static_cast<size_t>(std::ceil(this->mVertices->size() / static_cast<size_t>(this->mExecutors.size()))) };
-    // std::vector<char> visited(mVertices->size(), false);
-    std::vector<char> frontier(mVertices->size(), false);
-    std::vector<char> flags(mVertices->size(), false);
+    const size_t stride{ static_cast<size_t>(std::ceil(static_cast<float>(this->mVertices->size()) / static_cast<size_t>(this->mExecutors.size()))) };
+    std::vector<unsigned char> frontier(mVertices->size(), false);
+    std::vector<unsigned char> flags(mVertices->size(), false);
 
     frontier[vertexId] = true;
-
+    int counter {0};
     while (std::any_of(frontier.begin(), frontier.end(), [](const char t) { return t; })) {
       flags.resize(mVertices->size(), false);
       Barrier barrier(mExecutors.size());
@@ -208,22 +202,17 @@ std::vector<char> Graph<T>::getCluster(const int vertexId)
         thread.join();
       }
     }
-    // for (size_t iVisited{ 0 }; iVisited < visited.size(); ++iVisited) {
-    //   if (visited[iVisited] && static_cast<int>(iVisited) != vertexId) {
-    //     indices.emplace_back(iVisited);
-    //   }
-    // }
   }
   return visited;
 }
 
 template <typename T>
-std::vector<int> Graph<T>::getClusterIndices(const std::vector<char> visited, const int vertexId)
+std::vector<int> Graph<T>::getClusterIndices(const std::vector<unsigned char> visited)
 {
-  // Return a smaller vector only with the IDs of the vertices belonging to cluster
+  // Return a smaller vector only with the int IDs of the vertices belonging to cluster
   std::vector<int> indices;
   for (size_t iVisited{ 0 }; iVisited < visited.size(); ++iVisited) {
-    if (visited[iVisited] && static_cast<int>(iVisited) != vertexId) {
+    if (visited[iVisited]) {
       indices.emplace_back(iVisited);
     }
   }
@@ -233,8 +222,8 @@ std::vector<int> Graph<T>::getClusterIndices(const std::vector<char> visited, co
 template <typename T>
 std::vector<int> Graph<T>::getClusterIndices(const int vertexId)
 {
-  std::vector<char> visited = std::move(getCluster(vertexId));
-  return getClusterIndices(visited, vertexId);
+  std::vector<unsigned char> visited = std::move(getCluster(vertexId));
+  return getClusterIndices(visited);
 }
 
 } // namespace its
