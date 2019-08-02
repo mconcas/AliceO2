@@ -38,7 +38,7 @@ class VertexerTraitsGPU : public VertexerTraits
  public:
   VertexerTraitsGPU();
   virtual ~VertexerTraitsGPU();
-  void computeTracklets(const bool useMCLabel = false) override;
+  void computeTracklets() override;
   GPU_DEVICE static const int2 getBinsPhiRectWindow(const Cluster&, float maxdeltaphi);
 
  protected:

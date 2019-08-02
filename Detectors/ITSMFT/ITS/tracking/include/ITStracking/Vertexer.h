@@ -27,10 +27,12 @@
 #include "ITStracking/VertexerTraits.h"
 #include "ReconstructionDataFormats/Vertex.h"
 
-// debug
 #include "ITStracking/ClusterLines.h"
 #include "ITStracking/Tracklet.h"
 #include "ITStracking/Cluster.h"
+
+
+class TTree;
 
 namespace o2
 {
@@ -43,7 +45,7 @@ class Vertexer
 {
  public:
   Vertexer(VertexerTraits* traits);
-
+  virtual ~Vertexer() = default;
   Vertexer(const Vertexer&) = delete;
   Vertexer& operator=(const Vertexer&) = delete;
 
@@ -56,21 +58,27 @@ class Vertexer
   VertexerTraits* getTraits() const { return mTraits; };
 
   float clustersToVertices(ROframe&, const bool useMc = false, std::ostream& = std::cout);
-
-  template <typename... T>
-  void initialiseVertexer(T&&... args);
+  void filterMCTracklets();
+  void validateTracklets();
 
   template <typename... T>
   void findTracklets(T&&... args);
 
   void findTrivialMCTracklets();
-
   void findVertices();
+
+  template <typename... T>
+  void initialiseVertexer(T&&... args);
 
   // Utils
   void dumpTraits();
   template <typename... T>
   float evaluateTask(void (Vertexer::*)(T...), const char*, std::ostream& ostream, T&&... args);
+
+  // Debug
+  void setDebugCombinatorics();
+  void setDebugTracklets();
+  void setDebugLines();
 
   // debug, TBR
   std::vector<Line> getLines() const;
@@ -86,6 +94,11 @@ class Vertexer
   std::uint32_t mROframe = 0;
   VertexerTraits* mTraits = nullptr;
 };
+
+inline void Vertexer::filterMCTracklets()
+{
+  mTraits->computeMCFiltering();
+}
 
 template <typename... T>
 void Vertexer::initialiseVertexer(T&&... args)
@@ -119,11 +132,16 @@ inline void Vertexer::dumpTraits()
   mTraits->dumpVertexerTraits();
 }
 
+inline void Vertexer::validateTracklets()
+{
+  mTraits->computeTrackletMatching();
+}
+
 inline std::vector<Vertex> Vertexer::exportVertices()
 {
   std::vector<Vertex> vertices;
   for (auto& vertex : mTraits->getVertices()) {
-    std::cout << "Emplacing vertex with: " << vertex.mContributors << " contribs" << std::endl;
+    std::cout << "\t\tFound vertex with: " <<std::setw(6)<< vertex.mContributors << " contributors" << std::endl;
     vertices.emplace_back(Point3D<float>(vertex.mX, vertex.mY, vertex.mZ), vertex.mRMS2, vertex.mContributors, vertex.mAvgDistance2);
     vertices.back().setTimeStamp(vertex.mTimeStamp);
   }
@@ -156,46 +174,56 @@ float Vertexer::evaluateTask(void (Vertexer::*task)(T...), const char* taskName,
   return diff;
 }
 
+inline void Vertexer::setDebugCombinatorics()
+{
+  mTraits->setDebugFlag(VertexerDebug::CombinatoricsTreeAll);
+}
+
+inline void Vertexer::setDebugTracklets()
+{
+  mTraits->setDebugFlag(VertexerDebug::TrackletTreeAll);
+}
+
+inline void Vertexer::setDebugLines()
+{
+  mTraits->setDebugFlag(VertexerDebug::LineTreeAll);
+}
+
 // DEBUG
-inline std::vector<Line> Vertexer::getLines() const
-{
-  return mTraits->mTracklets;
-}
+// inline std::vector<Line> Vertexer::getLines() const
+// {
+//   return mTraits->mTracklets;
+// }
 
-inline std::vector<Tracklet> Vertexer::getTracklets01() const
-{
-  return mTraits->mComb01;
-}
+// inline std::vector<Tracklet> Vertexer::getTracklets01() const
+// {
+//   return mTraits->mComb01;
+// }
 
-inline std::vector<Tracklet> Vertexer::getTracklets12() const
-{
-  return mTraits->mComb12;
-}
+// inline std::vector<Tracklet> Vertexer::getTracklets12() const
+// {
+//   return mTraits->mComb12;
+// }
 
-inline std::array<std::vector<Cluster>, 3> Vertexer::getClusters() const
-{
-  return mTraits->mClusters;
-}
+// inline std::array<std::vector<Cluster>, 3> Vertexer::getClusters() const
+// {
+//   return mTraits->mClusters;
+// }
 
-inline std::vector<std::array<float, 9>> Vertexer::getDeltaTanLambdas() const
-{
-  return mTraits->mTrackletInfo;
-}
+// inline std::vector<std::array<float, 4>> Vertexer::getCentroids() const
+// {
+//   return mTraits->mCentroids;
+// }
 
-inline std::vector<std::array<float, 4>> Vertexer::getCentroids() const
-{
-  return mTraits->mCentroids;
-}
+// inline std::vector<std::array<float, 6>> Vertexer::getLinesData() const
+// {
+//   return mTraits->mLinesData;
+// }
 
-inline std::vector<std::array<float, 6>> Vertexer::getLinesData() const
-{
-  return mTraits->mLinesData;
-}
-
-inline void Vertexer::processLines()
-{
-  mTraits->processLines();
-}
+// // inline void Vertexer::processLines()
+// // {
+// //   mTraits->processLines();
+// // }
 
 } // namespace its
 } // namespace o2
