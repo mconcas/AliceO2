@@ -20,6 +20,7 @@
 
 #define LAYER0_TO_LAYER1 0
 #define LAYER1_TO_LAYER2 1
+#define __VERTEXER_ITS_DEBUG
 
 namespace o2
 {
@@ -70,7 +71,7 @@ void trackleterKernelSerial(
           const Cluster& nextCluster{clustersNextLayer[iNextLayerClusterIndex]};
           const auto& lblNext = evt->getClusterLabels(layerIndex, nextCluster.clusterId);
           const auto& lblCurr = evt->getClusterLabels(1, currentCluster.clusterId);
-          const unsigned char testMC{!isMc || (lblNext.compare(lblCurr) == 1)};
+          const unsigned char testMC{!isMc || (lblNext.compare(lblCurr) == 1 && lblCurr.getSourceID())};
           if (gpu::GPUCommonMath::Abs(currentCluster.phiCoordinate - nextCluster.phiCoordinate) < phiCut && testMC) {
             if (storedTracklets < maxTrackletsPerCluster) {
               if (layerOrder == LAYER0_TO_LAYER1) {
@@ -241,7 +242,7 @@ void VertexerTraits::computeTrackletsPureMontecarlo()
       const Cluster& nextCluster{mClusters[1][iNextLayerClusterIndex]};
       const auto& lblNext = mEvent->getClusterLabels(1, nextCluster.clusterId);
       const auto& lblCurr = mEvent->getClusterLabels(0, currentCluster.clusterId);
-      if (lblNext.compare(lblCurr) == 1) {
+      if (lblNext.compare(lblCurr) == 1 && lblCurr.getSourceID() ==0) {
         mComb01.emplace_back(iCurrentLayerClusterIndex, iNextLayerClusterIndex, currentCluster, nextCluster);
       }
     }
@@ -253,7 +254,7 @@ void VertexerTraits::computeTrackletsPureMontecarlo()
       const Cluster& nextCluster{mClusters[1][iNextLayerClusterIndex]};
       const auto& lblNext = mEvent->getClusterLabels(1, nextCluster.clusterId);
       const auto& lblCurr = mEvent->getClusterLabels(2, currentCluster.clusterId);
-      if (lblNext.compare(lblCurr) == 1) {
+      if (lblNext.compare(lblCurr) == 1 && lblCurr.getSourceID()==0) {
         mComb12.emplace_back(iNextLayerClusterIndex, iCurrentLayerClusterIndex, nextCluster, currentCluster);
       }
     }
