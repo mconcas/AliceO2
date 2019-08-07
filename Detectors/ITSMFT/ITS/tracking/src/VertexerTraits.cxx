@@ -71,7 +71,7 @@ void trackleterKernelSerial(
           const Cluster& nextCluster{clustersNextLayer[iNextLayerClusterIndex]};
           const auto& lblNext = evt->getClusterLabels(layerIndex, nextCluster.clusterId);
           const auto& lblCurr = evt->getClusterLabels(1, currentCluster.clusterId);
-          const unsigned char testMC{!isMc || (lblNext.compare(lblCurr) == 1 && lblCurr.getSourceID())};
+          const unsigned char testMC{!isMc || (lblNext.compare(lblCurr) == 1 && lblCurr.getSourceID()==0)};
           if (gpu::GPUCommonMath::Abs(currentCluster.phiCoordinate - nextCluster.phiCoordinate) < phiCut && testMC) {
             if (storedTracklets < maxTrackletsPerCluster) {
               if (layerOrder == LAYER0_TO_LAYER1) {
@@ -118,7 +118,7 @@ void trackletSelectionKernelSerial(
           const auto& lblClus0 = evt->getClusterLabels(0, clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].clusterId);
           const auto& lblClus1 = evt->getClusterLabels(1, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].clusterId);
           const auto& lblClus2 = evt->getClusterLabels(2, debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].clusterId);
-          const unsigned char isValidated{(lblClus0.compare(lblClus1) == 1 && lblClus0.compare(lblClus2) == 1)};
+          const unsigned char isValidated{(lblClus0.compare(lblClus1) == 1 && lblClus0.compare(lblClus2) == 1 && lblClus0.getSourceID()==0)};
           tlv.push_back(std::array<float, 9>{deltaTanLambda,
                                              clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].zCoordinate, clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].rCoordinate,
                                              clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].zCoordinate, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].rCoordinate,
