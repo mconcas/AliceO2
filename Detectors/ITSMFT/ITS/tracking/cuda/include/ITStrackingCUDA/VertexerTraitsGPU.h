@@ -10,7 +10,7 @@
 ///
 /// \file VertexerTraitsGPU.h
 /// \brief
-///
+/// \author matteo.concas@cern.ch
 
 #ifndef O2_ITS_TRACKING_VERTEXER_TRAITS_GPU_H_
 #define O2_ITS_TRACKING_VERTEXER_TRAITS_GPU_H_

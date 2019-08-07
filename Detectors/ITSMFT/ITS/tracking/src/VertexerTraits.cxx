@@ -10,22 +10,20 @@
 ///
 /// \file VertexerTraits.cxx
 /// \brief
-///
+/// \author matteo.concas@cern.ch
 
 #include <cassert>
-
-// debug
-#define __ALLOW_DEBUG_TREES_ITS_ITS
-
-#ifdef __ALLOW_DEBUG_TREES_ITS_ITS
-#include "CommonUtils/TreeStreamRedirector.h"
-#endif
-// \debug
 
 #include "ITStracking/VertexerTraits.h"
 #include "ITStracking/ROframe.h"
 #include "ITStracking/ClusterLines.h"
 #include "ITStracking/Tracklet.h"
+
+// debug
+#ifdef _ALLOW_DEBUG_TREES_ITS_
+#include "CommonUtils/TreeStreamRedirector.h"
+#endif
+// \debug
 
 #define LAYER0_TO_LAYER1 0
 #define LAYER1_TO_LAYER2 1
@@ -338,6 +336,9 @@ void VertexerTraits::computeTrackletMatching()
   if (mTreeStream && isDebugFlag(VertexerDebug::LineTreeAll)) {
     fillLinesInfoTree();
   }
+  if (mTreeStream && isDebugFlag(VertexerDebug::LineSummaryAll)) {
+    fillLinesSummaryTree();
+  }
 #endif
 }
 
@@ -456,16 +457,15 @@ void VertexerTraits::fillCombinatoricsTree()
   assert(mEvent != nullptr);
   for (auto& combination : mComb01) {
     (*mTreeStream)
-      << "combinatorics"
-      << "layer0layer1"
+      << "combinatorics01"
       << "tanLambda=" << combination.tanLambda
-      << "phi=" << combination.phiCoordinate;
+      << "phi=" << combination.phiCoordinate
+      << "\n";
   }
 
   for (auto& combination : mComb12) {
     (*mTreeStream)
-      << "combinatorics"
-      << "layer1layer2"
+      << "combinatorics12"
       << "tanLambda=" << combination.tanLambda
       << "phi=" << combination.phiCoordinate
       << "\n";
@@ -475,31 +475,25 @@ void VertexerTraits::fillCombinatoricsTree()
 void VertexerTraits::fillTrackletSelectionTree()
 {
   assert(mEvent != nullptr);
+  int id = mEvent->getROFrameId();
   for (auto& trackletPair : mAllowedTrackletPairs) {
     o2::MCCompLabel lblClus0 = mEvent->getClusterLabels(0, mClusters[0][mComb01[trackletPair[0]].firstClusterIndex].clusterId);
     o2::MCCompLabel lblClus1 = mEvent->getClusterLabels(1, mClusters[1][mComb01[trackletPair[0]].secondClusterIndex].clusterId);
     o2::MCCompLabel lblClus2 = mEvent->getClusterLabels(2, mClusters[2][mComb12[trackletPair[1]].secondClusterIndex].clusterId);
     unsigned char isValidated{(lblClus0.compare(lblClus1) == 1 && lblClus0.compare(lblClus2) == 1)};
     float deltaTanLambda{gpu::GPUCommonMath::Abs(mComb01[trackletPair[0]].tanLambda - mComb12[trackletPair[1]].tanLambda)};
-    float cluster0z{mClusters[0][mComb01[trackletPair[0]].firstClusterIndex].zCoordinate};
-    float cluster0r{mClusters[0][mComb01[trackletPair[0]].firstClusterIndex].rCoordinate};
-    float cluster1z{mClusters[1][mComb01[trackletPair[0]].secondClusterIndex].zCoordinate};
-    float cluster1r{mClusters[1][mComb01[trackletPair[0]].secondClusterIndex].rCoordinate};
-    float cluster2z{mClusters[2][mComb12[trackletPair[1]].secondClusterIndex].zCoordinate};
-    float cluster2r{mClusters[2][mComb12[trackletPair[1]].secondClusterIndex].rCoordinate};
-    float id = mEvent->getROFrameId();
-    mTreeStream->GetDirectory()->cd(); // in case of other open files
+    mTreeStream->GetDirectory()->cd(); // in case of existing other open files
     (*mTreeStream)
       << "selectedTracklets"
       << "ROframeId=" << id
       << "deltaTanlambda=" << deltaTanLambda
       << "isValidated=" << isValidated
-      << "cluster0z=" << cluster0z
-      << "cluster0r=" << cluster0r
-      << "cluster1z=" << cluster1z
-      << "cluster1r=" << cluster1r
-      << "cluster2z=" << cluster2z
-      << "cluster2r=" << cluster2r
+      << "cluster0z=" << mClusters[0][mComb01[trackletPair[0]].firstClusterIndex].zCoordinate
+      << "cluster0r=" << mClusters[0][mComb01[trackletPair[0]].firstClusterIndex].rCoordinate
+      << "cluster1z=" << mClusters[1][mComb01[trackletPair[0]].secondClusterIndex].zCoordinate
+      << "cluster1r=" << mClusters[1][mComb01[trackletPair[0]].secondClusterIndex].rCoordinate
+      << "cluster2z=" << mClusters[2][mComb12[trackletPair[1]].secondClusterIndex].zCoordinate
+      << "cluster2r=" << mClusters[2][mComb12[trackletPair[1]].secondClusterIndex].rCoordinate
       << "lblClus0=" << lblClus0
       << "lblClus1=" << lblClus1
       << "lblClus2=" << lblClus2
@@ -507,9 +501,32 @@ void VertexerTraits::fillTrackletSelectionTree()
   }
 }
 
+void VertexerTraits::fillLinesSummaryTree()
+{
+  assert(mEvent != nullptr);
+  int id = mEvent->getROFrameId();
+  const o2::its::Line zAxis{std::array<float, 3>{0.f, 0.f, -1.f}, std::array<float, 3>{0.f, 0.f, 1.f}};
+  for (auto& tracklet : mTracklets) {
+    float dcaz = Line::getDCA(tracklet, zAxis);
+    (*mTreeStream)
+      << "linesSummary"
+      << "ROframeId=" << id
+      << "oX=" << tracklet.originPoint[0]
+      << "oY=" << tracklet.originPoint[1]
+      << "oZ=" << tracklet.originPoint[2]
+      << "c1=" << tracklet.cosinesDirector[0]
+      << "c2=" << tracklet.cosinesDirector[1]
+      << "c2=" << tracklet.cosinesDirector[2]
+      << "DCAZaxis=" << dcaz
+      // TODO: Line::getDistanceFromPoint(line, MC_vertex)
+      << "\n";
+  }
+}
+
 void VertexerTraits::fillLinesInfoTree()
 {
   assert(mEvent != nullptr);
+  int id = mEvent->getROFrameId();
   for (unsigned int iLine1{0}; iLine1 < mTracklets.size(); ++iLine1) { // compute centroids for every line pair
     auto line1 = mTracklets[iLine1];
     for (unsigned int iLine2{iLine1 + 1}; iLine2 < mTracklets.size(); ++iLine2) {
@@ -521,6 +538,7 @@ void VertexerTraits::fillLinesInfoTree()
         (*mTreeStream)
           << "linesInfo"
           << "centroids"
+          << "ROframeId=" << id
           << "xCoord=" << vtx[0]
           << "yCoord=" << vtx[1]
           << "zCoord=" << vtx[2]

@@ -25,7 +25,7 @@
 #include "ITStracking/Tracklet.h"
 
 #include "GPUCommonMath.h"
-#define _ALLOW_DEBUG_TREES_ITS_ // to allow debug
+// #define _ALLOW_DEBUG_TREES_ITS_ // to allow debug
 
 namespace o2
 {
@@ -58,10 +58,9 @@ struct lightVertex {
 
 enum class VertexerDebug : unsigned int {
   TrackletTreeAll = 0x1 << 1,
-  TrackletTreeValid = 0x1 << 2,
-  TrackletTreeFake = 0x1 << 3,
-  LineTreeAll = 0x1 << 4,
-  CombinatoricsTreeAll = 0x1 << 5
+  LineTreeAll = 0x1 << 2,
+  CombinatoricsTreeAll = 0x1 << 3,
+  LineSummaryAll = 0x1 << 4
 };
 
 inline lightVertex::lightVertex(float x, float y, float z, std::array<float, 6> rms2, int cont, float avgdis2, int stamp) : mX(x), mY(y), mZ(z), mRMS2(rms2), mAvgDistance2(avgdis2), mContributors(cont), mTimeStamp(stamp)
@@ -73,7 +72,7 @@ class VertexerTraits
  public:
   VertexerTraits();
   virtual ~VertexerTraits();
-  GPU_HOST_DEVICE static constexpr int4 getEmptyBinsRect() { return int4{ 0, 0, 0, 0 }; }
+  GPU_HOST_DEVICE static constexpr int4 getEmptyBinsRect() { return int4{0, 0, 0, 0}; }
   GPU_HOST_DEVICE static const int4 getBinsRect(const Cluster&, const int, const float, float maxdeltaz, float maxdeltaphi);
   GPU_HOST_DEVICE static const int2 getPhiBins(float phi, float deltaPhi);
 
@@ -98,15 +97,20 @@ class VertexerTraits
   void arrangeClusters(ROframe*);
   std::vector<int> getMClabelsLayer(const int layer) const;
 
-#ifdef _ALLOW_DEBUG_TREES_ITS_
   void setDebugFlag(VertexerDebug flag, const unsigned char on);
   unsigned char isDebugFlag(const VertexerDebug& flags) const;
   unsigned int getDebugFlags() const { return static_cast<unsigned int>(mDBGFlags); }
+
+#ifdef _ALLOW_DEBUG_TREES_ITS_
   void setDebugTreeFileName(std::string name);
-  const std::string& getDebugTreeFileName() const { return mDebugTreeFileName; }
- 
+  const std::string& getDebugTreeFileName() const
+  {
+    return mDebugTreeFileName;
+  }
+
   void fillCombinatoricsTree();
   void fillTrackletSelectionTree();
+  void fillLinesSummaryTree();
   void fillLinesInfoTree();
 #endif
 
@@ -120,8 +124,9 @@ class VertexerTraits
   std::vector<int> mFoundTracklets12;
   std::array<std::vector<Cluster>, constants::its::LayersNumberVertexer> mClusters;
 
-#ifdef _ALLOW_DEBUG_TREES_ITS_
   unsigned int mDBGFlags = 0;
+
+#ifdef _ALLOW_DEBUG_TREES_ITS_
   std::string mDebugTreeFileName = "dbg_ITSvertexer.root"; // output filename
   o2::utils::TreeStreamRedirector* mTreeStream;            // observer
   std::vector<std::array<int, 2>> mAllowedTrackletPairs;
@@ -131,7 +136,7 @@ class VertexerTraits
   std::array<std::array<int, ZBins * PhiBins + 1>, LayersNumberVertexer> mIndexTables;
   std::vector<lightVertex> mVertices;
 
-  ///< Frame related quantities
+  // Frame related quantities
   std::array<std::vector<unsigned char>, 2> mUsedClusters;
   o2::its::ROframe* mEvent;
   uint32_t mROframe;
@@ -184,9 +189,8 @@ inline GPU_HOST_DEVICE const int4 VertexerTraits::getBinsRect(const Cluster& cur
               index_table_utils::getPhiBinIndex(math_utils::getNormalizedPhiCoordinate(phiRangeMax))};
 }
 
-// Debug
-#ifdef _ALLOW_DEBUG_TREES_ITS_
-inline void VertexerTraits::setDebugFlag(VertexerDebug flag, const unsigned char on=true)
+// debug
+inline void VertexerTraits::setDebugFlag(VertexerDebug flag, const unsigned char on = true)
 {
   if (on) {
     mDBGFlags |= static_cast<unsigned int>(flag);
@@ -200,6 +204,7 @@ inline unsigned char VertexerTraits::isDebugFlag(const VertexerDebug& flags) con
   return mDBGFlags & static_cast<unsigned int>(flags);
 }
 
+#ifdef _ALLOW_DEBUG_TREES_ITS_
 inline void VertexerTraits::setDebugTreeFileName(std::string name)
 {
   if (!name.empty()) {
@@ -207,6 +212,7 @@ inline void VertexerTraits::setDebugTreeFileName(std::string name)
   }
 }
 #endif
+// \debug
 
 extern "C" VertexerTraits* createVertexerTraits();
 

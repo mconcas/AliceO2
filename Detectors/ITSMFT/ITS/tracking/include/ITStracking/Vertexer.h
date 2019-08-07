@@ -10,7 +10,7 @@
 ///
 /// \file Vertexer.h
 /// \brief
-///
+/// \author matteo.concas@cern.ch
 
 #ifndef O2_ITS_TRACKING_VERTEXER_H_
 #define O2_ITS_TRACKING_VERTEXER_H_
@@ -30,7 +30,6 @@
 #include "ITStracking/ClusterLines.h"
 #include "ITStracking/Tracklet.h"
 #include "ITStracking/Cluster.h"
-
 
 class TTree;
 
@@ -75,20 +74,12 @@ class Vertexer
   template <typename... T>
   float evaluateTask(void (Vertexer::*)(T...), const char*, std::ostream& ostream, T&&... args);
 
-  // Debug
+  // debug
   void setDebugCombinatorics();
-  void setDebugTracklets();
+  void setDebugTrackletSelection();
   void setDebugLines();
-
-  // debug, TBR
-  std::vector<Line> getLines() const;
-  std::vector<Tracklet> getTracklets01() const;
-  std::vector<Tracklet> getTracklets12() const;
-  std::array<std::vector<Cluster>, 3> getClusters() const;
-  std::vector<std::array<float, 9>> getDeltaTanLambdas() const;
-  std::vector<std::array<float, 4>> getCentroids() const;
-  std::vector<std::array<float, 6>> getLinesData() const;
-  void processLines();
+  void setDebugSummaryLines();
+  // \debug
 
  private:
   std::uint32_t mROframe = 0;
@@ -141,7 +132,7 @@ inline std::vector<Vertex> Vertexer::exportVertices()
 {
   std::vector<Vertex> vertices;
   for (auto& vertex : mTraits->getVertices()) {
-    std::cout << "\t\tFound vertex with: " <<std::setw(6)<< vertex.mContributors << " contributors" << std::endl;
+    std::cout << "\t\tFound vertex with: " << std::setw(6) << vertex.mContributors << " contributors" << std::endl;
     vertices.emplace_back(Point3D<float>(vertex.mX, vertex.mY, vertex.mZ), vertex.mRMS2, vertex.mContributors, vertex.mAvgDistance2);
     vertices.back().setTimeStamp(vertex.mTimeStamp);
   }
@@ -179,7 +170,7 @@ inline void Vertexer::setDebugCombinatorics()
   mTraits->setDebugFlag(VertexerDebug::CombinatoricsTreeAll);
 }
 
-inline void Vertexer::setDebugTracklets()
+inline void Vertexer::setDebugTrackletSelection()
 {
   mTraits->setDebugFlag(VertexerDebug::TrackletTreeAll);
 }
@@ -189,41 +180,10 @@ inline void Vertexer::setDebugLines()
   mTraits->setDebugFlag(VertexerDebug::LineTreeAll);
 }
 
-// DEBUG
-// inline std::vector<Line> Vertexer::getLines() const
-// {
-//   return mTraits->mTracklets;
-// }
-
-// inline std::vector<Tracklet> Vertexer::getTracklets01() const
-// {
-//   return mTraits->mComb01;
-// }
-
-// inline std::vector<Tracklet> Vertexer::getTracklets12() const
-// {
-//   return mTraits->mComb12;
-// }
-
-// inline std::array<std::vector<Cluster>, 3> Vertexer::getClusters() const
-// {
-//   return mTraits->mClusters;
-// }
-
-// inline std::vector<std::array<float, 4>> Vertexer::getCentroids() const
-// {
-//   return mTraits->mCentroids;
-// }
-
-// inline std::vector<std::array<float, 6>> Vertexer::getLinesData() const
-// {
-//   return mTraits->mLinesData;
-// }
-
-// // inline void Vertexer::processLines()
-// // {
-// //   mTraits->processLines();
-// // }
+inline void Vertexer::setDebugSummaryLines()
+{
+  mTraits->setDebugFlag(VertexerDebug::LineSummaryAll);
+}
 
 } // namespace its
 } // namespace o2
