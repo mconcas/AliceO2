@@ -56,6 +56,13 @@ struct lightVertex {
   int mTimeStamp;
 };
 
+struct ClusterMCLabelInfo {
+  int TrackId;
+  int MotherId;
+  int EventId;
+  float Pt;
+};
+
 enum class VertexerDebug : unsigned int {
   TrackletTreeAll = 0x1 << 1,
   LineTreeAll = 0x1 << 2,
