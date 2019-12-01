@@ -71,6 +71,10 @@ UniquePointer<DeviceStoreVertexerHIP> DeviceStoreVertexerHIP::initialise(const s
                                                                          const std::array<std::array<int, constants::index_table::ZBins * constants::index_table::PhiBins + 1>,
                                                                                           constants::its::LayersNumberVertexer>& indexTables)
 {
+  std::array<int, constants::its::LayersNumberVertexer> tmpSizes = {static_cast<int>(clusters[0].size()),
+                                                                    static_cast<int>(clusters[1].size()),
+                                                                    static_cast<int>(clusters[2].size())};
+  mSizes.reset(tmpSizes.data(), static_cast<int>(3));
   for (int iLayer{0}; iLayer < constants::its::LayersNumberVertexer; ++iLayer) {
     mClusters[iLayer].reset(clusters[iLayer].data(), static_cast<int>(clusters[iLayer].size()));
   }

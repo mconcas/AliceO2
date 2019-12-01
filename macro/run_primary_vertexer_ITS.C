@@ -25,11 +25,18 @@
 using Vertex = o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>;
 using namespace o2::gpu;
 
+<<<<<<< HEAD
 int run_primary_vertexer_ITS(const float phiCut = -1.f,
                              const GPUDataTypes::DeviceType dtype = GPUDataTypes::DeviceType::CPU,
                              const bool useMCcheck = false,
+=======
+int run_primary_vertexer_ITS(const bool useMCcheck = false,
+>>>>>>> Small fixes to debug mode
                              const int inspEvt = -1,
                              const int numEvents = 1,
+                             const float phiCut = -1.f,
+                             const float tanlambdaCut = -1.f,
+                             const GPUDataTypes::DeviceType dtype = GPUDataTypes::DeviceType::CUDA,
                              const std::string inputClustersITS = "o2clus_its.root",
                              const std::string inputGRP = "o2sim_grp.root",
                              const std::string simfilename = "o2sim.root",
@@ -123,7 +130,8 @@ int run_primary_vertexer_ITS(const float phiCut = -1.f,
 
   // Settings
   o2::its::VertexingParameters parameters;
-  parameters.phiCut = phiCut > 0 ? phiCut : 0.05f;
+  parameters.phiCut = phiCut > 0 ? phiCut : 0.005f;
+  parameters.tanLambdaCut = tanlambdaCut > 0 ? tanlambdaCut : 0.002f;
   // e.g. parameters.clusterContributorsCut = 5;
   // \Settings
 
