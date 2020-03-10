@@ -144,7 +144,7 @@ GPUg() void trackleterKernel(
       const size_t stride{currentClusterIndex * store.getConfig().maxTrackletsPerCluster};
       const Cluster& currentCluster = store.getClusters()[1][currentClusterIndex]; // assign-constructor may be a problem, check
       const VertexerLayerName adjacentLayerIndex{layerOrder == TrackletingLayerOrder::fromInnermostToMiddleLayer ? VertexerLayerName::innermostLayer : VertexerLayerName::outerLayer};
-      const int4 selectedBinsRect{VertexerTraits::getBinsRect(currentCluster, static_cast<int>(adjacentLayerIndex), 0.f, 50.f, phiCut)};
+      const int4 selectedBinsRect{VertexerTraits::getBinsRect(currentCluster, static_cast<int>(adjacentLayerIndex), 0.f, 50.f, phiCut / 2)};
       if (selectedBinsRect.x != 0 || selectedBinsRect.y != 0 || selectedBinsRect.z != 0 || selectedBinsRect.w != 0) {
         int phiBinsNum{selectedBinsRect.w - selectedBinsRect.y + 1};
         if (phiBinsNum < 0) {
@@ -292,7 +292,7 @@ GPUg() void computeVertexKernel(DeviceStoreVertexerGPU& store, const int vertInd
 {
   for (size_t currentThreadIndex = blockIdx.x * blockDim.x + threadIdx.x; currentThreadIndex < binOpeningZ; currentThreadIndex += blockDim.x * gridDim.x) {
     if (currentThreadIndex == 0) {
-      if (store.getTmpVertexPositionBins()[2].value > 1) {
+      if (store.getTmpVertexPositionBins()[2].value > 1 && (store.getTmpVertexPositionBins()[0].value || store.getTmpVertexPositionBins()[1].value)) {
         float z{store.getConfig().lowHistBoundariesXYZ[2] + store.getTmpVertexPositionBins()[2].key * store.getConfig().binSizeHistZ + store.getConfig().binSizeHistZ / 2};
         float ex{0.f};
         float ey{0.f};

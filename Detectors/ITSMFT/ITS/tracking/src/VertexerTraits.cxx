@@ -542,13 +542,27 @@ void VertexerTraits::computeHistVertices()
     for (int iVertex{0};; ++iVertex) {
       int maxZBinContent{0};
       int maxZIndex{0};
+      // find maximum
       for (auto z : indexed(histZ)) {
         if (z.get() > maxZBinContent) {
           maxZBinContent = z.get();
           maxZIndex = z.index();
         }
       }
-      if (maxZBinContent < mVrtParams.clusterContributorsCut && iVertex) {
+      float tmpZ{histConf.lowHistBoundariesXYZ[2] + histConf.binSizeHistZ * maxZIndex + histConf.binSizeHistZ / 2};
+      int sumZ{maxZBinContent};
+      float wZ{tmpZ * static_cast<float>(maxZBinContent)};
+      for (int iBinZ{std::max(0, maxZIndex - histConf.binSpanXYZ[2])}; iBinZ < std::min(maxZIndex + histConf.binSpanXYZ[2] + 1, histConf.nBinsXYZ[2] - 1); ++iBinZ) {
+        if (iBinZ != maxZIndex) {
+          wZ += (histConf.lowHistBoundariesXYZ[2] + histConf.binSizeHistZ * iBinZ + histConf.binSizeHistZ / 2) * histZ.at(iBinZ);
+          sumZ += histZ.at(iBinZ);
+          histZ.at(iBinZ) = 0;
+#ifdef _ALLOW_DEBUG_TREES_ITS_
+          indicesBookKeeper[iBinZ].clear();
+#endif
+        }
+      }
+      if ((sumZ < mVrtParams.clusterContributorsCut) && (iVertex != 0)) {
         break;
       }
       float tmpZ{histConf.lowHistBoundariesXYZ[2] + histConf.binSizeHistZ * maxZIndex + histConf.binSizeHistZ / 2};

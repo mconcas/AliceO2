@@ -60,13 +60,13 @@ void run_trac_ca_its(std::string path = "./",
 
   gSystem->Load("libO2ITStracking.so");
 
-  // std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance());
-  std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance("CUDA", true)); // for GPU with CUDA
+  std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance());
+  // std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance("CUDA", true)); // for GPU with CUDA
   auto* chainITS = rec->AddChain<GPUChainITS>();
   rec->Init();
 
-  o2::its::Tracker tracker(chainITS->GetITSTrackerTraits());
-  //o2::its::Tracker tracker(new o2::its::TrackerTraitsCPU());
+  // o2::its::Tracker tracker(chainITS->GetITSTrackerTraits());
+  o2::its::Tracker tracker(new o2::its::TrackerTraitsCPU());
   o2::its::ROframe event(0);
 
   if (path.back() != '/') {
@@ -89,7 +89,7 @@ void run_trac_ca_its(std::string path = "./",
 
   bool isITS = grp->isDetReadOut(o2::detectors::DetID::ITS);
   if (!isITS) {
-    LOG(WARNING) << "ITS is not in the readoute";
+    LOG(WARNING) << "ITS is not in the readout";
     return;
   }
   bool isContITS = grp->isDetContinuousReadOut(o2::detectors::DetID::ITS);
@@ -162,7 +162,7 @@ void run_trac_ca_its(std::string path = "./",
 
   std::vector<MemoryParameters> memParams(3);
 
-  tracker.setParameters(memParams, trackParams);
+  // tracker.setParameters(memParams, trackParams);
 
   int currentEvent = -1;
   for (auto& rof : *rofs) {
@@ -186,7 +186,7 @@ void run_trac_ca_its(std::string path = "./",
 
     if (!vertITS.empty()) {
       // Using only the first vertex in the list
-      cout << " - Reconstructed vertexer: x = " << vertITS[0].getX() << " y = " << vertITS[0].getY() << " x = " << vertITS[0].getZ() << std::endl;
+      cout << " - Reconstructed vertex: x = " << vertITS[0].getX() << " y = " << vertITS[0].getY() << " x = " << vertITS[0].getZ() << std::endl;
       event.addPrimaryVertex(vertITS[0].getX(), vertITS[0].getY(), vertITS[0].getZ());
     } else {
       cout << " - Vertex not reconstructed, tracking skipped" << std::endl;
@@ -220,9 +220,9 @@ void run_trac_ca_its(std::string path = "./",
   outTree.Write();
   outFile.Close();
 
-  TGraph* graph = new TGraph(ncls.size(), ncls.data(), time.data());
-  graph->SetMarkerStyle(20);
-  graph->Draw("AP");
+  // TGraph* graph = new TGraph(ncls.size(), ncls.data(), time.data());
+  // graph->SetMarkerStyle(20);
+  // graph->Draw("AP");
 }
 
 #endif
