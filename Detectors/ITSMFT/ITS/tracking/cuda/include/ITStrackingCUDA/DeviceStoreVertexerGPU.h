@@ -235,7 +235,6 @@ inline std::vector<int> DeviceStoreVertexerGPU::getHistogramZFromGPU()
 {
   std::vector<int> histoZ;
   histoZ.resize(mGPUConf.nBinsXYZ[2] - 1);
-  // std::cout << "Size of dest vector to be refined" << std::endl;
   mHistogramXYZ[2].copyIntoSizedVector(histoZ);
 
   return histoZ;

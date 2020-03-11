@@ -152,63 +152,63 @@ if(ENABLE_OPENCL2)
 endif()
 
 # Detect and enable HIP
-if(ENABLE_HIP)
-  if(NOT DEFINED HIP_PATH)
-    if(NOT DEFINED ENV{HIP_PATH})
-      set(HIP_PATH
-          "/opt/rocm/hip"
-          CACHE PATH "Path to which HIP has been installed")
-    else()
-      set(HIP_PATH
-          $ENV{HIP_PATH}
-          CACHE PATH "Path to which HIP has been installed")
-    endif()
-  endif()
-  if(NOT DEFINED HCC_HOME)
-    if(NOT DEFINED ENV{HCC_HOME})
-      set(HCC_HOME
-          "${HIP_PATH}/../hcc"
-          CACHE PATH "Path to which HCC has been installed")
-    else()
-      set(HCC_HOME
-          $ENV{HCC_HOME}
-          CACHE PATH "Path to which HCC has been installed")
-    endif()
-  endif()
+# if(ENABLE_HIP)
+#   if(NOT DEFINED HIP_PATH)
+#     if(NOT DEFINED ENV{HIP_PATH})
+#       set(HIP_PATH
+#           "/opt/rocm/hip"
+#           CACHE PATH "Path to which HIP has been installed")
+#     else()
+#       set(HIP_PATH
+#           $ENV{HIP_PATH}
+#           CACHE PATH "Path to which HIP has been installed")
+#     endif()
+#   endif()
+#   if(NOT DEFINED HCC_HOME)
+#     if(NOT DEFINED ENV{HCC_HOME})
+#       set(HCC_HOME
+#           "${HIP_PATH}/../hcc"
+#           CACHE PATH "Path to which HCC has been installed")
+#     else()
+#       set(HCC_HOME
+#           $ENV{HCC_HOME}
+#           CACHE PATH "Path to which HCC has been installed")
+#     endif()
+#   endif()
 
-  if(EXISTS "${HIP_PATH}" AND EXISTS "${HCC_HOME}")
-    get_filename_component(hip_ROOT "${HIP_PATH}" ABSOLUTE)
-    get_filename_component(hcc_ROOT "${HCC_HOME}" ABSOLUTE)
-    find_package(hip)
-    find_package(hipcub)
-    find_package(rocprim)
-    find_package(rocthrust)
-    if(ENABLE_HIP STREQUAL "AUTO")
-      set_package_properties(hip PROPERTIES TYPE OPTIONAL)
-      set_package_properties(hipcub PROPERTIES TYPE OPTIONAL)
-      set_package_properties(rocprim PROPERTIES TYPE OPTIONAL)
-      set_package_properties(rocthrust PROPERTIES TYPE OPTIONAL)
-    else()
-      set_package_properties(hip PROPERTIES TYPE REQUIRED)
-      set_package_properties(hipcub PROPERTIES TYPE REQUIRED)
-      set_package_properties(rocprim PROPERTIES TYPE REQUIRED)
-      set_package_properties(rocthrust PROPERTIES TYPE REQUIRED)
-    endif()
-    if(hip_FOUND AND hipcub_FOUND AND rocthrust_FOUND AND rocprim_FOUND AND hip_HIPCC_EXECUTABLE)
-      set(HIP_ENABLED ON)
-      set_target_properties(rocthrust PROPERTIES IMPORTED_GLOBAL TRUE)
-      add_library(ROCm::rocThrust ALIAS rocthrust)
-      message(STATUS "HIP Found (${hip_HIPCC_EXECUTABLE})")
-    endif()
-  endif()
-  if(NOT HIP_ENABLED AND NOT ENABLE_HIP STREQUAL "AUTO")
-    message(
-      FATAL_ERROR
-        "HIP requested but HIP_PATH=${HIP_PATH} or HCC_HOME=${HCC_HOME} does not exist"
-      )
-  endif()
+#   if(EXISTS "${HIP_PATH}" AND EXISTS "${HCC_HOME}")
+#     get_filename_component(hip_ROOT "${HIP_PATH}" ABSOLUTE)
+#     get_filename_component(hcc_ROOT "${HCC_HOME}" ABSOLUTE)
+#     find_package(hip)
+#     find_package(hipcub)
+#     find_package(rocprim)
+#     find_package(rocthrust)
+#     if(ENABLE_HIP STREQUAL "AUTO")
+#       set_package_properties(hip PROPERTIES TYPE OPTIONAL)
+#       set_package_properties(hipcub PROPERTIES TYPE OPTIONAL)
+#       set_package_properties(rocprim PROPERTIES TYPE OPTIONAL)
+#       set_package_properties(rocthrust PROPERTIES TYPE OPTIONAL)
+#     else()
+#       set_package_properties(hip PROPERTIES TYPE REQUIRED)
+#       set_package_properties(hipcub PROPERTIES TYPE REQUIRED)
+#       set_package_properties(rocprim PROPERTIES TYPE REQUIRED)
+#       set_package_properties(rocthrust PROPERTIES TYPE REQUIRED)
+#     endif()
+#     if(hip_FOUND AND hipcub_FOUND AND rocthrust_FOUND AND rocprim_FOUND AND hip_HIPCC_EXECUTABLE)
+#       set(HIP_ENABLED ON)
+#       set_target_properties(rocthrust PROPERTIES IMPORTED_GLOBAL TRUE)
+#       add_library(ROCm::rocThrust ALIAS rocthrust)
+#       message(STATUS "HIP Found (${hip_HIPCC_EXECUTABLE})")
+#     endif()
+#   endif()
+#   if(NOT HIP_ENABLED AND NOT ENABLE_HIP STREQUAL "AUTO")
+#     message(
+#       FATAL_ERROR
+#         "HIP requested but HIP_PATH=${HIP_PATH} or HCC_HOME=${HCC_HOME} does not exist"
+#       )
+#   endif()
 
-endif()
+# endif()
 
 # if we end up here without a FATAL, it means we have found the "O2GPU" package
 set(O2GPU_FOUND TRUE)

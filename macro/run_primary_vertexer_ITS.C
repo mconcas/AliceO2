@@ -25,13 +25,7 @@
 using Vertex = o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>;
 using namespace o2::gpu;
 
-<<<<<<< HEAD
-int run_primary_vertexer_ITS(const float phiCut = -1.f,
-                             const GPUDataTypes::DeviceType dtype = GPUDataTypes::DeviceType::CPU,
-                             const bool useMCcheck = false,
-=======
 int run_primary_vertexer_ITS(const bool useMCcheck = false,
->>>>>>> Small fixes to debug mode
                              const int inspEvt = -1,
                              const int numEvents = 1,
                              const float phiCut = -1.f,
@@ -46,11 +40,11 @@ int run_primary_vertexer_ITS(const bool useMCcheck = false,
   std::string gpuName;
   switch (dtype) {
     case GPUDataTypes::DeviceType::CUDA:
-      R__LOAD_LIBRARY(O2ITStrackingCUDA)
+      // R__LOAD_LIBRARY(O2ITStrackingCUDA)
       gpuName = "vertexer_cuda";
       break;
     case GPUDataTypes::DeviceType::HIP:
-      R__LOAD_LIBRARY(O2ITStrackingHIP)
+      // R__LOAD_LIBRARY(O2ITStrackingHIP)
       gpuName = "vertexer_hip";
       break;
     default:
@@ -61,14 +55,8 @@ int run_primary_vertexer_ITS(const bool useMCcheck = false,
   std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance(dtype, true));
   auto* chainITS = rec->AddChain<GPUChainITS>();
   rec->Init();
-  o2::its::Vertexer vertexer(chainITS->GetITSVertexerTraits());
-
-  // #ifdef _ALLOW_DEBUG_TREES_ITS_
-  //   std::unique_ptr<o2::its::VertexerTraits> traitsptr{useGPU ? new o2::its::VertexerTraitsGPU{"dbg_ITSVertexerGPU.root"} : new o2::its::VertexerTraits{"dbg_ITSVertexerCPU.root"}};
-  // #else
-  //   std::unique_ptr<o2::its::VertexerTraits> traitsptr{useGPU ? new o2::its::VertexerTraitsGPU : new o2::its::VertexerTraits};
-  // #endif
-  //   o2::its::Vertexer vertexer(traitsptr.get());
+  // o2::its::Vertexer vertexer(chainITS->GetITSVertexerTraits());
+  o2::its::Vertexer vertexer(new o2::its::VertexerTraits());
 
   std::string mcCheck = useMCcheck ? "_data_MCCheck" : "_data";
   std::string outfile = gpuName + mcCheck + ".root";
@@ -96,21 +84,24 @@ int run_primary_vertexer_ITS(const bool useMCcheck = false,
   }
   mcHeaderTree.SetBranchAddress("MCEventHeader.", &mcHeader);
 
-  // get clusters
+  if (!itsClusters.GetBranch("ITSCluster")) {
+    LOG(FATAL) << "Did not find ITS clusters branch ITSClusters in the input tree";
+  }
   std::vector<o2::itsmft::Cluster>* clusters = nullptr;
   itsClusters.SetBranchAddress("ITSCluster", &clusters);
 
-  TChain itsClustersROF("ITSClustersROF");
-  itsClustersROF.AddFile((path + inputClustersITS).data());
-
-  if (!itsClustersROF.GetBranch("ITSClustersROF")) {
+  if (!itsClusters.GetBranch("ITSClustersROF")) {
     LOG(FATAL) << "Did not find ITS clusters branch ITSClustersROF in the input tree";
   }
   std::vector<o2::itsmft::ROFRecord>* rofs = nullptr;
-  itsClustersROF.SetBranchAddress("ITSClustersROF", &rofs);
-  itsClustersROF.GetEntry(0);
+  itsClusters.SetBranchAddress("ITSClustersROF", &rofs);
+  itsClusters.GetEntry(0);
+  itsClusters.GetEntry(0);
 
   // get labels
+  if (!itsClusters.GetBranch("ITSClusterMCTruth")) {
+    LOG(FATAL) << "Did not find ITS clusters branch ITSClusterMCTruth in the input tree";
+  }
   o2::dataformats::MCTruthContainer<o2::MCCompLabel>* labels = nullptr;
   itsClusters.SetBranchAddress("ITSClusterMCTruth", &labels);
 
@@ -154,7 +145,7 @@ int run_primary_vertexer_ITS(const bool useMCcheck = false,
     vertexer.setDebugTrackletSelection();
     // vertexer.setDebugLines(); // Handle with care, takes very long
     vertexer.setDebugCombinatorics();
-    // vertexer.setDebugSummaryLines();
+    vertexer.setDebugSummaryLines();
     // vertexer.setDebugCentroidsHistograms();
     // \debug
 
