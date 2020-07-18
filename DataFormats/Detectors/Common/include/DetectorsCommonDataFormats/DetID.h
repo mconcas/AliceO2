@@ -26,7 +26,7 @@
 
 #ifndef O2_BASE_DETID_
 #define O2_BASE_DETID_
-
+#define ENABLE_UPGRADES
 #include <Rtypes.h>
 #include <array>
 #include <bitset>
