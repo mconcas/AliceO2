@@ -8,6 +8,12 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 
+if(ENABLE_UPGRADES)
+  message("BUILDING dataformats and ENABLE_UPGRADES is set")
+else()
+  message("BUILDING dataformats and ENABLE_UPGRADES is NOT set")
+endif()
+
 o2_add_library(ITS3Base
                SOURCES src/MisalignmentParameter.cxx
                        src/GeometryTGeo.cxx 

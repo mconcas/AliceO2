@@ -246,7 +246,15 @@ class GeometryTGeo : public o2::itsmft::GeometryTGeo
   static void setITSChipPattern(const char* nm) { sChipName = nm; }
   static void setITSSensorPattern(const char* nm) { sSensorName = nm; }
   /// sym name of the layer
-  static const char* composeSymNameITS3() { return o2::detectors::DetID(o2::detectors::DetID::IT3).getName(); }
+#ifdef ENABLE_UPGRADES
+#warning "UPGRADES is enabled"
+#else
+#warning "UPGRADES is NOT enabled"
+#endif
+  static const char* composeSymNameITS3()
+  {
+    return o2::detectors::DetID(o2::detectors::DetID::IT3).getName();
+  }
   /// sym name of the layer
   static const char* composeSymNameLayer(int lr);
 
