@@ -8,6 +8,13 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 
+# if(ENABLE_UPGRADES)
+#   message("BUILDING dataformats and ENABLE_UPGRADES is set")
+#   add_compile_definitions(ENABLE_UPGRADES)
+# else()
+#   message("BUILDING dataformats and ENABLE_UPGRADES is NOT set")
+# endif()
+
 o2_add_library(DetectorsCommonDataFormats
                SOURCES src/DetID.cxx src/AlignParam.cxx src/DetMatrixCache.cxx
                        src/NameConf.cxx
