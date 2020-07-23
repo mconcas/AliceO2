@@ -49,6 +49,7 @@ void TypedVectorAttach(const char* name, FairMQChannel& channel, FairMQParts& pa
 
 void O2MCApplicationBase::Stepping()
 {
+  LOG(WARN) << "Stepping called from O2 !";
   mStepCounter++;
   if (mCutParams.stepFiltering) {
     // we can kill tracks here based on our
@@ -59,12 +60,23 @@ void O2MCApplicationBase::Stepping()
 
     if (z > mCutParams.ZmaxA) {
       fMC->StopTrack();
+      LOG(WARN) << "ESCO QUI !";
       return;
     }
     if (-z > mCutParams.ZmaxC) {
       fMC->StopTrack();
+      LOG(WARN) << "ESCO QUI 2 !";
       return;
     }
+  }
+  Int_t copyNo;
+  Int_t id = fMC->CurrentVolID(copyNo);
+  LOG(WARN) << "id is " << id << " <<<<<<<<<< ";
+  fVolIter = fVolMap.find(id);
+  if (fVolIter != fVolMap.end()) {
+    LOG(WARN) << "NOT the end!!!!!! ! ! !!";
+  } else {
+    LOG(WARN) << " IS THE END!!!!!!!!";
   }
 
   // dispatch first to stepping function in FairRoot
@@ -108,9 +120,11 @@ void O2MCApplicationBase::InitGeometry()
     // since fVolMap contains multiple entries (if multiple copies), this may
     // write to the same entry multiple times
     mSensitiveVolumes[e.first] = e.second->GetName();
+    LOG(WARN) << "fVolMap -> first:  " << e.first << " second: " << e.second->GetName();
   }
   std::ofstream sensvolfile("MCStepLoggerSenVol.dat");
   for (auto e : mSensitiveVolumes) {
+    LOG(WARN) << "mSensitive volumes: first " << e.first << "second: " << e.second;
     sensvolfile << e.first << ":" << e.second << "\n";
   }
 }
