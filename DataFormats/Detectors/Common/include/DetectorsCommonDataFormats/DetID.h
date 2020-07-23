@@ -26,6 +26,7 @@
 
 #ifndef O2_BASE_DETID_
 #define O2_BASE_DETID_
+#define ENABLE_UPGRADES
 #include <Rtypes.h>
 #include <array>
 #include <bitset>
@@ -68,9 +69,11 @@ class DetID
   static constexpr ID FDD = 14;
   static constexpr ID ACO = 15;
 #ifdef ENABLE_UPGRADES
+#warning "ENABLE_UPGRADES is on"
   static constexpr ID IT3 = 16;
   static constexpr ID Last = IT3;
 #else
+#warning "ENABLE_UPGRADES is off"
   static constexpr ID Last = ACO; ///< if extra detectors added, update this !!!
 #endif
   static constexpr ID First = ITS;
