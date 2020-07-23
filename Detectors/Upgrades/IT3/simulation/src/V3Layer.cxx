@@ -365,7 +365,7 @@ void V3Layer::createLayer(TGeoVolume* motherVolume)
 
   //  mStaveWidth = mLayerRadius*Tan(alpha);
 
-  snprintf(volumeName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSLayerPattern(), mLayerNumber);
+  snprintf(volumeName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3LayerPattern(), mLayerNumber);
   TGeoVolume* layerVolume = new TGeoVolumeAssembly(volumeName);
   layerVolume->SetUniqueID(mChipTypeID);
 
@@ -410,7 +410,7 @@ void V3Layer::createLayerTurbo(TGeoVolume* motherVolume)
     LOG(WARNING) << "Stave tilt angle (" << mStaveTilt << ") greater than 45deg";
   }
 
-  snprintf(volumeName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSLayerPattern(), mLayerNumber);
+  snprintf(volumeName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3LayerPattern(), mLayerNumber);
   TGeoVolume* layerVolume = new TGeoVolumeAssembly(volumeName);
   layerVolume->SetUniqueID(mChipTypeID);
   layerVolume->SetVisibility(kTRUE);
@@ -446,12 +446,12 @@ void V3Layer::createITS3Layer(TGeoVolume* motherVolume, const TGeoManager* mgr)
   char chipName[nameLen], sensName[nameLen], moduleName[nameLen],
     hsName[nameLen], staveName[nameLen], layerName[nameLen];
 
-  snprintf(sensName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSSensorPattern(), mLayerNumber);
-  snprintf(chipName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSChipPattern(), mLayerNumber);
-  snprintf(moduleName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSModulePattern(), mLayerNumber);
-  snprintf(hsName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSHalfStavePattern(), mLayerNumber);
-  snprintf(staveName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSStavePattern(), mLayerNumber);
-  snprintf(layerName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSLayerPattern(), mLayerNumber);
+  snprintf(sensName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3SensorPattern(), mLayerNumber);
+  snprintf(chipName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3ChipPattern(), mLayerNumber);
+  snprintf(moduleName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3ModulePattern(), mLayerNumber);
+  snprintf(hsName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3HalfStavePattern(), mLayerNumber);
+  snprintf(staveName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3StavePattern(), mLayerNumber);
+  snprintf(layerName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3LayerPattern(), mLayerNumber);
 
   TGeoTube* sensor = new TGeoTube(rmin, rmax, mIBModuleZLength / 2);
   TGeoTube* chip = new TGeoTube(rmin, rmax, mIBModuleZLength / 2);
@@ -529,7 +529,7 @@ TGeoVolume* V3Layer::createStave(const TGeoManager* /*mgr*/)
   alpha = (360. / (2 * mNumberOfStaves)) * DegToRad();
 
   // The stave
-  snprintf(volumeName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSStavePattern(), mLayerNumber);
+  snprintf(volumeName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3StavePattern(), mLayerNumber);
   TGeoVolume* staveVol = new TGeoVolumeAssembly(volumeName);
   staveVol->SetVisibility(kTRUE);
   staveVol->SetLineColor(2);
@@ -597,7 +597,7 @@ TGeoVolume* V3Layer::createStaveInnerB(const TGeoManager* mgr)
 
   TGeoMedium* medAir = mgr->GetMedium("IT3_AIR$");
 
-  snprintf(volumeName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSHalfStavePattern(), mLayerNumber);
+  snprintf(volumeName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3HalfStavePattern(), mLayerNumber);
   TGeoVolume* hstaveVol = new TGeoVolume(volumeName, hstave, medAir);
 
   // Finally build it up
@@ -623,8 +623,8 @@ TGeoVolume* V3Layer::createModuleInnerB(const TGeoManager* mgr)
     dummyChip = kTRUE; // will be made of Air
 
   // First create the single chip
-  snprintf(chipName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSChipPattern(), mLayerNumber);
-  snprintf(sensName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSSensorPattern(), mLayerNumber);
+  snprintf(chipName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3ChipPattern(), mLayerNumber);
+  snprintf(sensName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3SensorPattern(), mLayerNumber);
 
   ymod = 0.5 * mChipThickness;
 
@@ -661,7 +661,7 @@ TGeoVolume* V3Layer::createModuleInnerB(const TGeoManager* mgr)
   TGeoMedium* medKapton = mgr->GetMedium("IT3_KAPTON(POLYCH2)$");
   TGeoMedium* medGlue = mgr->GetMedium("IT3_GLUE_IBFPC$");
 
-  snprintf(volumeName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSModulePattern(), mLayerNumber);
+  snprintf(volumeName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3ModulePattern(), mLayerNumber);
   TGeoVolume* modVol = new TGeoVolume(volumeName, module, medAir);
 
   TGeoVolume* glueVol = new TGeoVolume("FPCGlue", glue, medGlue);
@@ -1148,7 +1148,7 @@ TGeoVolume* V3Layer::createStaveModelInnerB4(const TGeoManager* mgr)
 
   const Int_t nameLen = 30;
   char volname[nameLen];
-  snprintf(volname, nameLen, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITSStavePattern(), mLayerNumber);
+  snprintf(volname, nameLen, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITS3StavePattern(), mLayerNumber);
   TGeoVolume* mechStavVol = new TGeoVolume(volname, mechStavSh, medAir);
   mechStavVol->SetLineColor(12);
   mechStavVol->SetFillColor(12);
@@ -2093,7 +2093,7 @@ TGeoVolume* V3Layer::createStaveModelOuterB2(const TGeoManager* mgr)
     gammaConvRodVol->SetFillStyle(4000); // 0% transparent
   }
 
-  snprintf(volname, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSHalfStavePattern(), mLayerNumber);
+  snprintf(volname, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3HalfStavePattern(), mLayerNumber);
   TGeoVolume* halfStaveVol = new TGeoVolume(volname, halfStave, medAir);
   //   halfStaveVol->SetLineColor(12);
   //   halfStaveVol->SetFillColor(12);
@@ -3458,8 +3458,8 @@ TGeoVolume* V3Layer::createModuleOuterB(const TGeoManager* mgr)
     dummyChip = kTRUE; // will be made of Air
 
   // The chip (the same as for IB)
-  snprintf(chipName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSChipPattern(), mLayerNumber);
-  snprintf(sensName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSSensorPattern(), mLayerNumber);
+  snprintf(chipName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3ChipPattern(), mLayerNumber);
+  snprintf(sensName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3SensorPattern(), mLayerNumber);
 
   ylen = 0.5 * sOBChipThickness;
 
@@ -3518,7 +3518,7 @@ TGeoVolume* V3Layer::createModuleOuterB(const TGeoManager* mgr)
   flexKapVol->SetFillColor(flexKapVol->GetLineColor());
   flexKapVol->SetFillStyle(4000); // 0% transparent
 
-  snprintf(volName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITSModulePattern(), mLayerNumber);
+  snprintf(volName, nameLen, "%s%d", o2::its3::GeometryTGeo::getITS3ModulePattern(), mLayerNumber);
   TGeoVolume* modVol = new TGeoVolume(volName, module, medAir);
   modVol->SetVisibility(kTRUE);
 

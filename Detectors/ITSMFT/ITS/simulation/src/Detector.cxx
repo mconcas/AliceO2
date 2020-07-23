@@ -271,6 +271,7 @@ void Detector::InitializeO2Detector()
 Bool_t Detector::ProcessHits(FairVolume* vol)
 {
   // This method is called from the MC stepping
+  LOG(WARN) << "DETECTOR ID: " << GetDetId();
   if (!(fMC->TrackCharge())) {
     return kFALSE;
   }

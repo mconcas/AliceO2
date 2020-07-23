@@ -8,6 +8,11 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 
+if(ENABLE_UPGRADES)
+  message("Building upgrades with flag enabled")
+else()
+  message("Building upgrades with NO flag enabled")
+endif()
 o2_add_library(ITS3Base
                SOURCES src/MisalignmentParameter.cxx
                        src/GeometryTGeo.cxx 

@@ -187,7 +187,7 @@ void Detector::configITS(Detector* its)
 //   createAllArrays();
 
 //   for (Int_t j = 0; j < sNumberLayers; j++) {
-//     mLayerName[j].Form("%s%d", GeometryTGeo::getITSSensorPattern(), j); // See V3Layer
+//     mLayerName[j].Form("%s%d", GeometryTGeo::getITS3SensorPattern(), j); // See V3Layer
 //   }
 
 //   if (sNumberLayers > 0) { // if not, we'll Fatal-ize in CreateGeometry
@@ -239,7 +239,7 @@ Detector::Detector(Bool_t active)
   createAllArrays();
 
   for (Int_t j = 0; j < mTotalNumberOfLayers; j++) {
-    mLayerName[j].Form("%s%d", GeometryTGeo::getITSSensorPattern(), j); // See V3Layer
+    mLayerName[j].Form("%s%d", GeometryTGeo::getITS3SensorPattern(), j); // See V3Layer
   }
 
   if (mTotalNumberOfLayers > 0) { // if not, we'll Fatal-ize in CreateGeometry
@@ -289,7 +289,7 @@ Detector::Detector(const Detector& rhs)
 {
 
   for (Int_t j = 0; j < mTotalNumberOfLayers; j++) {
-    mLayerName[j].Form("%s%d", GeometryTGeo::getITSSensorPattern(), j); // See V3Layer
+    mLayerName[j].Form("%s%d", GeometryTGeo::getITS3SensorPattern(), j); // See V3Layer
   }
 }
 
@@ -330,7 +330,7 @@ Detector& Detector::operator=(const Detector& rhs)
   mStaveModelOuterBarrel = rhs.mStaveModelOuterBarrel;
 
   for (Int_t j = 0; j < mTotalNumberOfLayers; j++) {
-    mLayerName[j].Form("%s%d", GeometryTGeo::getITSSensorPattern(), j); // See V3Layer
+    mLayerName[j].Form("%s%d", GeometryTGeo::getITS3SensorPattern(), j); // See V3Layer
   }
 
   return *this;
@@ -382,11 +382,14 @@ void Detector::InitializeO2Detector()
 
 Bool_t Detector::ProcessHits(FairVolume* vol)
 {
+  std::cout << "cicciopasticcio cicciopasticcio cicciopasticcio cicciopasticcio cicciopasticcio cicciopasticcio cicciopasticcio \n";
+  LOG(WARN) << "DETECTOR ID: " << GetDetId();
   // This method is called from the MC stepping
   if (!(fMC->TrackCharge())) {
     return kFALSE;
   }
 
+  LOG(WARN) << "DETECTOR ID: " << GetDetId();
   Int_t lay = 0, volID = vol->getMCid();
 
   // FIXME: Determine the layer number. Is this information available directly from the FairVolume?
@@ -401,6 +404,7 @@ Bool_t Detector::ProcessHits(FairVolume* vol)
   auto stack = (o2::data::Stack*)fMC->GetStack();
   if (fMC->IsTrackExiting() && (lay == 0 || lay == 6)) {
     // Keep the track refs for the innermost and outermost layers only
+    LOG(WARN) << "DETECTOR ID: " << GetDetId();
     o2::TrackReference tr(*fMC, GetDetId());
     tr.setTrackID(stack->GetCurrentTrackNumber());
     tr.setUserId(lay);
@@ -899,7 +903,7 @@ TGeoVolume* Detector::createWrapperVolume(Int_t id)
   TGeoMedium* medAir = gGeoManager->GetMedium("IT3_AIR$");
 
   char volnam[30];
-  snprintf(volnam, 29, "%s%d", GeometryTGeo::getITSWrapVolPattern(), id);
+  snprintf(volnam, 29, "%s%d", GeometryTGeo::getITS3WrapVolPattern(), id);
 
   auto* wrapper = new TGeoVolume(volnam, tube, medAir);
 
@@ -924,8 +928,8 @@ void Detector::constructDetectorGeometry()
   if (!vALIC) {
     LOG(FATAL) << "Could not find the top volume";
   }
-  new TGeoVolumeAssembly(GeometryTGeo::getITSVolPattern());
-  TGeoVolume* vITSV = geoManager->GetVolume(GeometryTGeo::getITSVolPattern());
+  new TGeoVolumeAssembly(GeometryTGeo::getITS3VolPattern());
+  TGeoVolume* vITSV = geoManager->GetVolume(GeometryTGeo::getITS3VolPattern());
   vALIC->AddNode(vITSV, 2, nullptr); // Copy number is 2 to cheat AliGeoManager::CheckSymNamesLUT
 
   const Int_t kLength = 100;
@@ -1200,7 +1204,7 @@ void Detector::addAlignableVolumes() const
     return;
   }
 
-  TString path = Form("/cave_1/%s_2", GeometryTGeo::getITSVolPattern());
+  TString path = Form("/cave_1/%s_2", GeometryTGeo::getITS3VolPattern());
   TString sname = GeometryTGeo::composeSymNameITS3();
 
   LOG(DEBUG) << sname << " <-> " << path;
@@ -1224,12 +1228,12 @@ void Detector::addAlignableVolumesLayer(int lr, TString& parent, Int_t& lastUID)
   //
 
   TString wrpV =
-    mWrapperLayerId[lr] != -1 ? Form("%s%d_1", GeometryTGeo::getITSWrapVolPattern(), mWrapperLayerId[lr]) : "";
+    mWrapperLayerId[lr] != -1 ? Form("%s%d_1", GeometryTGeo::getITS3WrapVolPattern(), mWrapperLayerId[lr]) : "";
   TString path;
   if (mCreateOuterBarrel && (lr >= mNumberOfInnerLayers)) {
-    path = Form("%s/%s/%s%d_1", parent.Data(), wrpV.Data(), GeometryTGeo::getITSLayerPattern(), lr);
+    path = Form("%s/%s/%s%d_1", parent.Data(), wrpV.Data(), GeometryTGeo::getITS3LayerPattern(), lr);
   } else {
-    path = Form("%s/%s%d_1", parent.Data(), GeometryTGeo::getITSLayerPattern(), lr);
+    path = Form("%s/%s%d_1", parent.Data(), GeometryTGeo::getITS3LayerPattern(), lr);
   }
   TString sname = GeometryTGeo::composeSymNameLayer(lr);
 
@@ -1253,7 +1257,7 @@ void Detector::addAlignableVolumesStave(Int_t lr, Int_t st, TString& parent, Int
   //
   // Created:      06 Mar 2018  Mario Sitta First version (mainly ported from AliRoot)
   //
-  TString path = Form("%s/%s%d_%d", parent.Data(), GeometryTGeo::getITSStavePattern(), lr, st);
+  TString path = Form("%s/%s%d_%d", parent.Data(), GeometryTGeo::getITS3StavePattern(), lr, st);
   TString sname = GeometryTGeo::composeSymNameStave(lr, st);
 
   LOG(DEBUG) << "Add " << sname << " <-> " << path;
@@ -1280,7 +1284,7 @@ void Detector::addAlignableVolumesHalfStave(Int_t lr, Int_t st, Int_t hst, TStri
 
   TString path = parent;
   if (hst >= 0) {
-    path = Form("%s/%s%d_%d", parent.Data(), GeometryTGeo::getITSHalfStavePattern(), lr, hst);
+    path = Form("%s/%s%d_%d", parent.Data(), GeometryTGeo::getITS3HalfStavePattern(), lr, hst);
     TString sname = GeometryTGeo::composeSymNameHalfStave(lr, st, hst);
 
     LOG(DEBUG) << "Add " << sname << " <-> " << path;
@@ -1308,7 +1312,7 @@ void Detector::addAlignableVolumesModule(Int_t lr, Int_t st, Int_t hst, Int_t md
 
   TString path = parent;
   if (md >= 0) {
-    path = Form("%s/%s%d_%d", parent.Data(), GeometryTGeo::getITSModulePattern(), lr, md);
+    path = Form("%s/%s%d_%d", parent.Data(), GeometryTGeo::getITS3ModulePattern(), lr, md);
     TString sname = GeometryTGeo::composeSymNameModule(lr, st, hst, md);
 
     LOG(DEBUG) << "Add " << sname << " <-> " << path;
@@ -1334,7 +1338,7 @@ void Detector::addAlignableVolumesChip(Int_t lr, Int_t st, Int_t hst, Int_t md, 
   // Created:      06 Mar 2018  Mario Sitta First version (mainly ported from AliRoot)
   //
 
-  TString path = Form("%s/%s%d_%d", parent.Data(), GeometryTGeo::getITSChipPattern(), lr, ch);
+  TString path = Form("%s/%s%d_%d", parent.Data(), GeometryTGeo::getITS3ChipPattern(), lr, ch);
   TString sname = GeometryTGeo::composeSymNameChip(lr, st, hst, md, ch);
   Int_t modUID = chipVolUID(lastUID++);
 
@@ -1355,7 +1359,7 @@ void Detector::defineSensitiveVolumes()
 
   // The names of the ITS sensitive volumes have the format: ITSUSensor(0...sNumberLayers-1)
   for (Int_t j = 0; j < mTotalNumberOfLayers; j++) {
-    volumeName = GeometryTGeo::getITSSensorPattern() + TString::Itoa(j, 10);
+    volumeName = GeometryTGeo::getITS3SensorPattern() + TString::Itoa(j, 10);
     v = geoManager->GetVolume(volumeName.Data());
     AddSensitiveVolume(v);
   }

@@ -288,7 +288,7 @@ void V1Layer::createLayer(TGeoVolume* motherVolume)
 
   //  mStaveWidth = mLayerRadius*Tan(alpha);
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSLayerPattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3LayerPattern(), mLayerNumber);
   TGeoVolume* layerVolume = new TGeoVolumeAssembly(volumeName);
   layerVolume->SetUniqueID(mChipTypeID);
 
@@ -333,7 +333,7 @@ void V1Layer::createLayerTurbo(TGeoVolume* motherVolume)
     LOG(WARNING) << "Stave tilt angle (" << mStaveTilt << ") greater than 45deg";
   }
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSLayerPattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3LayerPattern(), mLayerNumber);
   TGeoVolume* layerVolume = new TGeoVolumeAssembly(volumeName);
   layerVolume->SetUniqueID(mChipTypeID);
   layerVolume->SetVisibility(kTRUE);
@@ -389,7 +389,7 @@ TGeoVolume* V1Layer::createStave(const TGeoManager* /*mgr*/)
 
   // We have all shapes: now create the real volumes
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSStavePattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3StavePattern(), mLayerNumber);
   //  TGeoVolume *staveVol = new TGeoVolume(volumeName, stave, medAir);
   TGeoVolume* staveVol = new TGeoVolumeAssembly(volumeName);
 
@@ -454,7 +454,7 @@ TGeoVolume* V1Layer::createStaveInnerB(const Double_t xsta, const Double_t ysta,
 
   TGeoMedium* medAir = mgr->GetMedium("IT3_AIR$");
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSHalfStavePattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3HalfStavePattern(), mLayerNumber);
   auto* hstaveVol = new TGeoVolume(volumeName, hstave, medAir);
 
   // Finally build it up
@@ -481,7 +481,7 @@ TGeoVolume* V1Layer::createModuleInnerB(Double_t xmod, Double_t ymod, Double_t z
 
   TGeoMedium* medAir = mgr->GetMedium("IT3_AIR$");
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSModulePattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3ModulePattern(), mLayerNumber);
   auto* modVol = new TGeoVolume(volumeName, module, medAir);
 
   // mm (not used)  zlen = ((TGeoBBox*)chipVol->GetShape())->GetDZ();
@@ -567,7 +567,7 @@ TGeoVolume* V1Layer::createStaveModelInnerB0(const Double_t xsta, const Double_t
   LOG(DEBUG1) << "BuildLevel " << mBuildLevel;
 
   char volumeName[30];
-  snprintf(volumeName, 30, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITSStavePattern(),
+  snprintf(volumeName, 30, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITS3StavePattern(),
            mLayerNumber);
 
   Double_t z = 0, y = -0.011 + 0.0150, x = 0;
@@ -757,7 +757,7 @@ TGeoVolume* V1Layer::createStaveModelInnerB1(const Double_t xsta, const Double_t
   TGeoVolume* mechStavVol = nullptr;
 
   char volumeName[30];
-  snprintf(volumeName, 30, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITSStavePattern(),
+  snprintf(volumeName, 30, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITS3StavePattern(),
            mLayerNumber);
 
   // detailed structure ++++++++++++++
@@ -966,7 +966,7 @@ TGeoVolume* V1Layer::createStaveModelInnerB21(const Double_t xsta, const Double_
   Int_t loop = (Int_t)(kStaveLength / (2 * kL1));
 
   char volumeName[30];
-  snprintf(volumeName, 30, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITSStavePattern(),
+  snprintf(volumeName, 30, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITS3StavePattern(),
            mLayerNumber);
 
   Double_t z = 0, y = -(kConeOutRadius + 0.03) + 0.0385, x = 0;
@@ -1252,7 +1252,7 @@ TGeoVolume* V1Layer::createStaveModelInnerB22(const Double_t xsta, const Double_
   Int_t loop = (Int_t)(kStaveLength / (2 * kL1));
 
   char volumeName[30];
-  snprintf(volumeName, 30, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITSStavePattern(),
+  snprintf(volumeName, 30, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITS3StavePattern(),
            mLayerNumber);
 
   Double_t z = 0, y = -(2 * kConeOutRadius) + klay1 + klay2 + mSensorThickness / 2 - 0.0004, x = 0;
@@ -1565,7 +1565,7 @@ TGeoVolume* V1Layer::createStaveModelInnerB3(const Double_t xsta, const Double_t
   Double_t smcSpace = 0.01;
 
   char volumeName[30];
-  snprintf(volumeName, 30, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITSStavePattern(),
+  snprintf(volumeName, 30, "%s%d_StaveStruct", o2::its3::GeometryTGeo::getITS3StavePattern(),
            mLayerNumber);
 
   // detailed structure ++++++++++++++
@@ -1993,11 +1993,11 @@ TGeoVolume* V1Layer::createStaveModelOuterB0(const TGeoManager* mgr)
   // We have all shapes: now create the real volumes
   TGeoMedium* medAir = mgr->GetMedium("IT3_AIR$");
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSModulePattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3ModulePattern(), mLayerNumber);
   auto* modVol = new TGeoVolume(volumeName, module, medAir);
   modVol->SetVisibility(kTRUE);
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSHalfStavePattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3HalfStavePattern(), mLayerNumber);
   auto* hstaveVol = new TGeoVolume(volumeName, hstave, medAir);
 
   // Finally build it up
@@ -2174,7 +2174,7 @@ TGeoVolume* V1Layer::createStaveModelOuterB1(const TGeoManager* mgr)
   fleectubVol->SetFillColor(fleectubVol->GetLineColor());
   fleectubVol->SetFillStyle(4000); // 0% transparent
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSHalfStavePattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3HalfStavePattern(), mLayerNumber);
   auto* halmStaveVol = new TGeoVolume(volumeName, halmStave, medAir);
   //   halmStaveVol->SetLineColor(12);
   //   halmStaveVol->SetFillColor(12);
@@ -2346,7 +2346,7 @@ TGeoVolume* V1Layer::createSpaceFrameOuterB1(const TGeoManager* mgr)
 
   zlen = mNumberOfModules * sOBModuleZLength + (mNumberOfModules - 1) * sOBModuleGap;
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSHalfStavePattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3HalfStavePattern(), mLayerNumber);
   if (gGeoManager->GetVolume(volumeName)) { // Should always be so
     sframeHeight -= ((TGeoBBox*)gGeoManager->GetVolume(volumeName)->GetShape())->GetDY() * 2;
     zlen = ((TGeoBBox*)gGeoManager->GetVolume(volumeName)->GetShape())->GetDZ() * 2;
@@ -2526,12 +2526,12 @@ TGeoVolume* V1Layer::createChipInnerB(const Double_t xchip, const Double_t ychip
   // We have all shapes: now create the real volumes
   TGeoMedium* medSi = mgr->GetMedium("IT3_SI$");
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSChipPattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3ChipPattern(), mLayerNumber);
   auto* chipVol = new TGeoVolume(volumeName, chip, medSi);
   chipVol->SetVisibility(kTRUE);
   chipVol->SetLineColor(1);
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSSensorPattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3SensorPattern(), mLayerNumber);
   auto* sensVol = new TGeoVolume(volumeName, sensor, medSi);
   sensVol->SetVisibility(kTRUE);
   sensVol->SetLineColor(8);
@@ -2625,7 +2625,7 @@ TGeoVolume* V1Layer::createModuleOuterB(const TGeoManager* mgr)
   flexKapVol->SetFillColor(flexKapVol->GetLineColor());
   flexKapVol->SetFillStyle(4000); // 0% transparent
 
-  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITSModulePattern(), mLayerNumber);
+  snprintf(volumeName, 30, "%s%d", o2::its3::GeometryTGeo::getITS3ModulePattern(), mLayerNumber);
   auto* modVol = new TGeoVolume(volumeName, module, medAir);
   modVol->SetVisibility(kTRUE);
 

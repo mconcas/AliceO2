@@ -229,23 +229,24 @@ class GeometryTGeo : public o2::itsmft::GeometryTGeo
 
   void Print(Option_t* opt = "") const;
 
-  static const char* getITSVolPattern() { return sVolumeName.c_str(); }
-  static const char* getITSLayerPattern() { return sLayerName.c_str(); }
-  static const char* getITSWrapVolPattern() { return sWrapperVolumeName.c_str(); }
-  static const char* getITSStavePattern() { return sStaveName.c_str(); }
-  static const char* getITSHalfStavePattern() { return sHalfStaveName.c_str(); }
-  static const char* getITSModulePattern() { return sModuleName.c_str(); }
-  static const char* getITSChipPattern() { return sChipName.c_str(); }
-  static const char* getITSSensorPattern() { return sSensorName.c_str(); }
-  static void setITSVolPattern(const char* nm) { sVolumeName = nm; }
-  static void setITSLayerPattern(const char* nm) { sLayerName = nm; }
-  static void setITSWrapVolPattern(const char* nm) { sWrapperVolumeName = nm; }
-  static void setITSStavePattern(const char* nm) { sStaveName = nm; }
-  static void setITSHalfStavePattern(const char* nm) { sHalfStaveName = nm; }
-  static void setITSModulePattern(const char* nm) { sModuleName = nm; }
-  static void setITSChipPattern(const char* nm) { sChipName = nm; }
-  static void setITSSensorPattern(const char* nm) { sSensorName = nm; }
+  static const char* getITS3VolPattern() { return sVolumeName.c_str(); }
+  static const char* getITS3LayerPattern() { return sLayerName.c_str(); }
+  static const char* getITS3WrapVolPattern() { return sWrapperVolumeName.c_str(); }
+  static const char* getITS3StavePattern() { return sStaveName.c_str(); }
+  static const char* getITS3HalfStavePattern() { return sHalfStaveName.c_str(); }
+  static const char* getITS3ModulePattern() { return sModuleName.c_str(); }
+  static const char* getITS3ChipPattern() { return sChipName.c_str(); }
+  static const char* getITS3SensorPattern() { return sSensorName.c_str(); }
+  static void setITS3VolPattern(const char* nm) { sVolumeName = nm; }
+  static void setITS3LayerPattern(const char* nm) { sLayerName = nm; }
+  static void setITS3WrapVolPattern(const char* nm) { sWrapperVolumeName = nm; }
+  static void setITS3StavePattern(const char* nm) { sStaveName = nm; }
+  static void setITS3HalfStavePattern(const char* nm) { sHalfStaveName = nm; }
+  static void setITS3ModulePattern(const char* nm) { sModuleName = nm; }
+  static void setITS3ChipPattern(const char* nm) { sChipName = nm; }
+  static void setITS3SensorPattern(const char* nm) { sSensorName = nm; }
   /// sym name of the layer
+
   static const char* composeSymNameITS3() { return o2::detectors::DetID(o2::detectors::DetID::IT3).getName(); }
   /// sym name of the layer
   static const char* composeSymNameLayer(int lr);

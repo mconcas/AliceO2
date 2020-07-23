@@ -52,13 +52,13 @@ ClassImp(o2::its3::GeometryTGeo);
 std::unique_ptr<o2::its3::GeometryTGeo> GeometryTGeo::sInstance;
 
 std::string GeometryTGeo::sVolumeName = "ITSV";               ///< Mother volume name
-std::string GeometryTGeo::sLayerName = "ITSULayer";           ///< Layer name
-std::string GeometryTGeo::sStaveName = "ITSUStave";           ///< Stave name
-std::string GeometryTGeo::sHalfStaveName = "ITSUHalfStave";   ///< HalfStave name
-std::string GeometryTGeo::sModuleName = "ITSUModule";         ///< Module name
-std::string GeometryTGeo::sChipName = "ITSUChip";             ///< Chip name
-std::string GeometryTGeo::sSensorName = "ITSUSensor";         ///< Sensor name
-std::string GeometryTGeo::sWrapperVolumeName = "ITSUWrapVol"; ///< Wrapper volume name
+std::string GeometryTGeo::sLayerName = "ITS3Layer";           ///< Layer name
+std::string GeometryTGeo::sStaveName = "ITS3UStave";           ///< Stave name
+std::string GeometryTGeo::sHalfStaveName = "ITS3UHalfStave";   ///< HalfStave name
+std::string GeometryTGeo::sModuleName = "ITS3UModule";         ///< Module name
+std::string GeometryTGeo::sChipName = "ITS3UChip";             ///< Chip name
+std::string GeometryTGeo::sSensorName = "ITS3USensor";         ///< Sensor name
+std::string GeometryTGeo::sWrapperVolumeName = "ITS3UWrapVol"; ///< Wrapper volume name
 
 //__________________________________________________________________________
 GeometryTGeo::GeometryTGeo(bool build, int loadTrans) : o2::itsmft::GeometryTGeo(DetID::IT3)
@@ -241,33 +241,33 @@ bool GeometryTGeo::getChipId(int index, int& lay, int& sta, int& hsta, int& mod,
 //__________________________________________________________________________
 const char* GeometryTGeo::composeSymNameLayer(int lr)
 {
-  return Form("%s/%s%d", composeSymNameITS3(), getITSLayerPattern(), lr);
+  return Form("%s/%s%d", composeSymNameITS3(), getITS3LayerPattern(), lr);
 }
 
 //__________________________________________________________________________
 const char* GeometryTGeo::composeSymNameStave(int lr, int stave)
 {
-  return Form("%s/%s%d", composeSymNameLayer(lr), getITSStavePattern(), stave);
+  return Form("%s/%s%d", composeSymNameLayer(lr), getITS3StavePattern(), stave);
 }
 
 //__________________________________________________________________________
 const char* GeometryTGeo::composeSymNameHalfStave(int lr, int stave, int substave)
 {
-  return substave >= 0 ? Form("%s/%s%d", composeSymNameStave(lr, stave), getITSHalfStavePattern(), substave)
+  return substave >= 0 ? Form("%s/%s%d", composeSymNameStave(lr, stave), getITS3HalfStavePattern(), substave)
                        : composeSymNameStave(lr, stave);
 }
 
 //__________________________________________________________________________
 const char* GeometryTGeo::composeSymNameModule(int lr, int stave, int substave, int mod)
 {
-  return mod >= 0 ? Form("%s/%s%d", composeSymNameHalfStave(lr, stave, substave), getITSModulePattern(), mod)
+  return mod >= 0 ? Form("%s/%s%d", composeSymNameHalfStave(lr, stave, substave), getITS3ModulePattern(), mod)
                   : composeSymNameHalfStave(lr, stave, substave);
 }
 
 //__________________________________________________________________________
 const char* GeometryTGeo::composeSymNameChip(int lr, int sta, int substave, int mod, int chip)
 {
-  return Form("%s/%s%d", composeSymNameModule(lr, sta, substave, mod), getITSChipPattern(), chip);
+  return Form("%s/%s%d", composeSymNameModule(lr, sta, substave, mod), getITS3ChipPattern(), chip);
 }
 
 //__________________________________________________________________________
@@ -285,23 +285,23 @@ TGeoHMatrix* GeometryTGeo::extractMatrixSensor(int index) const
 
   int wrID = mLayerToWrapper[lay];
 
-  TString path = Form("/cave_1/%s_2/", GeometryTGeo::getITSVolPattern());
+  TString path = Form("/cave_1/%s_2/", GeometryTGeo::getITS3VolPattern());
 
   if (wrID >= 0) {
-    path += Form("%s%d_1/", getITSWrapVolPattern(), wrID);
+    path += Form("%s%d_1/", getITS3WrapVolPattern(), wrID);
   }
 
   path +=
-    Form("%s%d_1/%s%d_%d/", GeometryTGeo::getITSLayerPattern(), lay, GeometryTGeo::getITSStavePattern(), lay, stav);
+    Form("%s%d_1/%s%d_%d/", GeometryTGeo::getITS3LayerPattern(), lay, GeometryTGeo::getITS3StavePattern(), lay, stav);
 
   if (mNumberOfHalfStaves[lay] > 0) {
-    path += Form("%s%d_%d/", GeometryTGeo::getITSHalfStavePattern(), lay, sstav);
+    path += Form("%s%d_%d/", GeometryTGeo::getITS3HalfStavePattern(), lay, sstav);
   }
   if (mNumberOfModules[lay] > 0) {
-    path += Form("%s%d_%d/", GeometryTGeo::getITSModulePattern(), lay, mod);
+    path += Form("%s%d_%d/", GeometryTGeo::getITS3ModulePattern(), lay, mod);
   }
   path +=
-    Form("%s%d_%d/%s%d_1", GeometryTGeo::getITSChipPattern(), lay, chipInMod, GeometryTGeo::getITSSensorPattern(), lay);
+    Form("%s%d_%d/%s%d_1", GeometryTGeo::getITS3ChipPattern(), lay, chipInMod, GeometryTGeo::getITS3SensorPattern(), lay);
 
   static TGeoHMatrix matTmp;
   gGeoManager->PushPath();
@@ -452,9 +452,9 @@ int GeometryTGeo::extractNumberOfLayers()
 {
   int numberOfLayers = 0;
 
-  TGeoVolume* itsV = gGeoManager->GetVolume(getITSVolPattern());
+  TGeoVolume* itsV = gGeoManager->GetVolume(getITS3VolPattern());
   if (!itsV) {
-    LOG(FATAL) << "ITS volume " << getITSVolPattern() << " is not in the geometry";
+    LOG(FATAL) << "ITS volume " << getITS3VolPattern() << " is not in the geometry";
   }
 
   // Loop on all ITSV nodes, count Layer volumes by checking names
@@ -467,17 +467,17 @@ int GeometryTGeo::extractNumberOfLayers()
     TGeoNode* nd = (TGeoNode*)nodes->At(j);
     const char* name = nd->GetName();
 
-    if (strstr(name, getITSLayerPattern())) {
+    if (strstr(name, getITS3LayerPattern())) {
       numberOfLayers++;
-      if ((lrID = extractVolumeCopy(name, GeometryTGeo::getITSLayerPattern())) < 0) {
+      if ((lrID = extractVolumeCopy(name, GeometryTGeo::getITS3LayerPattern())) < 0) {
         LOG(FATAL) << "Failed to extract layer ID from the " << name;
         exit(1);
       }
 
       mLayerToWrapper[lrID] = -1;                      // not wrapped
-    } else if (strstr(name, getITSWrapVolPattern())) { // this is a wrapper volume, may cointain layers
+    } else if (strstr(name, getITS3WrapVolPattern())) { // this is a wrapper volume, may cointain layers
       int wrID = -1;
-      if ((wrID = extractVolumeCopy(name, GeometryTGeo::getITSWrapVolPattern())) < 0) {
+      if ((wrID = extractVolumeCopy(name, GeometryTGeo::getITS3WrapVolPattern())) < 0) {
         LOG(FATAL) << "Failed to extract wrapper ID from the " << name;
         exit(1);
       }
@@ -487,8 +487,8 @@ int GeometryTGeo::extractNumberOfLayers()
 
       for (int jw = 0; jw < nNodesW; jw++) {
         TGeoNode* ndW = (TGeoNode*)nodesW->At(jw);
-        if (strstr(ndW->GetName(), getITSLayerPattern())) {
-          if ((lrID = extractVolumeCopy(ndW->GetName(), GeometryTGeo::getITSLayerPattern())) < 0) {
+        if (strstr(ndW->GetName(), getITS3LayerPattern())) {
+          if ((lrID = extractVolumeCopy(ndW->GetName(), GeometryTGeo::getITS3LayerPattern())) < 0) {
             LOG(FATAL) << "Failed to extract layer ID from the " << name;
             exit(1);
           }
@@ -506,7 +506,7 @@ int GeometryTGeo::extractNumberOfStaves(int lay) const
 {
   int numberOfStaves = 0;
   char laynam[30];
-  snprintf(laynam, 30, "%s%d", getITSLayerPattern(), lay);
+  snprintf(laynam, 30, "%s%d", getITS3LayerPattern(), lay);
   TGeoVolume* volLr = gGeoManager->GetVolume(laynam);
   if (!volLr) {
     LOG(FATAL) << "can't find " << laynam << " volume";
@@ -518,8 +518,8 @@ int GeometryTGeo::extractNumberOfStaves(int lay) const
   for (int j = 0; j < nNodes; j++) {
     // LOG(INFO) << "L" << lay << " " << j << " of " << nNodes << " "
     //           << volLr->GetNodes()->At(j)->GetName() << " "
-    //           << getITSStavePattern() << " -> " << numberOfStaves;
-    if (strstr(volLr->GetNodes()->At(j)->GetName(), getITSStavePattern())) {
+    //           << getITS3StavePattern() << " -> " << numberOfStaves;
+    if (strstr(volLr->GetNodes()->At(j)->GetName(), getITS3StavePattern())) {
       numberOfStaves++;
     }
   }
@@ -534,7 +534,7 @@ int GeometryTGeo::extractNumberOfHalfStaves(int lay) const
   }
   int nSS = 0;
   char stavnam[30];
-  snprintf(stavnam, 30, "%s%d", getITSStavePattern(), lay);
+  snprintf(stavnam, 30, "%s%d", getITS3StavePattern(), lay);
   TGeoVolume* volLd = gGeoManager->GetVolume(stavnam);
   if (!volLd) {
     LOG(FATAL) << "can't find volume " << stavnam;
@@ -542,7 +542,7 @@ int GeometryTGeo::extractNumberOfHalfStaves(int lay) const
   // Loop on all stave nodes, count Chip volumes by checking names
   int nNodes = volLd->GetNodes()->GetEntries();
   for (int j = 0; j < nNodes; j++) {
-    if (strstr(volLd->GetNodes()->At(j)->GetName(), getITSHalfStavePattern())) {
+    if (strstr(volLd->GetNodes()->At(j)->GetName(), getITS3HalfStavePattern())) {
       nSS++;
     }
   }
@@ -560,11 +560,11 @@ int GeometryTGeo::extractNumberOfModules(int lay) const
   TGeoVolume* volLd = nullptr;
 
   if (!sHalfStaveName.empty()) {
-    snprintf(stavnam, 30, "%s%d", getITSHalfStavePattern(), lay);
+    snprintf(stavnam, 30, "%s%d", getITS3HalfStavePattern(), lay);
     volLd = gGeoManager->GetVolume(stavnam);
   }
   if (!volLd) { // no substaves, check staves
-    snprintf(stavnam, 30, "%s%d", getITSStavePattern(), lay);
+    snprintf(stavnam, 30, "%s%d", getITS3StavePattern(), lay);
     volLd = gGeoManager->GetVolume(stavnam);
   }
   if (!volLd) {
@@ -577,7 +577,7 @@ int GeometryTGeo::extractNumberOfModules(int lay) const
   int nNodes = volLd->GetNodes()->GetEntries();
 
   for (int j = 0; j < nNodes; j++) {
-    if (strstr(volLd->GetNodes()->At(j)->GetName(), getITSModulePattern())) {
+    if (strstr(volLd->GetNodes()->At(j)->GetName(), getITS3ModulePattern())) {
       nMod++;
     }
   }
@@ -592,17 +592,17 @@ int GeometryTGeo::extractNumberOfChipsPerModule(int lay, int& nrow) const
   TGeoVolume* volLd = nullptr;
 
   if (!sModuleName.empty()) {
-    snprintf(stavnam, 30, "%s%d", getITSModulePattern(), lay);
+    snprintf(stavnam, 30, "%s%d", getITS3ModulePattern(), lay);
     volLd = gGeoManager->GetVolume(stavnam);
   }
   if (!volLd) { // no modules on this layer, check substaves
     if (!sHalfStaveName.empty()) {
-      snprintf(stavnam, 30, "%s%d", getITSHalfStavePattern(), lay);
+      snprintf(stavnam, 30, "%s%d", getITS3HalfStavePattern(), lay);
       volLd = gGeoManager->GetVolume(stavnam);
     }
   }
   if (!volLd) { // no substaves on this layer, check staves
-    snprintf(stavnam, 30, "%s%d", getITSStavePattern(), lay);
+    snprintf(stavnam, 30, "%s%d", getITS3StavePattern(), lay);
     volLd = gGeoManager->GetVolume(stavnam);
   }
   if (!volLd) {
@@ -620,7 +620,7 @@ int GeometryTGeo::extractNumberOfChipsPerModule(int lay, int& nrow) const
     //    AliInfo(Form("L%d %d of %d %s %s ->
     // %d",lay,j,nNodes,volLd->GetNodes()->At(j)->GetName(),GetITSChipPattern(),numberOfChips));
     TGeoNodeMatrix* node = (TGeoNodeMatrix*)volLd->GetNodes()->At(j);
-    if (!strstr(node->GetName(), getITSChipPattern())) {
+    if (!strstr(node->GetName(), getITS3ChipPattern())) {
       continue;
     }
     node->LocalToMaster(loc, lab);
@@ -667,7 +667,7 @@ int GeometryTGeo::extractNumberOfChipsPerModule(int lay, int& nrow) const
 int GeometryTGeo::extractLayerChipType(int lay) const
 {
   char stavnam[30];
-  snprintf(stavnam, 30, "%s%d", getITSLayerPattern(), lay);
+  snprintf(stavnam, 30, "%s%d", getITS3LayerPattern(), lay);
   TGeoVolume* volLd = gGeoManager->GetVolume(stavnam);
   if (!volLd) {
     LOG(FATAL) << "can't find volume " << stavnam;
