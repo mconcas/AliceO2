@@ -55,7 +55,7 @@ using namespace o2::its4;
 
 float getDetLengthFromEta(const float eta, const float radius)
 {
-  float len =  2. * (10. + radius * std::cos(2 * std::atan(std::exp(-eta))));
+  float len = 2. * (10. + radius * std::cos(2 * std::atan(std::exp(-eta))));
   return len;
 }
 
