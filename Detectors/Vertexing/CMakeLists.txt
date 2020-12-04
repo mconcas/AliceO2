@@ -26,6 +26,7 @@ o2_add_library(DetectorsVertexing
                                      O2::SimulationDataFormat
                                      O2::FT0Reconstruction
                                      O2::DataFormatsFT0
+                                     O2::MathUtils
                                      ms_gsl::ms_gsl)
 
 o2_target_root_dictionary(DetectorsVertexing
@@ -38,9 +39,8 @@ o2_target_root_dictionary(DetectorsVertexing
                                   include/DetectorsVertexing/SVertexer.h
                                   include/DetectorsVertexing/SVertexerParams.h
                                   include/DetectorsVertexing/V0Hypothesis.h)
-if(CUDA_ENABLED)
-        add_subdirectory(cuda)
-        # target_compile_definitions(${targetName} PRIVATE CUDA_ENABLED)
+if(ENABLE_CUDA OR ENABLE_HIP)
+        add_subdirectory(gpu)
 endif()
 
 add_subdirectory(macros)

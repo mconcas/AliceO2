@@ -16,10 +16,12 @@
 #ifndef _ALICEO2_DCA_FITTERN_
 #define _ALICEO2_DCA_FITTERN_
 #include <TMath.h>
-#include <Math/SMatrix.h>
-#include <Math/SVector.h>
 #include "ReconstructionDataFormats/Track.h"
 #include "DetectorsVertexing/HelixHelper.h"
+#include "GPUCommonArray.h"
+#include "MathUtils/CartesianGPU.h"
+
+using namespace o2::gpu;
 
 namespace o2
 {
@@ -30,11 +32,11 @@ namespace vertexing
 struct TrackCovI {
   float sxx, syy, syz, szz;
 
-  TrackCovI(const o2::track::TrackParCov& trc, float xerrFactor = 1.) { set(trc, xerrFactor); }
+  GPUd() TrackCovI(const o2::track::TrackParCov& trc, float xerrFactor = 1.) { set(trc, xerrFactor); }
 
-  TrackCovI() = default;
+  GPUdDefault() TrackCovI() = default;
 
-  void set(const o2::track::TrackParCov& trc, float xerrFactor = 1)
+  GPUd() void set(const o2::track::TrackParCov& trc, float xerrFactor = 1)
   {
     // we assign Y error to X for DCA calculation
     // (otherwise for quazi-collinear tracks the X will not be constrained)
@@ -46,8 +48,10 @@ struct TrackCovI {
       syy = czz * detYZI;
       syz = -cyz * detYZI;
       szz = cyy * detYZI;
+#ifndef GPUCA_GPUCODE_DEVICE
     } else {
       throw std::runtime_error("invalid track covariance");
+#endif
     }
   }
 };
@@ -56,9 +60,9 @@ struct TrackCovI {
 ///< Derivative (up to 2) of the TrackParam position over its running param X
 struct TrackDeriv {
   float dydx, dzdx, d2ydx2, d2zdx2;
-  TrackDeriv() = default;
-  TrackDeriv(const o2::track::TrackPar& trc, float bz) { set(trc, bz); }
-  void set(const o2::track::TrackPar& trc, float bz)
+  GPUdDefault() TrackDeriv() = default;
+  GPUd() TrackDeriv(const o2::track::TrackPar& trc, float bz) { set(trc, bz); }
+  GPUd() void set(const o2::track::TrackPar& trc, float bz)
   {
     float snp = trc.getSnp(), csp = std::sqrt((1. - snp) * (1. + snp)), cspI = 1. / csp, crv2c = trc.getCurvature(bz) * cspI;
     dydx = snp * cspI;            // = snp/csp
@@ -80,34 +84,34 @@ class DCAFitterN
   using TrackAuxPar = o2::track::TrackAuxPar;
   using CrossInfo = o2::track::CrossInfo;
 
-  using Vec3D = ROOT::Math::SVector<double, 3>;
-  using VecND = ROOT::Math::SVector<double, N>;
-  using MatSym3D = ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3>>;
-  using MatStd3D = ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepStd<double, 3>>;
-  using MatSymND = ROOT::Math::SMatrix<double, N, N, ROOT::Math::MatRepSym<double, N>>;
-  using MatStdND = ROOT::Math::SMatrix<double, N, N, ROOT::Math::MatRepStd<double, N>>;
+  using Vec3D = o2::math_utils::SVector<double, 3>;
+  using VecND = o2::math_utils::SVector<double, N>;
+  using MatSym3D = o2::math_utils::SMatrix<double, 3, 3, o2::math_utils::MatRepSym<double, 3>>;
+  using MatStd3D = o2::math_utils::SMatrix<double, 3, 3, o2::math_utils::MatRepStd<double, 3>>;
+  using MatSymND = o2::math_utils::SMatrix<double, N, N, o2::math_utils::MatRepSym<double, N>>;
+  using MatStdND = o2::math_utils::SMatrix<double, N, N, o2::math_utils::MatRepStd<double, N>>;
   using TrackCoefVtx = MatStd3D;
-  using ArrTrack = std::array<Track, N>;         // container for prongs (tracks) at single vertex cand.
-  using ArrTrackCovI = std::array<TrackCovI, N>; // container for inv.cov.matrices at single vertex cand.
-  using ArrTrCoef = std::array<TrackCoefVtx, N>; // container of TrackCoefVtx coefficients at single vertex cand.
-  using ArrTrDer = std::array<TrackDeriv, N>;    // container of Track 1st and 2nd derivative over their X param
-  using ArrTrPos = std::array<Vec3D, N>;         // container of Track positions
+  using ArrTrack = gpustd::array<Track, N>;         // container for prongs (tracks) at single vertex cand.
+  using ArrTrackCovI = gpustd::array<TrackCovI, N>; // container for inv.cov.matrices at single vertex cand.
+  using ArrTrCoef = gpustd::array<TrackCoefVtx, N>; // container of TrackCoefVtx coefficients at single vertex cand.
+  using ArrTrDer = gpustd::array<TrackDeriv, N>;    // container of Track 1st and 2nd derivative over their X param
+  using ArrTrPos = gpustd::array<Vec3D, N>;         // container of Track positions
 
  public:
   static constexpr int getNProngs() { return N; }
 
-  DCAFitterN() = default;
-  DCAFitterN(float bz, bool useAbsDCA, bool prop2DCA) : mBz(bz), mUseAbsDCA(useAbsDCA), mPropagateToPCA(prop2DCA)
+  GPUdDefault() DCAFitterN() = default;
+  GPUd() DCAFitterN(float bz, bool useAbsDCA, bool prop2DCA) : mBz(bz), mUseAbsDCA(useAbsDCA), mPropagateToPCA(prop2DCA)
   {
     static_assert(N >= NMin && N <= NMax, "N prongs outside of allowed range");
   }
 
   //=========================================================================
   ///< return PCA candidate, by default best on is provided (no check for the index validity)
-  const Vec3D& getPCACandidate(int cand = 0) const { return mPCA[mOrder[cand]]; }
+  GPUd() const Vec3D& getPCACandidate(int cand = 0) const { return mPCA[mOrder[cand]]; }
 
   ///< return Chi2 at PCA candidate (no check for its validity)
-  float getChi2AtPCACandidate(int cand = 0) const { return mChi2[mOrder[cand]]; }
+  GPUd() float getChi2AtPCACandidate(int cand = 0) const { return mChi2[mOrder[cand]]; }
 
   ///< prepare copies of tracks at the V0 candidate (no check for the candidate validity)
   ///  must be called before getTrack(i,cand) query
@@ -133,7 +137,7 @@ class DCAFitterN
   o2::track::TrackPar createParentTrackPar(int cand = 0, bool sectorAlpha = true) const;
 
   ///< calculate on the fly track param (no cov mat) at candidate, check isValid to make sure propagation was successful
-  o2::track::TrackPar getTrackParamAtPCA(int i, int cand = 0) const;
+  GPUd() o2::track::TrackPar getTrackParamAtPCA(int i, int cand = 0) const;
 
   MatSym3D calcPCACovMatrix(int cand = 0) const;
 
@@ -164,7 +168,7 @@ class DCAFitterN
   bool getPropagateToPCA() const { return mPropagateToPCA; }
 
   template <class... Tr>
-  int process(const Tr&... args);
+  GPUd() int process(const Tr&... args);
   void print() const;
 
  protected:
@@ -186,7 +190,7 @@ class DCAFitterN
   bool minimizeChi2NoErr();
   bool roughDZCut() const;
   bool closerToAlternative() const;
-  static double getAbsMax(const VecND& v);
+  GPUd() static double getAbsMax(const VecND& v);
 
   ///< track param positions at V0 candidate (no check for the candidate validity)
   const Vec3D& getTrackPos(int i, int cand = 0) const { return mTrPos[mOrder[cand]][i]; }
@@ -215,22 +219,22 @@ class DCAFitterN
     return mat;
   }
 
-  void assign(int) {}
+  GPUd() void assign(int) {}
   template <class T, class... Tr>
-  void assign(int i, const T& t, const Tr&... args)
+  GPUd() void assign(int i, const T& t, const Tr&... args)
   {
     static_assert(std::is_convertible<T, Track>(), "Wrong track type");
     mOrigTrPtr[i] = &t;
     assign(i + 1, args...);
   }
 
-  void clear()
+  GPUd() void clear()
   {
     mCurHyp = 0;
     mAllowAltPreference = true;
   }
 
-  static void setTrackPos(Vec3D& pnt, const Track& tr)
+  GPUd() static void setTrackPos(Vec3D& pnt, const Track& tr)
   {
     pnt[0] = tr.getX();
     pnt[1] = tr.getY();
@@ -239,30 +243,30 @@ class DCAFitterN
 
  private:
   // vectors of 1st derivatives of track local residuals over X parameters
-  std::array<std::array<Vec3D, N>, N> mDResidDx;
+  gpustd::array<gpustd::array<Vec3D, N>, N> mDResidDx;
   // vectors of 1nd derivatives of track local residuals over X parameters
   // (cross-derivatives DR/(dx_j*dx_k) = 0 for j!=k, therefore the hessian is diagonal)
-  std::array<std::array<Vec3D, N>, N> mD2ResidDx2;
+  gpustd::array<gpustd::array<Vec3D, N>, N> mD2ResidDx2;
   VecND mDChi2Dx;      // 1st derivatives of chi2 over tracks X params
   MatSymND mD2Chi2Dx2; // 2nd derivatives of chi2 over tracks X params (symmetric matrix)
   MatSymND mCosDif;    // matrix with cos(alp_j-alp_i) for j<i
   MatSymND mSinDif;    // matrix with sin(alp_j-alp_i) for j<i
-  std::array<const Track*, N> mOrigTrPtr;
-  std::array<TrackAuxPar, N> mTrAux; // Aux track info for each track at each cand. vertex
+  gpustd::array<const Track*, N> mOrigTrPtr;
+  gpustd::array<TrackAuxPar, N> mTrAux; // Aux track info for each track at each cand. vertex
   CrossInfo mCrossings;              // info on track crossing
 
-  std::array<ArrTrackCovI, MAXHYP> mTrcEInv; // errors for each track at each cand. vertex
-  std::array<ArrTrack, MAXHYP> mCandTr;      // tracks at each cond. vertex (Note: Errors are at seed XY point)
-  std::array<ArrTrCoef, MAXHYP> mTrCFVT;     // TrackCoefVtx for each track at each cand. vertex
-  std::array<ArrTrDer, MAXHYP> mTrDer;       // Track derivativse
-  std::array<ArrTrPos, MAXHYP> mTrPos;       // Track positions
-  std::array<ArrTrPos, MAXHYP> mTrRes;       // Track residuals
-  std::array<Vec3D, MAXHYP> mPCA;            // PCA for each vertex candidate
-  std::array<float, MAXHYP> mChi2 = {0};     // Chi2 at PCA candidate
-  std::array<int, MAXHYP> mNIters;           // number of iterations for each seed
-  std::array<bool, MAXHYP> mTrPropDone;      // Flag that the tracks are fully propagated to PCA
+  gpustd::array<ArrTrackCovI, MAXHYP> mTrcEInv; // errors for each track at each cand. vertex
+  gpustd::array<ArrTrack, MAXHYP> mCandTr;      // tracks at each cond. vertex (Note: Errors are at seed XY point)
+  gpustd::array<ArrTrCoef, MAXHYP> mTrCFVT;     // TrackCoefVtx for each track at each cand. vertex
+  gpustd::array<ArrTrDer, MAXHYP> mTrDer;       // Track derivativse
+  gpustd::array<ArrTrPos, MAXHYP> mTrPos;       // Track positions
+  gpustd::array<ArrTrPos, MAXHYP> mTrRes;       // Track residuals
+  gpustd::array<Vec3D, MAXHYP> mPCA;            // PCA for each vertex candidate
+  gpustd::array<float, MAXHYP> mChi2 = {0};     // Chi2 at PCA candidate
+  gpustd::array<int, MAXHYP> mNIters;           // number of iterations for each seed
+  gpustd::array<bool, MAXHYP> mTrPropDone;      // Flag that the tracks are fully propagated to PCA
   MatSym3D mWeightInv;                       // inverse weight of single track, [sum{M^T E M}]^-1 in EQ.T
-  std::array<int, MAXHYP> mOrder{0};
+  gpustd::array<int, MAXHYP> mOrder{0};
   int mCurHyp = 0;
   int mCrossIDCur = 0;
   int mCrossIDAlt = -1;
@@ -284,7 +288,7 @@ class DCAFitterN
 ///_________________________________________________________________________
 template <int N, typename... Args>
 template <class... Tr>
-int DCAFitterN<N, Args...>::process(const Tr&... args)
+GPUd() int DCAFitterN<N, Args...>::process(const Tr&... args)
 {
   // This is a main entry point: fit PCA of N tracks
   static_assert(sizeof...(args) == N, "incorrect number of input tracks");
@@ -510,7 +514,7 @@ template <int N, typename... Args>
 void DCAFitterN<N, Args...>::calcChi2Derivatives()
 {
   //< calculate 1st and 2nd derivatives of wighted DCA (chi2) over track parameters X, see EQ.Chi2 in the ref
-  std::array<std::array<Vec3D, N>, N> covIDrDx; // tempory vectors of covI_j * dres_j/dx_i
+  gpustd::array<gpustd::array<Vec3D, N>, N> covIDrDx; // tempory vectors of covI_j * dres_j/dx_i
 
   // chi2 1st derivative
   for (int i = N; i--;) {
@@ -607,7 +611,7 @@ void DCAFitterN<N, Args...>::calcPCANoErr()
 
 //___________________________________________________________________
 template <int N, typename... Args>
-ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3>> DCAFitterN<N, Args...>::calcPCACovMatrix(int cand) const
+o2::math_utils::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3>> DCAFitterN<N, Args...>::calcPCACovMatrix(int cand) const
 {
   // calculate covariance matrix for the point of closest approach
   MatSym3D covm;
@@ -709,7 +713,7 @@ bool DCAFitterN<N, Args...>::propagateTracksToVertex(int icand)
 
 //___________________________________________________________________
 template <int N, typename... Args>
-inline o2::track::TrackPar DCAFitterN<N, Args...>::getTrackParamAtPCA(int i, int icand) const
+GPUdi() o2::track::TrackPar DCAFitterN<N, Args...>::getTrackParamAtPCA(int i, int icand) const
 {
   // propagate tracks param only to current vertex (if not already done)
   int ord = mOrder[icand];
@@ -725,7 +729,7 @@ inline o2::track::TrackPar DCAFitterN<N, Args...>::getTrackParamAtPCA(int i, int
 
 //___________________________________________________________________
 template <int N, typename... Args>
-inline double DCAFitterN<N, Args...>::getAbsMax(const VecND& v)
+GPUd() inline double DCAFitterN<N, Args...>::getAbsMax(const VecND& v)
 {
   double mx = -1;
   for (int i = N; i--;) {
@@ -769,7 +773,11 @@ bool DCAFitterN<N, Args...>::minimizeChi2()
 
     // do Newton-Rapson iteration with corrections = - dchi2/d{x0..xN} * [ d^2chi2/d{x0..xN}^2 ]^-1
     if (!mD2Chi2Dx2.Invert()) {
+#if !defined(__CUDACC__)
       LOG(ERROR) << "InversionFailed";
+#else
+      printf("InversionFailed");
+#endif
       return false;
     }
     VecND dx = mD2Chi2Dx2 * mDChi2Dx;
@@ -822,7 +830,11 @@ bool DCAFitterN<N, Args...>::minimizeChi2NoErr()
 
     // do Newton-Rapson iteration with corrections = - dchi2/d{x0..xN} * [ d^2chi2/d{x0..xN}^2 ]^-1
     if (!mD2Chi2Dx2.Invert()) {
+#if !defined(__CUDACC__)
       LOG(ERROR) << "InversionFailed";
+#else
+      printf("InversionFailed");
+#endif
       return false;
     }
     VecND dx = mD2Chi2Dx2 * mDChi2Dx;
@@ -878,10 +890,18 @@ bool DCAFitterN<N, Args...>::closerToAlternative() const
 template <int N, typename... Args>
 void DCAFitterN<N, Args...>::print() const
 {
+#if !defined(__CUDACC__)
   LOG(INFO) << N << "-prong vertex fitter in " << (mUseAbsDCA ? "abs." : "weighted") << " distance minimization mode";
   LOG(INFO) << "Bz: " << mBz << " MaxIter: " << mMaxIter << " MaxChi2: " << mMaxChi2;
   LOG(INFO) << "Stopping condition: Max.param change < " << mMinParamChange << " Rel.Chi2 change > " << mMinRelChi2Change;
   LOG(INFO) << "Discard candidates for : Rvtx > " << getMaxR() << " DZ between tracks > " << mMaxDZIni;
+#else
+  printf("%d-prong vertex fitter in %s  distance minimization mode\n", N, (mUseAbsDCA ? "abs." : "weighted"));
+  printf("Bz: %f MaxIter: %d MaxChi2: %f\n", mBz, mMaxIter, mMaxChi2);
+  printf("Stopping condition: Max.param change < %f  Rel.Chi2 change > %f\n", mMinParamChange, mMinRelChi2Change);
+  printf("Discard candidates for : Rvtx > %f  DZ between tracks > %f", getMaxR(), mMaxDZIni);
+#endif
+
 }
 
 //___________________________________________________________________
@@ -891,13 +911,13 @@ o2::track::TrackParCov DCAFitterN<N, Args...>::createParentTrackParCov(int cand,
   const auto& trP = getTrack(0, cand);
   const auto& trN = getTrack(1, cand);
   const auto& wvtx = getPCACandidate(cand);
-  std::array<float, 21> covV = {0.};
-  std::array<float, 3> pvecV = {0.};
+  gpustd::array<float, 21> covV = {0.};
+  gpustd::array<float, 3> pvecV = {0.};
   int q = 0;
   for (int it = 0; it < N; it++) {
     const auto& trc = getTrack(it, cand);
-    std::array<float, 3> pvecT = {0.};
-    std::array<float, 21> covT = {0.};
+    gpustd::array<float, 3> pvecT = {0.};
+    gpustd::array<float, 21> covT = {0.};
     trc.getPxPyPzGlo(pvecT);
     trc.getCovXYZPxPyPzGlo(covT);
     constexpr int MomInd[6] = {9, 13, 14, 18, 19, 20}; // cov matrix elements for momentum component
@@ -916,7 +936,7 @@ o2::track::TrackParCov DCAFitterN<N, Args...>::createParentTrackParCov(int cand,
   covV[3] = covVtxV(2, 0);
   covV[4] = covVtxV(2, 1);
   covV[5] = covVtxV(2, 2);
-  const std::array<float, 3> vertex = {(float)wvtx[0], (float)wvtx[1], (float)wvtx[2]};
+  const gpustd::array<float, 3> vertex = {(float)wvtx[0], (float)wvtx[1], (float)wvtx[2]};
   return std::move(o2::track::TrackParCov(vertex, pvecV, covV, q, sectorAlpha));
 }
 
@@ -927,18 +947,18 @@ o2::track::TrackPar DCAFitterN<N, Args...>::createParentTrackPar(int cand, bool 
   const auto& trP = getTrack(0, cand);
   const auto& trN = getTrack(1, cand);
   const auto& wvtx = getPCACandidate(cand);
-  std::array<float, 3> pvecV = {0.};
+  gpustd::array<float, 3> pvecV = {0.};
   int q = 0;
   for (int it = 0; it < N; it++) {
     const auto& trc = getTrack(it, cand);
-    std::array<float, 3> pvecT = {0.};
+    gpustd::array<float, 3> pvecT = {0.};
     trc.getPxPyPzGlo(pvecT);
     for (int i = 0; i < 3; i++) {
       pvecV[i] += pvecT[i];
     }
     q += trc.getCharge();
   }
-  const std::array<float, 3> vertex = {(float)wvtx[0], (float)wvtx[1], (float)wvtx[2]};
+  const gpustd::array<float, 3> vertex = {(float)wvtx[0], (float)wvtx[1], (float)wvtx[2]};
   return std::move(o2::track::TrackPar(vertex, pvecV, q, sectorAlpha));
 }
 
