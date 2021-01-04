@@ -40,7 +40,7 @@
 #include "Framework/Logger.h"
 
 #ifdef CA_DEBUG
-#include "ITSTracking/StandaloneDebugger.h"
+#include "ITStracking/StandaloneDebugger.h"
 #endif
 
 namespace o2
@@ -78,6 +78,11 @@ class Tracker
   std::uint32_t getROFrame() const { return mROFrame; }
   void setCorrType(const o2::base::PropagatorImpl<float>::MatCorrType& type) { mCorrType = type; }
   void setParameters(const std::vector<MemoryParameters>&, const std::vector<TrackingParameters>&);
+<<<<<<< HEAD
+=======
+  void setUseSmoother(const bool = false);
+  void initMatBudLUTFromFile();
+>>>>>>> Add toggles
   void getGlobalConfiguration();
   bool isMatLUT() const { return o2::base::Propagator::Instance()->getMatLUT() && (mCorrType == o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT); }
 
@@ -116,6 +121,7 @@ class Tracker
 
   bool mCUDA = false;
   o2::base::PropagatorImpl<float>::MatCorrType mCorrType = o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT;
+  bool mUseSmoother = false;
   float mBz = 5.f;
   std::uint32_t mROFrame = 0;
   std::vector<TrackITSExt> mTracks;
@@ -131,6 +137,11 @@ inline void Tracker::setParameters(const std::vector<MemoryParameters>& memPars,
 {
   mMemParams = memPars;
   mTrkParams = trkPars;
+}
+
+inline void Tracker::setUseSmoother(const bool smooth)
+{
+  mUseSmoother = smooth;
 }
 
 inline float Tracker::getBz() const
