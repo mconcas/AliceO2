@@ -662,6 +662,7 @@ void Tracker::getGlobalConfiguration()
   if (tc.useMatCorrTGeo) {
     setCorrType(o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrTGeo);
   }
+  setUseSmoother(tc.useKalmanSmoother);
 }
 
 // Smoother

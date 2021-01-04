@@ -71,6 +71,7 @@ class Tracker
 
   std::vector<TrackITSExt>& getTracks();
   auto& getTrackLabels() { return mTrackLabels; }
+  bool isKSmoother();
 
   void clustersToTracks(const ROframe&, std::ostream& = std::cout);
 
@@ -78,11 +79,8 @@ class Tracker
   std::uint32_t getROFrame() const { return mROFrame; }
   void setCorrType(const o2::base::PropagatorImpl<float>::MatCorrType& type) { mCorrType = type; }
   void setParameters(const std::vector<MemoryParameters>&, const std::vector<TrackingParameters>&);
-<<<<<<< HEAD
-=======
   void setUseSmoother(const bool = false);
   void initMatBudLUTFromFile();
->>>>>>> Add toggles
   void getGlobalConfiguration();
   bool isMatLUT() const { return o2::base::Propagator::Instance()->getMatLUT() && (mCorrType == o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT); }
 
@@ -152,6 +150,11 @@ inline float Tracker::getBz() const
 inline void Tracker::setBz(float bz)
 {
   mBz = bz;
+}
+
+inline bool Tracker::isKSmoother()
+{
+  return mUseSmoother;
 }
 
 template <typename... T>
