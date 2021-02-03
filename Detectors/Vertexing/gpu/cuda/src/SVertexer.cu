@@ -8,53 +8,104 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#if defined(__HIPCC__)
-#include "DetectorsVertexingHIP/SVertexer.h"
-#else
 #include "DetectorsVertexing/SVertexer.h"
-#endif
+#include "DetectorsBase/Propagator.h"
+#include "ReconstructionDataFormats/TrackTPCITS.h"
+#include "DataFormatsTPC/TrackTPC.h"
+#include "DataFormatsITS/TrackITS.h"
 
-// #include "DetectorsVertexing/SMatrixGPU.h"
-#include "DetectorsVertexing/DCAFitterN.h" // <- target
+//Macro for checking GPU errors following a cuda launch or api call
+#define gpuCheckError()                                                               \
+  {                                                                                   \
+    cudaError_t e = cudaGetLastError();                                               \
+    if (e != cudaSuccess) {                                                           \
+      printf("GPU failure %s:%d: '%s'\n", __FILE__, __LINE__, cudaGetErrorString(e)); \
+      exit(0);                                                                        \
+    }                                                                                 \
+  }
 
 namespace o2
 {
 namespace vertexing
 {
 
-using Vec3D = o2::math_utils::SVector<double, 3>;
-using MatSym3D = o2::math_utils::SMatrix<double, 3, 3, o2::math_utils::MatRepSym<double, 3>>;
-using MatStd3D = o2::math_utils::SMatrix<double, 3, 3, o2::math_utils::MatRepStd<double, 3>>;
+struct SVParamsGPU {
+  // Struct to pass configuration for SVertexer as static symbol on GPU
+  unsigned char useAbsDCA = false;
+  unsigned char propagateToPCA = false;
+  float maxRIni = 0.f;
+  float minParamChange = 0.f;
+  float minRelChi2Change = 0.f;
+  float maxDZIni = 0.f;
+  float maxChi2 = 0.f;
+  float bz = 0.f;
+};
 
-//Macro for checking cuda errors following a cuda launch or api call
-#define cudaCheckError()                                                               \
-  {                                                                                    \
-    cudaError_t e = cudaGetLastError();                                                \
-    if (e != cudaSuccess) {                                                            \
-      printf("Cuda failure %s:%d: '%s'\n", __FILE__, __LINE__, cudaGetErrorString(e)); \
-      exit(0);                                                                         \
-    }                                                                                  \
-  }
+__constant__ SVParamsGPU gpuStaticConf;
 
-// Kernels
+namespace kernels
+{
 GPUg() void testFitterKernel()
 {
-  double bz = 5.0;
   o2::vertexing::DCAFitterN<2> mFitter2Prong;
-  mFitter2Prong.setBz(bz);
-  mFitter2Prong.setPropagateToPCA(true);  // After finding the vertex, propagate tracks to the DCA. This is default anyway
-  mFitter2Prong.setMaxR(200);             // do not consider V0 seeds with 2D circles crossing above this R. This is default anyway
-  mFitter2Prong.setMaxDZIni(4);           // do not consider V0 seeds with tracks Z-distance exceeding this. This is default anyway
-  mFitter2Prong.setMinParamChange(1e-3);  // stop iterations if max correction is below this value. This is default anyway
-  mFitter2Prong.setMinRelChi2Change(0.9); // stop iterations if chi2 improves by less that this factor
 
   printf("End.\n");
 }
+} // namespace kernels
 
-void hello_util()
+using PID = o2::track::PID;
+using TrackTPCITS = o2::dataformats::TrackTPCITS;
+using TrackITS = o2::its::TrackITS;
+using TrackTPC = o2::tpc::TrackTPC;
+
+void SVertexer::init()
 {
-  testFitterKernel<<<1, 1>>>();
-  cudaCheckError();
+  mSVParams = &SVertexerParams::Instance();
+  auto bz = o2::base::Propagator::Instance()->getNominalBz();
+
+  SVParamsGPU parsHost;
+
+  parsHost.useAbsDCA = mSVParams->useAbsDCA;
+  parsHost.maxRIni = mSVParams->maxRIni;
+  parsHost.minParamChange = mSVParams->minParamChange;
+  parsHost.minRelChi2Change = mSVParams->minRelChi2Change;
+  parsHost.maxDZIni = mSVParams->maxDZIni;
+  parsHost.maxChi2 = mSVParams->maxChi2;
+  parsHost.propagateToPCA = false;
+  parsHost.bz = bz;
+
+  // precalculated selection cuts
+  mMinR2ToMeanVertex = mSVParams->minRfromMeanVertex * mSVParams->minRfromMeanVertex;
+  mMaxDCAXY2ToMeanVertex = mSVParams->maxDCAXYfromMeanVertex * mSVParams->maxDCAXYfromMeanVertex;
+  mMinCosPointingAngle = mSVParams->minCosPointingAngle;
+
+  mV0Hyps[SVertexerParams::Photon].set(PID::Photon, PID::Electron, PID::Electron, mSVParams->pidCutsPhoton, bz);
+  mV0Hyps[SVertexerParams::K0].set(PID::K0, PID::Pion, PID::Pion, mSVParams->pidCutsK0, bz);
+  mV0Hyps[SVertexerParams::Lambda].set(PID::Lambda, PID::Proton, PID::Pion, mSVParams->pidCutsLambda, bz);
+  mV0Hyps[SVertexerParams::AntiLambda].set(PID::Lambda, PID::Pion, PID::Proton, mSVParams->pidCutsLambda, bz);
+  mV0Hyps[SVertexerParams::HyperTriton].set(PID::HyperTriton, PID::Helium3, PID::Pion, mSVParams->pidCutsHTriton, bz);
+  mV0Hyps[SVertexerParams::AntiHyperTriton].set(PID::HyperTriton, PID::Pion, PID::Helium3, mSVParams->pidCutsHTriton, bz);
+
+  // Load configuration to constant static symbol on GPU
+  cudaMemcpyToSymbol(gpuStaticConf, &parsHost, sizeof(parsHost));
+  printf("Calling kernel\n");
+  kernels::testFitterKernel<<<1, 1>>>();
+  cudaDeviceSynchronize();
+  gpuCheckError();
+
+  // NB: no DCA-fitter has been configured yet.
+}
+
+void SVertexer::process(const gsl::span<const PVertex>& vertices,   // primary vertices
+                        const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
+                        const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
+                        const o2d::GlobalTrackAccessor& tracksPool, // accessor to various tracks
+                        std::vector<V0>& v0s,                       // found V0s
+                        std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
+)
+{
+  kernels::testFitterKernel<<<1, 1>>>();
+  gpuCheckError();
 }
 
 } // namespace vertexing

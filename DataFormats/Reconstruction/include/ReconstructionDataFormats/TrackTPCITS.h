@@ -44,7 +44,7 @@ class TrackTPCITS : public o2::track::TrackParCov
   const timeEst& getTimeMUS() const { return mTimeMUS; }
   timeEst& getTimeMUS() { return mTimeMUS; }
   void setTimeMUS(const timeEst& t) { mTimeMUS = t; }
-  void setTimeMUS(float t, float te)
+  GPUdi() void setTimeMUS(float t, float te)
   {
     mTimeMUS.setTimeStamp(t);
     mTimeMUS.setTimeStampError(te);

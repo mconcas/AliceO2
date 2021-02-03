@@ -41,13 +41,14 @@ o2_target_root_dictionary(DetectorsVertexing
                                   include/DetectorsVertexing/SVertexerParams.h
                                   include/DetectorsVertexing/V0Hypothesis.h)
 if(ENABLE_CUDA)
-        # add_subdirectory(gpu)
         o2_add_library(DetectorsVertexingCUDA
                SOURCES gpu/cuda/src/SVertexer.cu
                PUBLIC_INCLUDE_DIRECTORIES include/
-               PUBLIC_LINK_LIBRARIES O2::GPUCommon
-                                     O2::ReconstructionDataFormats
-                                     # O2::DetectorsVertexing
+               PUBLIC_LINK_LIBRARIES    O2::GPUCommon
+                                        O2::ReconstructionDataFormats
+                                        O2::DataFormatsITS
+                                        O2::TPCBase
+               PRIVATE_LINK_LIBRARIES   O2::DetectorsVertexing 
                TARGETVARNAME targetName)
 
                set_property(TARGET ${targetName} PROPERTY CUDA_SEPARABLE_COMPILATION ON)

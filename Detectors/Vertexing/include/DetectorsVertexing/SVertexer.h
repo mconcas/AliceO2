@@ -32,7 +32,7 @@ namespace vertexing
 {
 
 namespace o2d = o2::dataformats;
-#if !defined (__CUDACC__)
+
 class SVertexer
 {
  public:
@@ -68,24 +68,6 @@ class SVertexer
   float mMaxDCAXY2ToMeanVertex = 0;
   float mMinCosPointingAngle = 0;
 };
-#else
-
-void hello_util();
-
-class SVertexerCUDA final
-{
- public:
-  SVertexerCUDA() = default;
-  virtual ~SVertexerCUDA() = default;
-  void hello();
-};
-
-// Steers
-void SVertexerCUDA::hello()
-{
-  hello_util();
-}
-#endif
 } // namespace vertexing
 } // namespace o2
 #endif

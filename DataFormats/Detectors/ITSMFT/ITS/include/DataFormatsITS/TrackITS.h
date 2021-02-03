@@ -53,18 +53,18 @@ class TrackITS : public o2::track::TrackParCov
 
   // Other functions
   float getChi2() const { return mChi2; }
-  int getNumberOfClusters() const { return mClusRef.getEntries(); }
-  int getFirstClusterEntry() const { return mClusRef.getFirstEntry(); }
-  int getClusterEntry(int i) const { return getFirstClusterEntry() + i; }
-  void shiftFirstClusterEntry(int bias)
+  GPUdi() int getNumberOfClusters() const { return mClusRef.getEntries(); }
+  GPUdi() int getFirstClusterEntry() const { return mClusRef.getFirstEntry(); }
+  GPUdi() int getClusterEntry(int i) const { return getFirstClusterEntry() + i; }
+  GPUdi() void shiftFirstClusterEntry(int bias)
   {
     mClusRef.setFirstEntry(mClusRef.getFirstEntry() + bias);
   }
-  void setFirstClusterEntry(int offs)
+  GPUdi() void setFirstClusterEntry(int offs)
   {
     mClusRef.setFirstEntry(offs);
   }
-  void setNumberOfClusters(int n)
+  GPUdi() void setNumberOfClusters(int n)
   {
     mClusRef.setEntries(n);
   }
@@ -72,7 +72,7 @@ class TrackITS : public o2::track::TrackParCov
   void getImpactParams(float x, float y, float z, float bz, float ip[2]) const;
   // bool getPhiZat(float r,float &phi,float &z) const;
 
-  void setClusterRefs(int firstEntry, int n)
+  GPUdi() void setClusterRefs(int firstEntry, int n)
   {
     mClusRef.set(firstEntry, n);
   }
@@ -107,14 +107,14 @@ class TrackITSExt : public TrackITS
   static constexpr int MaxClusters = 16; /// Prepare for overlaps and new detector configurations
   using TrackITS::TrackITS; // inherit base constructors
 
-  TrackITSExt(o2::track::TrackParCov&& parCov, short ncl, float chi2,
+  GPUdi() TrackITSExt(o2::track::TrackParCov&& parCov, short ncl, float chi2,
               o2::track::TrackParCov&& outer, std::array<int, MaxClusters> cls)
     : TrackITS(parCov, chi2, outer), mIndex{cls}
   {
     setNumberOfClusters(ncl);
   }
 
-  void setClusterIndex(int l, int i)
+  GPUdi() void setClusterIndex(int l, int i)
   {
     int ncl = getNumberOfClusters();
     mIndex[ncl++] = (l << 28) + i;
@@ -123,7 +123,7 @@ class TrackITSExt : public TrackITS
 
   int getClusterIndex(int lr) const { return mIndex[lr]; }
 
-  void setExternalClusterIndex(int layer, int idx, bool newCluster = false)
+  GPUdi() void setExternalClusterIndex(int layer, int idx, bool newCluster = false)
   {
     if (newCluster) {
       getClusterRefs().setEntries(getNumberOfClusters() + 1);

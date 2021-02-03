@@ -2,10 +2,13 @@
 /// \brief Simple macro run dummy svertexer, it eventually will support GPU
 
 #if !defined(__CLING__) || defined(__ROOTCLING__)
-#include "DetectorsVertexing/DCAFitterN.h"
-// #include "DetectorsVertexingHIP/SVertexer.h"
-#include "DetectorsVertexingCUDA/SVertexer.h"
+
+#include "DetectorsVertexing/SVertexer.h"
 #include "CommonUtils/TreeStreamRedirector.h"
+#include "DataFormatsParameters/GRPObject.h"
+#include "DetectorsBase/GeometryManager.h"
+#include "DetectorsBase/Propagator.h"
+
 #include <TRandom.h>
 #include <TGenPhaseSpace.h>
 #include <TLorentzVector.h>
@@ -129,256 +132,18 @@ TLorentzVector generate(Vec3D& vtx, std::vector<o2::track::TrackParCov>& vctr, f
 
 } // namespace vertexing
 } // namespace o2
+
 void runSVertexer()
 {
-  int NTest = 10000;
-  o2::utils::TreeStreamRedirector outStream("dcafitterNTest.root");
+  gSystem->Unload("libO2DetectorsVertexing");
+  gSystem->Load("libO2DetectorsVertexingCUDA");
 
-  TGenPhaseSpace genPHS;
-  double pion = 0.13957;
-  double k0 = 0.49761;
-  double kch = 0.49368;
-  double dch = 1.86965;
-  std::vector<double> k0dec = {pion, pion};
-  std::vector<double> dchdec = {pion, kch, pion};
-  std::vector<o2::track::TrackParCov> vctracks;
-  o2::vertexing::Vec3D vtxGen;
+   const auto grp = o2::parameters::GRPObject::loadFrom("o2sim_grp.root");
+  o2::base::GeometryManager::loadGeometry();
+  o2::base::Propagator::initFieldFromGRP(grp);
+  o2::vertexing::SVertexer sV{};
+  sV.init();
+  // sV.process();
 
-  double bz = 5.0;
-  // 2 prongs vertices
-
-  LOG(INFO) << "Processing 2-prong Helix - Helix case";
-  std::vector<int> forceQ{1, 1};
-
-  o2::vertexing::DCAFitterN<2> ft; // 2 prong fitter
-  ft.setBz(bz);
-  ft.setPropagateToPCA(true);  // After finding the vertex, propagate tracks to the DCA. This is default anyway
-  ft.setMaxR(200);             // do not consider V0 seeds with 2D circles crossing above this R. This is default anyway
-  ft.setMaxDZIni(4);           // do not consider V0 seeds with tracks Z-distance exceeding this. This is default anyway
-  ft.setMinParamChange(1e-3);  // stop iterations if max correction is below this value. This is default anyway
-  ft.setMinRelChi2Change(0.9); // stop iterations if chi2 improves by less that this factor
-
-  std::string treeName2A = "pr2a", treeName2W = "pr2w";
-  TStopwatch swA, swW;
-  int nfoundA = 0, nfoundW = 0;
-  double meanDA = 0, meanDW = 0;
-  swA.Stop();
-  swW.Stop();
-  for (int iev = 0; iev < NTest; iev++) {
-    auto genParent = o2::vertexing::generate(vtxGen, vctracks, bz, genPHS, k0, k0dec, forceQ);
-
-    ft.setUseAbsDCA(true);
-    swA.Start(false);
-    int ncA = ft.process(vctracks[0], vctracks[1]); // HERE WE FIT THE VERTICES
-    swA.Stop();
-    LOG(DEBUG) << "fit abs.dist " << iev << " NC: " << ncA << " Chi2: " << (ncA ? ft.getChi2AtPCACandidate(0) : -1);
-    if (ncA) {
-      auto minD = checkResults(outStream, treeName2A, ft, vtxGen, genParent, k0dec);
-      meanDA += minD;
-      nfoundA++;
-    }
-
-    ft.setUseAbsDCA(false);
-    swW.Start(false);
-    int ncW = ft.process(vctracks[0], vctracks[1]); // HERE WE FIT THE VERTICES
-    swW.Stop();
-    LOG(DEBUG) << "fit wgh.dist " << iev << " NC: " << ncW << " Chi2: " << (ncW ? ft.getChi2AtPCACandidate(0) : -1);
-    if (ncW) {
-      auto minD = checkResults(outStream, treeName2W, ft, vtxGen, genParent, k0dec);
-      meanDW += minD;
-      nfoundW++;
-    }
-  }
-  ft.print();
-  meanDA /= nfoundA ? nfoundA : 1;
-  meanDW /= nfoundW ? nfoundW : 1;
-  LOG(INFO) << "Processed " << NTest << " 2-prong vertices Helix : Helix";
-  LOG(INFO) << "2-prongs with abs.dist minization: eff= " << float(nfoundA) / NTest
-            << " mean.dist to truth: " << meanDA << " CPU time: " << swA.CpuTime();
-  LOG(INFO) << "2-prongs with wgh.dist minization: eff= " << float(nfoundW) / NTest
-            << " mean.dist to truth: " << meanDW << " CPU time: " << swW.CpuTime();
-
-  o2::vertexing::SVertexerCUDA sV{};
-  sV.hello();
-  //   BOOST_CHECK(nfoundA > 0.99 * NTest);
-  //   BOOST_CHECK(nfoundW > 0.99 * NTest);
-  //   BOOST_CHECK(meanDA < 0.1);
-  //   BOOST_CHECK(meanDW < 0.1);
-
-  // // 2 prongs vertices with one of charges set to 0: Helix : Line
-  // {
-  //   std::vector<int> forceQ{1, 1};
-  //   LOG(INFO) << "Processing 2-prong Helix - Line case";
-  //   o2::vertexing::DCAFitterN<2> ft; // 2 prong fitter
-  //   ft.setBz(bz);
-  //   ft.setPropagateToPCA(true);  // After finding the vertex, propagate tracks to the DCA. This is default anyway
-  //   ft.setMaxR(200);             // do not consider V0 seeds with 2D circles crossing above this R. This is default anyway
-  //   ft.setMaxDZIni(4);           // do not consider V0 seeds with tracks Z-distance exceeding this. This is default anyway
-  //   ft.setMinParamChange(1e-3);  // stop iterations if max correction is below this value. This is default anyway
-  //   ft.setMinRelChi2Change(0.9); // stop iterations if chi2 improves by less that this factor
-
-  //   std::string treeName2A = "pr2aHL", treeName2W = "pr2wHL";
-  //   TStopwatch swA, swW;
-  //   int nfoundA = 0, nfoundW = 0;
-  //   double meanDA = 0, meanDW = 0;
-  //   swA.Stop();
-  //   swW.Stop();
-  //   for (int iev = 0; iev < NTest; iev++) {
-  //     forceQ[iev % 2] = 1;
-  //     forceQ[1 - iev % 2] = 0;
-  //     auto genParent = generate(vtxGen, vctracks, bz, genPHS, k0, k0dec, forceQ);
-
-  //     ft.setUseAbsDCA(true);
-  //     swA.Start(false);
-  //     int ncA = ft.process(vctracks[0], vctracks[1]); // HERE WE FIT THE VERTICES
-  //     swA.Stop();
-  //     LOG(DEBUG) << "fit abs.dist " << iev << " NC: " << ncA << " Chi2: " << (ncA ? ft.getChi2AtPCACandidate(0) : -1);
-  //     if (ncA) {
-  //       auto minD = checkResults(outStream, treeName2A, ft, vtxGen, genParent, k0dec);
-  //       meanDA += minD;
-  //       nfoundA++;
-  //     }
-
-  //     ft.setUseAbsDCA(false);
-  //     swW.Start(false);
-  //     int ncW = ft.process(vctracks[0], vctracks[1]); // HERE WE FIT THE VERTICES
-  //     swW.Stop();
-  //     LOG(DEBUG) << "fit wgh.dist " << iev << " NC: " << ncW << " Chi2: " << (ncW ? ft.getChi2AtPCACandidate(0) : -1);
-  //     if (ncW) {
-  //       auto minD = checkResults(outStream, treeName2W, ft, vtxGen, genParent, k0dec);
-  //       meanDW += minD;
-  //       nfoundW++;
-  //     }
-  //   }
-  //   ft.print();
-  //   meanDA /= nfoundA ? nfoundA : 1;
-  //   meanDW /= nfoundW ? nfoundW : 1;
-  //   LOG(INFO) << "Processed " << NTest << " 2-prong vertices: Helix : Line";
-  //   LOG(INFO) << "2-prongs with abs.dist minization: eff= " << float(nfoundA) / NTest
-  //             << " mean.dist to truth: " << meanDA << " CPU time: " << swA.CpuTime();
-  //   LOG(INFO) << "2-prongs with wgh.dist minization: eff= " << float(nfoundW) / NTest
-  //             << " mean.dist to truth: " << meanDW << " CPU time: " << swW.CpuTime();
-  //   BOOST_CHECK(nfoundA > 0.99 * NTest);
-  //   BOOST_CHECK(nfoundW > 0.99 * NTest);
-  //   BOOST_CHECK(meanDA < 0.1);
-  //   BOOST_CHECK(meanDW < 0.1);
-  // }
-
-  // // 2 prongs vertices with both of charges set to 0: Line : Line
-  // {
-  //   std::vector<int> forceQ{0, 0};
-  //   LOG(INFO) << "Processing 2-prong Line - Line case";
-  //   o2::vertexing::DCAFitterN<2> ft; // 2 prong fitter
-  //   ft.setBz(bz);
-  //   ft.setPropagateToPCA(true);  // After finding the vertex, propagate tracks to the DCA. This is default anyway
-  //   ft.setMaxR(200);             // do not consider V0 seeds with 2D circles crossing above this R. This is default anyway
-  //   ft.setMaxDZIni(4);           // do not consider V0 seeds with tracks Z-distance exceeding this. This is default anyway
-  //   ft.setMinParamChange(1e-3);  // stop iterations if max correction is below this value. This is default anyway
-  //   ft.setMinRelChi2Change(0.9); // stop iterations if chi2 improves by less that this factor
-
-  //   std::string treeName2A = "pr2aLL", treeName2W = "pr2wLL";
-  //   TStopwatch swA, swW;
-  //   int nfoundA = 0, nfoundW = 0;
-  //   double meanDA = 0, meanDW = 0;
-  //   swA.Stop();
-  //   swW.Stop();
-  //   for (int iev = 0; iev < NTest; iev++) {
-  //     forceQ[0] = forceQ[1] = 0;
-  //     auto genParent = generate(vtxGen, vctracks, bz, genPHS, k0, k0dec, forceQ);
-
-  //     ft.setUseAbsDCA(true);
-  //     swA.Start(false);
-  //     int ncA = ft.process(vctracks[0], vctracks[1]); // HERE WE FIT THE VERTICES
-  //     swA.Stop();
-  //     LOG(DEBUG) << "fit abs.dist " << iev << " NC: " << ncA << " Chi2: " << (ncA ? ft.getChi2AtPCACandidate(0) : -1);
-  //     if (ncA) {
-  //       auto minD = checkResults(outStream, treeName2A, ft, vtxGen, genParent, k0dec);
-  //       meanDA += minD;
-  //       nfoundA++;
-  //     }
-
-  //     ft.setUseAbsDCA(false);
-  //     swW.Start(false);
-  //     int ncW = ft.process(vctracks[0], vctracks[1]); // HERE WE FIT THE VERTICES
-  //     swW.Stop();
-  //     LOG(DEBUG) << "fit wgh.dist " << iev << " NC: " << ncW << " Chi2: " << (ncW ? ft.getChi2AtPCACandidate(0) : -1);
-  //     if (ncW) {
-  //       auto minD = checkResults(outStream, treeName2W, ft, vtxGen, genParent, k0dec);
-  //       meanDW += minD;
-  //       nfoundW++;
-  //     }
-  //   }
-  //   ft.print();
-  //   meanDA /= nfoundA ? nfoundA : 1;
-  //   meanDW /= nfoundW ? nfoundW : 1;
-  //   LOG(INFO) << "Processed " << NTest << " 2-prong vertices: Line : Line";
-  //   LOG(INFO) << "2-prongs with abs.dist minization: eff= " << float(nfoundA) / NTest
-  //             << " mean.dist to truth: " << meanDA << " CPU time: " << swA.CpuTime();
-  //   LOG(INFO) << "2-prongs with wgh.dist minization: eff= " << float(nfoundW) / NTest
-  //             << " mean.dist to truth: " << meanDW << " CPU time: " << swW.CpuTime();
-  //   BOOST_CHECK(nfoundA > 0.99 * NTest);
-  //   BOOST_CHECK(nfoundW > 0.99 * NTest);
-  //   BOOST_CHECK(meanDA < 0.1);
-  //   BOOST_CHECK(meanDW < 0.1);
-  // }
-
-  // // 3 prongs vertices
-  // {
-  //   std::vector<int> forceQ{1, 1, 1};
-
-  //   o2::vertexing::DCAFitterN<3> ft; // 3 prong fitter
-  //   ft.setBz(bz);
-  //   ft.setPropagateToPCA(true);  // After finding the vertex, propagate tracks to the DCA. This is default anyway
-  //   ft.setMaxR(200);             // do not consider V0 seeds with 2D circles crossing above this R. This is default anyway
-  //   ft.setMaxDZIni(4);           // do not consider V0 seeds with tracks Z-distance exceeding this. This is default anyway
-  //   ft.setMinParamChange(1e-3);  // stop iterations if max correction is below this value. This is default anyway
-  //   ft.setMinRelChi2Change(0.9); // stop iterations if chi2 improves by less that this factor
-
-  //   std::string treeName3A = "pr3a", treeName3W = "pr3w";
-  //   TStopwatch swA, swW;
-  //   int nfoundA = 0, nfoundW = 0;
-  //   double meanDA = 0, meanDW = 0;
-  //   swA.Stop();
-  //   swW.Stop();
-  //   for (int iev = 0; iev < NTest; iev++) {
-  //     auto genParent = generate(vtxGen, vctracks, bz, genPHS, dch, dchdec, forceQ);
-
-  //     ft.setUseAbsDCA(true);
-  //     swA.Start(false);
-  //     int ncA = ft.process(vctracks[0], vctracks[1], vctracks[2]); // HERE WE FIT THE VERTICES
-  //     swA.Stop();
-  //     LOG(DEBUG) << "fit abs.dist " << iev << " NC: " << ncA << " Chi2: " << (ncA ? ft.getChi2AtPCACandidate(0) : -1);
-  //     if (ncA) {
-  //       auto minD = checkResults(outStream, treeName3A, ft, vtxGen, genParent, dchdec);
-  //       meanDA += minD;
-  //       nfoundA++;
-  //     }
-
-  //     ft.setUseAbsDCA(false);
-  //     swW.Start(false);
-  //     int ncW = ft.process(vctracks[0], vctracks[1], vctracks[2]); // HERE WE FIT THE VERTICES
-  //     swW.Stop();
-  //     LOG(DEBUG) << "fit wgh.dist " << iev << " NC: " << ncW << " Chi2: " << (ncW ? ft.getChi2AtPCACandidate(0) : -1);
-  //     if (ncW) {
-  //       auto minD = checkResults(outStream, treeName3W, ft, vtxGen, genParent, dchdec);
-  //       meanDW += minD;
-  //       nfoundW++;
-  //     }
-  //   }
-  //   ft.print();
-  //   meanDA /= nfoundA ? nfoundA : 1;
-  //   meanDW /= nfoundW ? nfoundW : 1;
-  //   LOG(INFO) << "Processed " << NTest << " 3-prong vertices";
-  //   LOG(INFO) << "3-prongs with abs.dist minization: eff= " << float(nfoundA) / NTest
-  //             << " mean.dist to truth: " << meanDA << " CPU time: " << swA.CpuTime();
-  //   LOG(INFO) << "3-prongs with wgh.dist minization: eff= " << float(nfoundW) / NTest
-  //             << " mean.dist to truth: " << meanDW << " CPU time: " << swW.CpuTime();
-  //   BOOST_CHECK(nfoundA > 0.9 * NTest);
-  //   BOOST_CHECK(nfoundW > 0.9 * NTest);
-  //   BOOST_CHECK(meanDA < 0.1);
-  //   BOOST_CHECK(meanDW < 0.1);
-  // }
-
-  outStream.Close();
   return;
 }

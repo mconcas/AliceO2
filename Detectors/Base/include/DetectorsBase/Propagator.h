@@ -105,7 +105,7 @@ class Propagator
   Propagator& operator=(Propagator&&) = delete;
 
   // Bz at the origin
-  GPUd() float getNominalBz() const { return mBz; }
+  GPUhd() float getNominalBz() const { return mBz; }
 
   GPUd() void setMatLUT(const o2::base::MatLayerCylSet* lut) { mMatLUT = lut; }
   GPUd() const o2::base::MatLayerCylSet* getMatLUT() const { return mMatLUT; }
@@ -113,13 +113,13 @@ class Propagator
   GPUd() const o2::gpu::GPUTPCGMPolynomialField* getGPUField() const { return mGPUField; }
   GPUd() void setBz(float bz) { mBz = bz; }
 
-#ifndef GPUCA_GPUCODE
   static Propagator* Instance(bool uninitialized = false)
   {
     static Propagator instance(uninitialized);
     return &instance;
   }
 
+#ifndef GPUCA_GPUCODE
   static int initFieldFromGRP(const o2::parameters::GRPObject* grp, bool verbose = false);
   static int initFieldFromGRP(const std::string grpFileName, std::string grpName = "GRP", bool verbose = false);
 #endif
@@ -128,8 +128,8 @@ class Propagator
   GPUd() void getFiedXYZ(const math_utils::Point3D<float> xyz, float* bxyz) const;
 
  private:
-#ifndef GPUCA_GPUCODE
   Propagator(bool uninitialized = false);
+#ifndef GPUCA_GPUCODE
   ~Propagator() = default;
 #endif
 
