@@ -11,7 +11,7 @@
 #if defined(__HIPCC__)
 #include "DetectorsVertexingHIP/SVertexer.h"
 #else
-#include "DetectorsVertexingCUDA/SVertexer.h"
+#include "DetectorsVertexing/SVertexer.h"
 #endif
 
 // #include "DetectorsVertexing/SMatrixGPU.h"

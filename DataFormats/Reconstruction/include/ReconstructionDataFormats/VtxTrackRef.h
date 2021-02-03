@@ -51,19 +51,19 @@ class VtxTrackRef : public RangeReference<int, int>
   std::string asString() const;
 
   // get 1st of entry of indices for given source
-  int getFirstEntryOfSource(int s) const
+  GPUd() int getFirstEntryOfSource(int s) const
   {
     assert(s >= 0 && s < VtxTrackIndex::NSources);
     return s ? mFirstEntrySource[s - 1] : getFirstEntry();
   }
 
   // get number of entries for given source
-  int getEntriesOfSource(int s) const
+  GPUd() int getEntriesOfSource(int s) const
   {
     return (s == VtxTrackIndex::NSources - 1 ? (getFirstEntry() + getEntries()) : getFirstEntryOfSource(s + 1)) - getFirstEntryOfSource(s);
   }
 
-  void setFirstEntryOfSource(int s, int i)
+  GPUd() void setFirstEntryOfSource(int s, int i)
   {
     assert(s >= 0 && s < VtxTrackIndex::NSources);
     if (s) {

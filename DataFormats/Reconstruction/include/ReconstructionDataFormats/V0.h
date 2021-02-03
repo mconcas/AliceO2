@@ -50,12 +50,12 @@ class V0 : public o2::track::TrackParCov
   int getVertexID() const { return mVertexID; }
   void setVertexID(int id) { mVertexID = id; }
 
-  float getMass2() const
+  GPUd() float getMass2() const
   {
     return calcMass2(mProngs[0].getPID(), mProngs[1].getPID());
   }
 
-  float calcMass2(PID pidPos, PID pidNeg) const
+  GPUd() float calcMass2(PID pidPos, PID pidNeg) const
   {
     return calcMass2(PID::getMass2(pidPos), PID::getMass2(pidNeg));
   }

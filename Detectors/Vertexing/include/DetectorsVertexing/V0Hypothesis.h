@@ -32,25 +32,25 @@ class V0Hypothesis
   void set(PID v0, PID ppos, PID pneg, float sig, float nSig, float margin, float cpt, float bz = 0.f);
   void set(PID v0, PID ppos, PID pneg, const float pars[SVertexerParams::NPIDParams], float bz = 0.f);
 
-  float getMassV0Hyp() const { return PID::getMass(mPIDV0); }
-  float getMassPosProng() const { return PID::getMass(mPIDPosProng); }
-  float getMassNegProng() const { return PID::getMass(mPIDNegProng); }
+  GPUdi() float getMassV0Hyp() const { return PID::getMass(mPIDV0); }
+  GPUdi() float getMassPosProng() const { return PID::getMass(mPIDPosProng); }
+  GPUdi() float getMassNegProng() const { return PID::getMass(mPIDNegProng); }
 
-  float calcMass2(float p2Pos, float p2Neg, float p2V0) const
+  GPUd() float calcMass2(float p2Pos, float p2Neg, float p2V0) const
   {
     // calculate v0 mass from squared momentum of its prongs and total momentum
     float ePos = std::sqrt(p2Pos + getMass2PosProng()), eNeg = std::sqrt(p2Neg + getMass2NegProng()), eV0 = ePos + eNeg;
     return eV0 * eV0 - p2V0;
   }
 
-  float calcMass(float p2Pos, float p2Neg, float p2V0) const { return std::sqrt(calcMass2(p2Pos, p2Neg, p2V0)); }
+  GPUd() float calcMass(float p2Pos, float p2Neg, float p2V0) const { return std::sqrt(calcMass2(p2Pos, p2Neg, p2V0)); }
 
-  bool check(float p2Pos, float p2Neg, float p2V0, float ptV0) const
+  GPUd() bool check(float p2Pos, float p2Neg, float p2V0, float ptV0) const
   { // check if given mass and pt is matching to hypothesis
     return check(calcMass(p2Pos, p2Neg, p2V0), ptV0);
   }
 
-  bool check(float mass, float pt) const
+  GPUd() bool check(float mass, float pt) const
   { // check if given mass and pt is matching to hypothesis
     return std::abs(mass - getMassV0Hyp()) < getMargin(pt);
   }
@@ -59,8 +59,8 @@ class V0Hypothesis
   float getMargin(float pt) const { return mNSigma * getSigma(pt) + mMargin; }
 
  private:
-  float getMass2PosProng() const { return PID::getMass2(mPIDPosProng); }
-  float getMass2NegProng() const { return PID::getMass2(mPIDNegProng); }
+  GPUdi() float getMass2PosProng() const { return PID::getMass2(mPIDPosProng); }
+  GPUdi() float getMass2NegProng() const { return PID::getMass2(mPIDNegProng); }
 
   PID mPIDV0 = PID::K0;
   PID mPIDPosProng = PID::Pion;

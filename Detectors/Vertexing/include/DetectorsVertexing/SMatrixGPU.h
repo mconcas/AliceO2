@@ -34,7 +34,7 @@
 #include <Math/Functions.h>
 #endif
 
-#include <cassert>
+// #include <cassert>
 #include "GPUCommonDef.h"
 #include "GPUCommonArray.h"
 #include "GPUCommonMath.h"
