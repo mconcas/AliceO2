@@ -16,6 +16,9 @@
 #include <TSystem.h>
 #include <Math/SVector.h>
 #include <array>
+
+#include <dlfcn.h>
+
 #endif
 
 namespace o2
@@ -135,13 +138,13 @@ TLorentzVector generate(Vec3D& vtx, std::vector<o2::track::TrackParCov>& vctr, f
 
 void runSVertexer()
 {
-  gSystem->Unload("libO2DetectorsVertexing");
-  gSystem->Load("libO2DetectorsVertexingCUDA");
-
-   const auto grp = o2::parameters::GRPObject::loadFrom("o2sim_grp.root");
+  // // gSystem->Unload("libO2DetectorsVertexing");
+  // int res = gSystem->Load("libO2DetectorsVertexingCUDA");
+  // R__LOAD_LIBRARY(libO2DetectorsVertexingCUDA);
+  const auto grp = o2::parameters::GRPObject::loadFrom("o2sim_grp.root");
   o2::base::GeometryManager::loadGeometry();
   o2::base::Propagator::initFieldFromGRP(grp);
-  o2::vertexing::SVertexer sV{};
+  o2::vertexing::SVertexerCUDA sV{};
   sV.init();
   // sV.process();
 

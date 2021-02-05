@@ -58,7 +58,7 @@ using TrackTPCITS = o2::dataformats::TrackTPCITS;
 using TrackITS = o2::its::TrackITS;
 using TrackTPC = o2::tpc::TrackTPC;
 
-void SVertexer::init()
+void SVertexerCUDA::init()
 {
   mSVParams = &SVertexerParams::Instance();
   auto bz = o2::base::Propagator::Instance()->getNominalBz();
@@ -96,7 +96,7 @@ void SVertexer::init()
   // NB: no DCA-fitter has been configured yet.
 }
 
-void SVertexer::process(const gsl::span<const PVertex>& vertices,   // primary vertices
+void SVertexerCUDA::process(const gsl::span<const PVertex>& vertices,   // primary vertices
                         const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
                         const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
                         const o2d::GlobalTrackAccessor& tracksPool, // accessor to various tracks

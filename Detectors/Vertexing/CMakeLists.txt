@@ -50,11 +50,11 @@ if(ENABLE_CUDA)
                                         O2::TPCBase
                PRIVATE_LINK_LIBRARIES   O2::DetectorsVertexing 
                TARGETVARNAME targetName)
-
                set_property(TARGET ${targetName} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
 target_compile_definitions(
   ${targetName} PRIVATE $<TARGET_PROPERTY:O2::DetectorsVertexing,COMPILE_DEFINITIONS>)
+
 endif()
 if (ENABLE_HIP)
 endif()

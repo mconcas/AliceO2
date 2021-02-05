@@ -42,19 +42,19 @@ class SVertexer
   using V0 = o2::dataformats::V0;
   using RRef = o2::dataformats::RangeReference<int, int>;
 
-  void init();
-  void process(const gsl::span<const PVertex>& vertices,   // primary vertices
-               const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
-               const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
-               const o2d::GlobalTrackAccessor& tracksPool, // accessor to various tracks
-               std::vector<V0>& v0s,                       // found V0s
-               std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
+  virtual void init();
+  virtual void process(const gsl::span<const PVertex>& vertices,   // primary vertices
+                       const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
+                       const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
+                       const o2d::GlobalTrackAccessor& tracksPool, // accessor to various tracks
+                       std::vector<V0>& v0s,                       // found V0s
+                       std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
   );
 
   auto& getMeanVertex() const { return mMeanVertex; }
   void setMeanVertex(const o2d::VertexBase& v) { mMeanVertex = v; }
 
- private:
+ protected:
   uint64_t getPairIdx(GIndex id1, GIndex id2) const
   {
     return (uint64_t(id1) << 32) | id2;
@@ -68,6 +68,33 @@ class SVertexer
   float mMaxDCAXY2ToMeanVertex = 0;
   float mMinCosPointingAngle = 0;
 };
+
+class SVertexerCUDA : public SVertexer
+{
+ public:
+  void init() override;
+  void process(const gsl::span<const PVertex>& vertices,   // primary vertices
+               const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
+               const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
+               const o2d::GlobalTrackAccessor& tracksPool, // accessor to various tracks
+               std::vector<V0>& v0s,                       // found V0s
+               std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
+               ) override;
+};
+
+class SVertexerHIP : public SVertexer
+{
+ public:
+  void init() override;
+  void process(const gsl::span<const PVertex>& vertices,   // primary vertices
+               const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
+               const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
+               const o2d::GlobalTrackAccessor& tracksPool, // accessor to various tracks
+               std::vector<V0>& v0s,                       // found V0s
+               std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
+               ) override;
+};
+
 } // namespace vertexing
 } // namespace o2
 #endif
