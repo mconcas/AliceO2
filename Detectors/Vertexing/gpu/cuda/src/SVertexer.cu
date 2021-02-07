@@ -14,6 +14,10 @@
 #include "DataFormatsTPC/TrackTPC.h"
 #include "DataFormatsITS/TrackITS.h"
 
+// move eventually
+#include "ITStrackingCUDA/Vector.h"
+#include "ITStrackingCUDA/Array.h"
+
 //Macro for checking GPU errors following a cuda launch or api call
 #define gpuCheckError()                                                               \
   {                                                                                   \
@@ -97,15 +101,26 @@ void SVertexerCUDA::init()
 }
 
 void SVertexerCUDA::process(const gsl::span<const PVertex>& vertices,   // primary vertices
-                        const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
-                        const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
-                        const o2d::GlobalTrackAccessor& tracksPool, // accessor to various tracks
-                        std::vector<V0>& v0s,                       // found V0s
-                        std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
+                            const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
+                            const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
+                            const o2d::GlobalTrackAccessor& tracksPool, // accessor to various tracks
+                            std::vector<V0>& v0s,                       // found V0s
+                            std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
 )
 {
+  std::unordered_map<uint64_t, int> cache; // cache for tested combinations, the value >0 will give the entry of prevalidated V0 in the v0sTmp
+  std::vector<V0> v0sTmp(1);               // 1st one is dummy!
+  std::vector<int> v0sIdx;                 // id's in v0sTmp used attached to p.vertices
+  std::vector<RRef> pv2v0sRefs;            // p.vertex to v0 index references
+  std::vector<char> selQ(trackIndex.size(), 0);
+
   kernels::testFitterKernel<<<1, 1>>>();
   gpuCheckError();
+}
+
+void SVertexerCUDA::testDCAFitterGPU(std::vector<o2::track::TrackParCov>& trks)
+{
+  o2::its::gpu::Vector<o2::track::TrackParCov> tr;
 }
 
 } // namespace vertexing

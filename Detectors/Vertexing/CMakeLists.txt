@@ -48,6 +48,8 @@ if(ENABLE_CUDA)
                                         O2::ReconstructionDataFormats
                                         O2::DataFormatsITS
                                         O2::TPCBase
+                                        O2::ITStrackingCUDA
+
                PRIVATE_LINK_LIBRARIES   O2::DetectorsVertexing 
                TARGETVARNAME targetName)
                set_property(TARGET ${targetName} PROPERTY CUDA_SEPARABLE_COMPILATION ON)

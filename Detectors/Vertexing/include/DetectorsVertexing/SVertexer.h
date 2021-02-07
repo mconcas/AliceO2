@@ -69,6 +69,7 @@ class SVertexer
   float mMinCosPointingAngle = 0;
 };
 
+#ifdef __CUDACC__
 class SVertexerCUDA : public SVertexer
 {
  public:
@@ -80,8 +81,11 @@ class SVertexerCUDA : public SVertexer
                std::vector<V0>& v0s,                       // found V0s
                std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
                ) override;
+  void testDCAFitterGPU(std::vector<o2::track::TrackParCov>&);
 };
+#endif
 
+#ifdef __HIPCC__
 class SVertexerHIP : public SVertexer
 {
  public:
@@ -93,7 +97,9 @@ class SVertexerHIP : public SVertexer
                std::vector<V0>& v0s,                       // found V0s
                std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
                ) override;
+  void testDCAFitterGPU(std::vector<o2::track::TrackParCov>&);
 };
+#endif
 
 } // namespace vertexing
 } // namespace o2
