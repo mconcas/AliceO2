@@ -49,9 +49,18 @@ __constant__ SVParamsGPU gpuStaticConf;
 
 namespace kernels
 {
-GPUg() void testFitterKernel()
+GPUg() void testFitterKernel(o2::its::gpu::Vector<o2::track::TrackParCov>& tracks)
 {
-  o2::vertexing::DCAFitterN<2> mFitter2Prong;
+  o2::vertexing::DCAFitterN<2> fitter2Prong;
+
+  fitter2Prong.setBz(gpuStaticConf.bz);
+  fitter2Prong.setPropagateToPCA(gpuStaticConf.propagateToPCA);
+  fitter2Prong.setMaxR(gpuStaticConf.maxRIni);
+  fitter2Prong.setMaxDZIni(gpuStaticConf.maxDZIni);
+  fitter2Prong.setMinParamChange(gpuStaticConf.minParamChange);
+  fitter2Prong.setMinRelChi2Change(gpuStaticConf.minRelChi2Change);
+
+  int ncA = fitter2Prong.process(tracks[0], tracks[1]); // HERE WE FIT THE VERTICES
 
   printf("End.\n");
 }
@@ -92,10 +101,6 @@ void SVertexerCUDA::init()
 
   // Load configuration to constant static symbol on GPU
   cudaMemcpyToSymbol(gpuStaticConf, &parsHost, sizeof(parsHost));
-  printf("Calling kernel\n");
-  kernels::testFitterKernel<<<1, 1>>>();
-  cudaDeviceSynchronize();
-  gpuCheckError();
 
   // NB: no DCA-fitter has been configured yet.
 }
@@ -114,13 +119,20 @@ void SVertexerCUDA::process(const gsl::span<const PVertex>& vertices,   // prima
   std::vector<RRef> pv2v0sRefs;            // p.vertex to v0 index references
   std::vector<char> selQ(trackIndex.size(), 0);
 
-  kernels::testFitterKernel<<<1, 1>>>();
-  gpuCheckError();
+  // kernels::testFitterKernel<<<1, 1>>>();
+  // gpuCheckError();
 }
 
 void SVertexerCUDA::testDCAFitterGPU(std::vector<o2::track::TrackParCov>& trks)
 {
-  o2::its::gpu::Vector<o2::track::TrackParCov> tr;
+  // init and load clusters on card
+  o2::its::gpu::Vector<o2::track::TrackParCov> tr{2, 2};
+  tr.reset(trks.data(), static_cast<int>(trks.size()));
+
+  // call gpu kernel for dca fitter instance
+  kernels::testFitterKernel<<<1, 1>>>(tr);
+  cudaDeviceSynchronize();
+  gpuCheckError();
 }
 
 } // namespace vertexing
