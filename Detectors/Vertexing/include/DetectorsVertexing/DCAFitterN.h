@@ -306,6 +306,7 @@ GPUd() int DCAFitterN<N, Args...>::process(const Tr&... args)
 {
   // This is a main entry point: fit PCA of N tracks
   static_assert(sizeof...(args) == N, "incorrect number of input tracks");
+
   assign(0, args...);
   clear();
   for (int i = 0; i < N; i++) {
@@ -339,7 +340,8 @@ GPUd() int DCAFitterN<N, Args...>::process(const Tr&... args)
     mChi2[mCurHyp] = -1.;
     mPCA[mCurHyp][0] = mCrossings.xDCA[ic];
     mPCA[mCurHyp][1] = mCrossings.yDCA[ic];
-
+  } // ADDED MANUALLY
+  /*
     if (mUseAbsDCA ? minimizeChi2NoErr() : minimizeChi2()) {
       mOrder[mCurHyp] = mCurHyp;
       if (mPropagateToPCA && !propagateTracksToVertex(mCurHyp)) {
@@ -360,6 +362,7 @@ GPUd() int DCAFitterN<N, Args...>::process(const Tr&... args)
       }
     }
   }
+*/
   return mCurHyp;
 }
 
@@ -917,7 +920,7 @@ GPUd() void DCAFitterN<N, Args...>::print() const
   printf("%d-prong vertex fitter in %s  distance minimization mode\n", N, (mUseAbsDCA ? "abs." : "weighted"));
   printf("Bz: %f MaxIter: %d MaxChi2: %f\n", mBz, mMaxIter, mMaxChi2);
   printf("Stopping condition: Max.param change < %f  Rel.Chi2 change > %f\n", mMinParamChange, mMinRelChi2Change);
-  printf("Discard candidates for : Rvtx > %f  DZ between tracks > %f", getMaxR(), mMaxDZIni);
+  printf("Discard candidates for : Rvtx > %f  DZ between tracks > %f\n", getMaxR(), mMaxDZIni);
 #endif
 }
 

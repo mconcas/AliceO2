@@ -574,6 +574,12 @@ GPUdi() SMatrixGPU<T, D1, D2, R>::SMatrixGPU(SMatrixIdentity)
 }
 
 template <class T, size_t D1, size_t D2, class R>
+GPUdi() SMatrixGPU<T, D1, D2, R>::SMatrixGPU(const SMatrixGPU<T, D1, D2, R>& rhs)
+{
+  mRep = rhs.mRep;
+}
+
+template <class T, size_t D1, size_t D2, class R>
 GPUdi() T* SMatrixGPU<T, D1, D2, R>::begin()
 {
   return mRep.Array();
@@ -1076,7 +1082,7 @@ GPUdi() void Inverter<D, N>::InvertBunchKaufman(MatRepSymGPU<T, D>& rhs, int& if
     {
       if (piv[j - 1] != 0)
         // printf("error in piv %lf \n", piv[j - 1]);
-      s = 2;
+        s = 2;
       if (j < nrow) {
         ip = rhs.Array() + (j + 1) * j / 2 + j - 1;
         for (i = 0; i < nrow - j; ip += 1 + j + i++)

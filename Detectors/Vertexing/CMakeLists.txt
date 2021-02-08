@@ -54,6 +54,19 @@ if(ENABLE_CUDA)
                TARGETVARNAME targetName)
                set_property(TARGET ${targetName} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
+        o2_target_root_dictionary(DetectorsVertexingCUDA
+                   LINKDEF gpu/cuda/src/DetectorsVertexingCUDALinkDef.h
+                   HEADERS include/DetectorsVertexing/SMatrixGPU.h
+                           include/DetectorsVertexing/HelixHelper.h
+                           include/DetectorsVertexing/PVertexer.h
+                           include/DetectorsVertexing/PVertexerHelpers.h
+                           include/DetectorsVertexing/PVertexerParams.h
+                           include/DetectorsVertexing/VertexTrackMatcher.h
+                           include/DetectorsVertexing/DCAFitterN.h
+                           include/DetectorsVertexing/SVertexer.h
+                           include/DetectorsVertexing/SVertexerParams.h
+                           include/DetectorsVertexing/V0Hypothesis.h)
+
 target_compile_definitions(
   ${targetName} PRIVATE $<TARGET_PROPERTY:O2::DetectorsVertexing,COMPILE_DEFINITIONS>)
 

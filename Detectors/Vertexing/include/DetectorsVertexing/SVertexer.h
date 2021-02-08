@@ -42,7 +42,7 @@ class SVertexer
   using V0 = o2::dataformats::V0;
   using RRef = o2::dataformats::RangeReference<int, int>;
 
-  virtual void init();
+  void init();
   virtual void process(const gsl::span<const PVertex>& vertices,   // primary vertices
                        const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
                        const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
@@ -69,11 +69,9 @@ class SVertexer
   float mMinCosPointingAngle = 0;
 };
 
-// #ifdef __CUDACC__
 class SVertexerCUDA : public SVertexer
 {
  public:
-  void init() override;
   void process(const gsl::span<const PVertex>& vertices,   // primary vertices
                const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
                const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
@@ -81,15 +79,18 @@ class SVertexerCUDA : public SVertexer
                std::vector<V0>& v0s,                       // found V0s
                std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
                ) override;
-  void testDCAFitterGPU(std::vector<o2::track::TrackParCov>&);
-};
-// #endif
 
-#ifdef __HIPCC__
+  // Temporary functions
+  void testDCAFitterGPU(std::vector<o2::track::TrackParCov>&);
+
+ private:
+  float mBz = 0.f;
+  void initGPUFromPars();
+};
+
 class SVertexerHIP : public SVertexer
 {
  public:
-  void init() override;
   void process(const gsl::span<const PVertex>& vertices,   // primary vertices
                const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
                const gsl::span<const VRef>& vtxRefs,       // references from vertex to these track IDs
@@ -97,9 +98,10 @@ class SVertexerHIP : public SVertexer
                std::vector<V0>& v0s,                       // found V0s
                std::vector<RRef>& vtx2V0refs               // references from PVertex to V0
                ) override;
+
+  // Temporary functions
   void testDCAFitterGPU(std::vector<o2::track::TrackParCov>&);
 };
-#endif
 
 } // namespace vertexing
 } // namespace o2

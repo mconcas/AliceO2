@@ -33,34 +33,35 @@ namespace o2
 namespace vertexing
 {
 
-struct SVParamsGPU {
-  // Struct to pass configuration for SVertexer as static symbol on GPU
-  unsigned char useAbsDCA = false;
-  unsigned char propagateToPCA = false;
-  float maxRIni = 0.f;
-  float minParamChange = 0.f;
-  float minRelChi2Change = 0.f;
-  float maxDZIni = 0.f;
-  float maxChi2 = 0.f;
-  float bz = 0.f;
-};
+// struct SVParamsGPU {
+//   // Struct to pass configuration for SVertexer as static symbol on GPU
+//   unsigned char useAbsDCA = false;
+//   unsigned char propagateToPCA = false;
+//   float maxRIni = 0.f;
+//   float minParamChange = 0.f;
+//   float minRelChi2Change = 0.f;
+//   float maxDZIni = 0.f;
+//   float maxChi2 = 0.f;
+//   float bz = 0.f;
+// };
 
-__constant__ SVParamsGPU gpuStaticConf;
+// __constant__ SVParamsGPU gpuStaticConf;
 
 namespace kernels
 {
-GPUg() void testFitterKernel(o2::its::gpu::Vector<o2::track::TrackParCov>& tracks)
+GPUg() void testFitterKernel(o2::vertexing::DCAFitterN<2> fitter2Prong, o2::track::TrackParCov track0, o2::track::TrackParCov track1)
 {
-  o2::vertexing::DCAFitterN<2> fitter2Prong;
+  fitter2Prong.setBz(5.0);
+  fitter2Prong.setPropagateToPCA(true);  // After finding the vertex, propagate tracks to the DCA. This is default anyway
+  fitter2Prong.setMaxR(200);             // do not consider V0 seeds with 2D circles crossing above this R. This is default anyway
+  fitter2Prong.setMaxDZIni(4);           // do not consider V0 seeds with tracks Z-distance exceeding this. This is default anyway
+  fitter2Prong.setMinParamChange(1e-3);  // stop iterations if max correction is below this value. This is default anyway
+  fitter2Prong.setMinRelChi2Change(0.9); // stop iterations if chi2 improves by less that this factor
+  fitter2Prong.setUseAbsDCA(true);
 
-  fitter2Prong.setBz(gpuStaticConf.bz);
-  fitter2Prong.setPropagateToPCA(gpuStaticConf.propagateToPCA);
-  fitter2Prong.setMaxR(gpuStaticConf.maxRIni);
-  fitter2Prong.setMaxDZIni(gpuStaticConf.maxDZIni);
-  fitter2Prong.setMinParamChange(gpuStaticConf.minParamChange);
-  fitter2Prong.setMinRelChi2Change(gpuStaticConf.minRelChi2Change);
+  fitter2Prong.print();
 
-  int ncA = fitter2Prong.process(tracks[0], tracks[1]); // HERE WE FIT THE VERTICES
+  int ncA = fitter2Prong.process(track0, track1); // HERE WE FIT THE VERTICES
 
   printf("End.\n");
 }
@@ -70,40 +71,6 @@ using PID = o2::track::PID;
 using TrackTPCITS = o2::dataformats::TrackTPCITS;
 using TrackITS = o2::its::TrackITS;
 using TrackTPC = o2::tpc::TrackTPC;
-
-void SVertexerCUDA::init()
-{
-  mSVParams = &SVertexerParams::Instance();
-  auto bz = o2::base::Propagator::Instance()->getNominalBz();
-
-  SVParamsGPU parsHost;
-
-  parsHost.useAbsDCA = mSVParams->useAbsDCA;
-  parsHost.maxRIni = mSVParams->maxRIni;
-  parsHost.minParamChange = mSVParams->minParamChange;
-  parsHost.minRelChi2Change = mSVParams->minRelChi2Change;
-  parsHost.maxDZIni = mSVParams->maxDZIni;
-  parsHost.maxChi2 = mSVParams->maxChi2;
-  parsHost.propagateToPCA = false;
-  parsHost.bz = bz;
-
-  // precalculated selection cuts
-  mMinR2ToMeanVertex = mSVParams->minRfromMeanVertex * mSVParams->minRfromMeanVertex;
-  mMaxDCAXY2ToMeanVertex = mSVParams->maxDCAXYfromMeanVertex * mSVParams->maxDCAXYfromMeanVertex;
-  mMinCosPointingAngle = mSVParams->minCosPointingAngle;
-
-  mV0Hyps[SVertexerParams::Photon].set(PID::Photon, PID::Electron, PID::Electron, mSVParams->pidCutsPhoton, bz);
-  mV0Hyps[SVertexerParams::K0].set(PID::K0, PID::Pion, PID::Pion, mSVParams->pidCutsK0, bz);
-  mV0Hyps[SVertexerParams::Lambda].set(PID::Lambda, PID::Proton, PID::Pion, mSVParams->pidCutsLambda, bz);
-  mV0Hyps[SVertexerParams::AntiLambda].set(PID::Lambda, PID::Pion, PID::Proton, mSVParams->pidCutsLambda, bz);
-  mV0Hyps[SVertexerParams::HyperTriton].set(PID::HyperTriton, PID::Helium3, PID::Pion, mSVParams->pidCutsHTriton, bz);
-  mV0Hyps[SVertexerParams::AntiHyperTriton].set(PID::HyperTriton, PID::Pion, PID::Helium3, mSVParams->pidCutsHTriton, bz);
-
-  // Load configuration to constant static symbol on GPU
-  cudaMemcpyToSymbol(gpuStaticConf, &parsHost, sizeof(parsHost));
-
-  // NB: no DCA-fitter has been configured yet.
-}
 
 void SVertexerCUDA::process(const gsl::span<const PVertex>& vertices,   // primary vertices
                             const gsl::span<const GIndex>& trackIndex,  // Global ID's for associated tracks
@@ -118,19 +85,18 @@ void SVertexerCUDA::process(const gsl::span<const PVertex>& vertices,   // prima
   std::vector<int> v0sIdx;                 // id's in v0sTmp used attached to p.vertices
   std::vector<RRef> pv2v0sRefs;            // p.vertex to v0 index references
   std::vector<char> selQ(trackIndex.size(), 0);
-
-  // kernels::testFitterKernel<<<1, 1>>>();
-  // gpuCheckError();
 }
 
 void SVertexerCUDA::testDCAFitterGPU(std::vector<o2::track::TrackParCov>& trks)
 {
   // init and load clusters on card
-  o2::its::gpu::Vector<o2::track::TrackParCov> tr{2, 2};
-  tr.reset(trks.data(), static_cast<int>(trks.size()));
+  // o2::its::gpu::Vector<o2::track::TrackParCov> tr{2, 2};
+  // tr.reset(trks.data(), static_cast<int>(trks.size()));
+  // auto tr0 = trks[0];
+  // auto tr1 = trks[1];
 
   // call gpu kernel for dca fitter instance
-  kernels::testFitterKernel<<<1, 1>>>(tr);
+  kernels::testFitterKernel<<<1, 1>>>(mFitter2Prong, trks[0], trks[1]);
   cudaDeviceSynchronize();
   gpuCheckError();
 }
