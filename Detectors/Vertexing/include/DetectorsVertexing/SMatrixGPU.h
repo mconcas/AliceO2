@@ -357,16 +357,6 @@ class MatRepSymGPU
     return *this;
   }
 
-  // template <class R>
-  // GPUdi() bool operator==(const R& rhs) const
-  // {
-  //   bool rc = true;
-  //   for (size_t i = 0; i < D * D; ++i) {
-  //     rc = rc && (operator[](i) == rhs[i]);
-  //   }
-  //   return rc;
-  // }
-
   enum {
     kRows = D,              // rows
     kCols = D,              // columns
@@ -413,23 +403,7 @@ class MatRepStdGPU
   GPUdi() T apply(size_t i) const { return mArray[i]; }
   GPUdi() T* Array() { return mArray; }
   GPUdi() const T* Array() const { return mArray; }
-  //
-  //   template <class R>
-  //   GPUdi() MatRepStdGPU<T, D1, D2>& operator+=(const R& rhs)
-  //   {
-  //     for (size_t i = 0; i < kSize; ++i)
-  //       mArray[i] += rhs[i];
-  //     return *this;
-  //   }
-  // //
-  //   template <class R>
-  //   GPUdi() MatRepStdGPU<T, D1, D2>& operator-=(const R& rhs)
-  //   {
-  //     for (size_t i = 0; i < kSize; ++i)
-  //       mArray[i] -= rhs[i];
-  //     return *this;
-  //   }
-  //
+
   template <class R>
   GPUdi() MatRepStdGPU<T, D1, D2>& operator=(const R& rhs)
   {
@@ -1491,5 +1465,4 @@ using MatRepStd = ROOT::Math::MatRepStd<T, D>;
 
 #endif
 }; // namespace o2::math_utils
-
 #endif

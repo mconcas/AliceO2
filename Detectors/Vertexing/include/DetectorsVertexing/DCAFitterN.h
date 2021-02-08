@@ -340,8 +340,7 @@ GPUd() int DCAFitterN<N, Args...>::process(const Tr&... args)
     mChi2[mCurHyp] = -1.;
     mPCA[mCurHyp][0] = mCrossings.xDCA[ic];
     mPCA[mCurHyp][1] = mCrossings.yDCA[ic];
-  } // ADDED MANUALLY
-  /*
+
     if (mUseAbsDCA ? minimizeChi2NoErr() : minimizeChi2()) {
       mOrder[mCurHyp] = mCurHyp;
       if (mPropagateToPCA && !propagateTracksToVertex(mCurHyp)) {
@@ -362,7 +361,6 @@ GPUd() int DCAFitterN<N, Args...>::process(const Tr&... args)
       }
     }
   }
-*/
   return mCurHyp;
 }
 
@@ -828,7 +826,6 @@ template <int N, typename... Args>
 GPUd() bool DCAFitterN<N, Args...>::minimizeChi2NoErr()
 {
   // find best chi2 (absolute DCA) of N tracks in the vicinity of the PCA seed
-
   for (int i = N; i--;) {
     mCandTr[mCurHyp][i] = *mOrigTrPtr[i];
     auto x = mTrAux[i].c * mPCA[mCurHyp][0] + mTrAux[i].s * mPCA[mCurHyp][1]; // X of PCA in the track frame
