@@ -38,6 +38,7 @@
 #include "GPUCommonDef.h"
 #include "GPUCommonArray.h"
 #include "GPUCommonMath.h"
+#include "GPUCommonAlgorithm.h"
 
 namespace o2::math_utils
 {
@@ -46,7 +47,7 @@ namespace o2::math_utils
 
 template <bool>
 struct Check {
-  Check(void*) {}
+  GPUd() Check(void*) {}
 };
 template <>
 struct Check<false> {
@@ -82,6 +83,10 @@ class SVectorGPU
   GPUd() const T* Array() const;
   GPUd() T* Array();
   GPUd() T apply(size_t i) const;
+
+  // Operators
+  GPUd() SVectorGPU<T, N>& operator-=(const SVectorGPU<T, N>& rhs);
+  GPUd() SVectorGPU<T, N>& operator+=(const SVectorGPU<T, N>& rhs);
 
   enum {
     kSize = N
@@ -197,6 +202,24 @@ template <class T, size_t D>
 GPUdi() T Dot(const SVectorGPU<T, D>& lhs, const SVectorGPU<T, D>& rhs)
 {
   return meta_dot<D - 1>::f(lhs, rhs, T());
+}
+
+template <class T, size_t D>
+GPUdi() SVectorGPU<T, D>& SVectorGPU<T, D>::operator-=(const SVectorGPU<T, D>& rhs)
+{
+  for (size_t i = 0; i < D; ++i) {
+    mArray[i] -= rhs.apply(i);
+  }
+  return *this;
+}
+
+template <class T, size_t D>
+GPUd() SVectorGPU<T, D>& SVectorGPU<T, D>::operator+=(const SVectorGPU<T, D>& rhs)
+{
+  for (size_t i = 0; i < D; ++i) {
+    mArray[i] += rhs.apply(i);
+  }
+  return *this;
 }
 
 template <size_t I>
@@ -1052,7 +1075,7 @@ GPUdi() void Inverter<D, N>::InvertBunchKaufman(MatRepSymGPU<T, D>& rhs, int& if
     } else //2x2 pivot, compute columns j and j-1 of the inverse
     {
       if (piv[j - 1] != 0)
-        printf("error in piv %f \n", piv[j - 1]);
+        // printf("error in piv %lf \n", piv[j - 1]);
       s = 2;
       if (j < nrow) {
         ip = rhs.Array() + (j + 1) * j / 2 + j - 1;
@@ -1361,7 +1384,7 @@ template <class T, size_t D1, size_t D2, class R>
 GPUdi() bool SMatrixGPU<T, D1, D2, R>::Invert()
 {
   GPU_STATIC_CHECK(D1 == D2, SMatrixGPU_not_square);
-  return Inverter<D1, D2>::Dinv((*this).fRep);
+  return Inverter<D1, D2>::Dinv((*this).mRep);
 }
 
 template <class T, size_t D1, size_t D2, class R>
@@ -1403,6 +1426,19 @@ class TransposeOpGPU
  protected:
   const Matrix& mRhs;
 };
+
+template <class T, size_t D1, size_t D2, class R>
+GPUdi() SVectorGPU<T, D1> operator*(const SMatrixGPU<T, D1, D2, R>& rhs, const SVectorGPU<T, D2>& lhs)
+{
+  SVectorGPU<T, D1> tmp;
+  for (size_t i = 0; i < D1; ++i) {
+    const size_t rpos = i * D2;
+    for (size_t j = 0; j < D2; ++j) {
+      tmp[i] += rhs.apply(rpos + j) * lhs.apply(j);
+    }
+  }
+  return tmp;
+}
 
 template <class T, size_t D1, size_t D2, class R>
 GPUdi() Expr<TransposeOpGPU<SMatrixGPU<T, D1, D2, R>, T, D1, D2>, T, D2, D1, typename TranspPolicyGPU<T, D1, D2, R>::RepType> Transpose(const SMatrixGPU<T, D1, D2, R>& rhs)

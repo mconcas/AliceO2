@@ -69,7 +69,7 @@ class SVertexer
   float mMinCosPointingAngle = 0;
 };
 
-#ifdef __CUDACC__
+// #ifdef __CUDACC__
 class SVertexerCUDA : public SVertexer
 {
  public:
@@ -83,7 +83,7 @@ class SVertexerCUDA : public SVertexer
                ) override;
   void testDCAFitterGPU(std::vector<o2::track::TrackParCov>&);
 };
-#endif
+// #endif
 
 #ifdef __HIPCC__
 class SVertexerHIP : public SVertexer

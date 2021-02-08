@@ -206,16 +206,59 @@ void testCPU()
             << " mean.dist to truth: " << meanDW << " CPU time: " << swW.CpuTime();
 }
 
+void testGPU()
+{
+  int NTest = 10000;
+  o2::utils::TreeStreamRedirector outStream("dcafitterNTestGPU.root");
+
+  TGenPhaseSpace genPHS;
+  double pion = 0.13957;
+  double k0 = 0.49761;
+  double kch = 0.49368;
+  double dch = 1.86965;
+  std::vector<double> k0dec = {pion, pion};
+  std::vector<double> dchdec = {pion, kch, pion};
+  std::vector<o2::track::TrackParCov> vctracks;
+  o2::vertexing::Vec3D vtxGen;
+
+  double bz = 5.0;
+  // 2 prongs vertices
+
+  LOG(INFO) << "Processing 2-prong Helix - Helix case";
+  std::vector<int> forceQ{1, 1};
+
+  // o2::vertexing::DCAFitterN<2> ft; // 2 prong fitter
+  ft.setBz(bz);
+  ft.setPropagateToPCA(true);  // After finding the vertex, propagate tracks to the DCA. This is default anyway
+  ft.setMaxR(200);             // do not consider V0 seeds with 2D circles crossing above this R. This is default anyway
+  ft.setMaxDZIni(4);           // do not consider V0 seeds with tracks Z-distance exceeding this. This is default anyway
+  ft.setMinParamChange(1e-3);  // stop iterations if max correction is below this value. This is default anyway
+  ft.setMinRelChi2Change(0.9); // stop iterations if chi2 improves by less that this factor
+
+  std::string treeName2A = "pr2a", treeName2W = "pr2w";
+  TStopwatch swA, swW;
+  int nfoundA = 0, nfoundW = 0;
+  double meanDA = 0, meanDW = 0;
+  swA.Stop();
+  swW.Stop();
+  // for (int iev = 0; iev < NTest; iev++) {
+  auto genParent = o2::vertexing::generate(vtxGen, vctracks, bz, genPHS, k0, k0dec, forceQ);
+
+  // ft.setUseAbsDCA(true);
+  swA.Start(false);
+  // int ncA = sV.process(vctracks[0], vctracks[1]); // HERE WE FIT THE VERTICES
+  o2::vertexing::SVertexerCUDA sV{};
+
+  sV.init();
+  sV.testDCAFitterGPU(vctracks);
+  swA.Stop();
+}
 void runSVertexer()
 {
-  testCPU();
+  // testCPU();
 
-  const auto grp = o2::parameters::GRPObject::loadFrom("o2sim_grp.root");
-  o2::base::GeometryManager::loadGeometry();
-  o2::base::Propagator::initFieldFromGRP(grp);
-  o2::vertexing::SVertexerCUDA sV{};
-  sV.init();
-  // sV.process();
-
+  // const auto grp = o2::parameters::GRPObject::loadFrom("o2sim_grp.root");
+  // o2::base::GeometryManager::loadGeometry();
+  // o2::base::Propagator::initFieldFromGRP(grp);
   return;
 }

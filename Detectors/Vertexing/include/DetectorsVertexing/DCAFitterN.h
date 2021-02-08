@@ -352,7 +352,11 @@ GPUd() int DCAFitterN<N, Args...>::process(const Tr&... args)
   for (int i = mCurHyp; i--;) { // order in quality
     for (int j = i; j--;) {
       if (mChi2[mOrder[i]] < mChi2[mOrder[j]]) {
+#if !defined(__CUDACC__) && !defined(__HIPCC__)
         std::swap(mOrder[i], mOrder[j]);
+#else
+        o2::gpu::GPUCommonAlgorithm::swap(mOrder[i], mOrder[j]);
+#endif
       }
     }
   }
