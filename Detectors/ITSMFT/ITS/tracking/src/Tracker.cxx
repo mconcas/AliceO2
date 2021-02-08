@@ -324,6 +324,7 @@ void Tracker::findTracks(const ROframe& event)
     CA_DEBUGGER(assert(nClusters == temporaryTrack.getNumberOfClusters()));
   }
   //mTraits->refitTracks(event.getTrackingFrameInfo(), tracks);
+
   if (mUseSmoother)
     smoothTracks(event, tracks);
 
