@@ -44,13 +44,14 @@ if(ENABLE_CUDA)
         o2_add_library(DetectorsVertexingCUDA
                SOURCES gpu/cuda/src/SVertexer.cu
                PUBLIC_INCLUDE_DIRECTORIES include/
-               PUBLIC_LINK_LIBRARIES    O2::GPUCommon
-                                        O2::ReconstructionDataFormats
+               PRIVATE_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/DataFormats/Reconstruction/src
+               PUBLIC_LINK_LIBRARIES    O2::GPUTracking
+                                        O2::GPUCommon
                                         O2::DataFormatsITS
                                         O2::TPCBase
                                         O2::ITStrackingCUDA
 
-               PRIVATE_LINK_LIBRARIES   O2::DetectorsVertexing 
+               PRIVATE_LINK_LIBRARIES   O2::DetectorsVertexing
                TARGETVARNAME targetName)
                set_property(TARGET ${targetName} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 

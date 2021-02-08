@@ -9,7 +9,9 @@
 // or submit itself to any jurisdiction.
 
 #include "DetectorsVertexing/SVertexer.h"
-#include "DetectorsBase/Propagator.h"
+#include "TrackParametrization.cxx"
+#include "TrackParametrizationWithError.cxx"
+// #include "DetectorsBase/Propagator.h"
 #include "ReconstructionDataFormats/TrackTPCITS.h"
 #include "DataFormatsTPC/TrackTPC.h"
 #include "DataFormatsITS/TrackITS.h"
@@ -62,6 +64,7 @@ GPUg() void testFitterKernel(o2::vertexing::DCAFitterN<2> fitter2Prong, o2::trac
   fitter2Prong.print();
 
   int ncA = fitter2Prong.process(track0, track1); // HERE WE FIT THE VERTICES
+  // track1.propagateParamTo(0.1, 5.0);
 
   printf("End.\n");
 }
