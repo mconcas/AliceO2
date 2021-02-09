@@ -305,6 +305,9 @@ GPUd() bool TrackParametrization<value_T>::propagateParamTo(value_t xk, const di
 template <typename value_T>
 GPUd() bool TrackParametrization<value_T>::propagateParamTo(value_t xk, value_t b)
 {
+#if defined(__CUDACC__)
+  printf("SEI SU CUDA IMPLEMENTATION\n\n\n\n\n\n\n\n");
+#endif
   //----------------------------------------------------------------
   // propagate this track to the plane X=xk (cm) in the field "b" (kG)
   // Only parameters are propagated, not the matrix. To be used for small

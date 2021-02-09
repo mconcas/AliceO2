@@ -9,12 +9,12 @@
 // or submit itself to any jurisdiction.
 
 #include "DetectorsVertexing/SVertexer.h"
-#include "TrackParametrization.cxx"
-#include "TrackParametrizationWithError.cxx"
+// #include "TrackParametrization.cxx"
+// #include "TrackParametrizationWithError.cxx"
 // #include "DetectorsBase/Propagator.h"
-#include "ReconstructionDataFormats/TrackTPCITS.h"
-#include "DataFormatsTPC/TrackTPC.h"
-#include "DataFormatsITS/TrackITS.h"
+// #include "ReconstructionDataFormats/TrackTPCITS.h"
+// #include "DataFormatsTPC/TrackTPC.h"
+// #include "DataFormatsITS/TrackITS.h"
 
 // move eventually
 #include "ITStrackingCUDA/Vector.h"

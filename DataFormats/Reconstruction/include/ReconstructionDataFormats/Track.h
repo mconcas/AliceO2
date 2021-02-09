@@ -15,8 +15,13 @@
 #ifndef ALICEO2_BASE_TRACK
 #define ALICEO2_BASE_TRACK
 
+#if !defined(__CUDACC__) && !defined(__HIPCC__)
 #include "ReconstructionDataFormats/TrackParametrization.h"
 #include "ReconstructionDataFormats/TrackParametrizationWithError.h"
+#else
+#include "TrackParametrization.cxx"
+#include "TrackParametrizationWithError.cxx"
+#endif
 
 namespace o2
 {
