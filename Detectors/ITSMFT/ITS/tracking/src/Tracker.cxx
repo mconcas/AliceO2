@@ -679,8 +679,8 @@ float Tracker::getSmootherPredictedChi2(const o2::track::TrackParCov& outwT, // 
     LOG(ERROR) << "Tracks need to be propagated to the same point! inwT.X=" << inwT.getX() << " outwT.X=" << outwT.getX();
   }
 
-  std::array<double, 2> pp1 = {static_cast<double>(outwT.getY()), static_cast<double>(outwT.getZ())}; // predicted Y,Z points
-  std::array<double, 2> pp2 = {static_cast<double>(inwT.getY()), static_cast<double>(inwT.getZ())};   // predicted Y,Z points
+  std::array<double, 2> pp1 = {static_cast<double>(outwT.getY()), static_cast<double>(outwT.getZ())}; // P1: predicted Y,Z points
+  std::array<double, 2> pp2 = {static_cast<double>(inwT.getY()), static_cast<double>(inwT.getZ())};   // P2: predicted Y,Z points
 
   std::array<double, 3> c1 = {static_cast<double>(outwT.getSigmaY2()),
                               static_cast<double>(outwT.getSigmaZY()),
@@ -693,19 +693,19 @@ float Tracker::getSmootherPredictedChi2(const o2::track::TrackParCov& outwT, // 
   std::array<double, 3> w1 = getInverseSymm2D(c1); // weight matrices
   std::array<double, 3> w2 = getInverseSymm2D(c2);
 
-  std::array<double, 3> w1w2 = {w1[0] + w2[0], w1[1] + w2[1], w1[2] + w2[2]};
-  std::array<double, 3> C = getInverseSymm2D(w1w2); // C = (W1+W2)^-1
+  std::array<double, 3> w1w2 = {w1[0] + w2[0], w1[1] + w2[1], w1[2] + w2[2]}; // (W1 + W2)
+  std::array<double, 3> C = getInverseSymm2D(w1w2);                           // C = (W1+W2)^-1
 
-  std::array<double, 2> w1pp1 = {w1[0] * pp1[0] + w1[1] * pp1[1], w1[1] * pp1[0] + w1[2] * pp1[1]};
-  std::array<double, 2> w2pp2 = {w2[0] * pp2[0] + w2[1] * pp2[1], w2[1] * pp2[0] + w2[2] * pp2[1]};
+  std::array<double, 2> w1pp1 = {w1[0] * pp1[0] + w1[1] * pp1[1], w1[1] * pp1[0] + w1[2] * pp1[1]}; // W1 * P1
+  std::array<double, 2> w2pp2 = {w2[0] * pp2[0] + w2[1] * pp2[1], w2[1] * pp2[0] + w2[2] * pp2[1]}; // W2 * P2
 
-  float Y = static_cast<float>(C[0] * (w1pp1[0] + w2pp2[0]) + C[1] * (w1pp1[1] + w2pp2[1]));
-  float Z = static_cast<float>(C[1] * (w1pp1[0] + w2pp2[0]) + C[2] * (w1pp1[1] + w2pp2[1]));
+  float Y = static_cast<float>(C[0] * (w1pp1[0] + w2pp2[0]) + C[1] * (w1pp1[1] + w2pp2[1])); // Pp: weighted normalized combination of the prediction:
+  float Z = static_cast<float>(C[1] * (w1pp1[0] + w2pp2[0]) + C[2] * (w1pp1[1] + w2pp2[1])); // Pp = [(W1 * P1) + (W2 * P2)] / (W1 + W2)
 
-  std::array<double, 2> delta = {Y - cls[0], Z - cls[1]};
-  std::array<double, 3> CCp = {C[0] + clCov[0], C[1] + clCov[1], C[2] + clCov[2]};
+  std::array<double, 2> delta = {Y - cls[0], Z - cls[1]};                          // Δ = Pp - X, X: space point of cluster (Y,Z)
+  std::array<double, 3> CCp = {C[0] + clCov[0], C[1] + clCov[1], C[2] + clCov[2]}; // Transformation of cluster covmat: CCp = C * Cov
 
-  float chi2 = static_cast<float>(delta[0] * (CCp[0] * delta[0] + CCp[1] * delta[1]) + delta[1] * (CCp[1] * delta[0] + CCp[2] * delta[1]));
+  float chi2 = static_cast<float>(delta[0] * (CCp[0] * delta[0] + CCp[1] * delta[1]) + delta[1] * (CCp[1] * delta[0] + CCp[2] * delta[1])); // chi2 = tΔ * (CCp * Δ)
 #ifdef CA_DEBUG
   LOG(INFO) << "Propagated t1_y: " << pp1[0] << " t1_z: " << pp1[1];
   LOG(INFO) << "Propagated t2_y: " << pp2[0] << " t2_z: " << pp2[1];
@@ -734,7 +734,7 @@ bool Tracker::kalmanPropagateTrack(const ROframe& event,
 
   for (auto iLevel{first}; iLevel != last; iLevel += step) {
     float xx0 = ((iLevel > 2) ? 0.008f : 0.003f); // Thickness in units of X0
-    distance = xx0 * 9.37f;
+    distance = xx0 * 9.37f;                       // Thickness in cm
     const TrackingFrameInfo& tF = event.getTrackingFrameInfoOnLayer(iLevel).at(track.getClusterIndex(iLevel));
     status = track.rotate(tF.alphaTrackingFrame);
     status &= track.propagateTo(tF.xTrackingFrame, getBz());
@@ -763,9 +763,9 @@ bool Tracker::kalmanPropagateTrack(const ROframe& event,
 
 bool Tracker::smoothTrack(TrackITSExt& track, const int testedClusterIndex, const int level, const ROframe& event)
 {
-  // This method should be the core function for decision-taking based on Kalman smoother approach.
-  // Test the substitution of a certain cluster at given layer into the track model.
-  // Selection is performed comparing the local chi2 obtained with smoothed propagation at the layer.
+  // This method should be the core functionality for decision-taking based on the Kalman smoothing approach.
+  // If the substitution of a given cluster in a track provides a better local "smoother chi2" the cluster is substituted.
+  // Selection is performed comparing the local chi2 obtained with propagation at the layer of the track models in opposite directions.
   // Returns true if tested cluster provides better smoothed chi2; track is updated accordingly.
   // Returns false otherwise; track is left untouched.
   bool status;
@@ -834,7 +834,7 @@ bool Tracker::smoothTrack(TrackITSExt& track, const int testedClusterIndex, cons
     float density = 2.33f;                       // Density of Si [g/cm^3]
     float distance;                              // Default thickness
     float xx0 = ((level > 2) ? 0.008f : 0.003f); // Thickness in units of X0
-    distance = xx0 * 9.37f;
+    distance = xx0 * 9.37f;                      // Thickness in cm
 
     // Finalize fitting step here
     outwardsTrack.setChi2(outwardsTrack.getChi2() +
@@ -866,9 +866,9 @@ bool Tracker::smoothTrack(TrackITSExt& track, const int testedClusterIndex, cons
 
 void Tracker::smoothTracks(const ROframe& event, std::vector<TrackITSExt>& tracks)
 {
-  // // Operate on groups of siblings trying to shuffle their clusters to find a better chi2
-  // constexpr float radiationLength = 9.36f; // Radiation length of Si [cm]
-  // constexpr float density = 2.33f;         // Density of Si [g/cm^3]
+  // Operate on groups of siblings trying to shuffle their clusters to find a better chi2
+  constexpr float radiationLength = 9.36f; // Radiation length of Si [cm]
+  constexpr float density = 2.33f;         // Density of Si [g/cm^3]
   // for (auto& indexed : mPrimaryVertexContext->getTracksIndexTable()) {
   //   for (auto iFirstTrack{indexed.first}; iFirstTrack < indexed.first + indexed.second; ++iFirstTrack) {
   //     o2::its::TrackITSExt outwardsTrack = tracks[iFirstTrack]; // outwards track: from innermost cluster to outermost
