@@ -211,11 +211,11 @@ void CheckClusters(std::string clusfile = "o2clus_its.root", std::string hitfile
   nt.Draw("dz:dx", "abs(dz)<0.01 && abs(dx)<0.01");
   new TCanvas;
   nt.Draw("dz:tz", "abs(dz)<0.005 && abs(tz)<2");
-  auto c1 = new TCanvas("p1","pullX");
+  auto c1 = new TCanvas("p1", "pullX");
   c1->cd();
   c1->SetLogy();
   nt.Draw("dx/ex", "abs(dx/ex)<10");
-  auto c2 = new TCanvas("p2","pullZ");
+  auto c2 = new TCanvas("p2", "pullZ");
   c2->cd();
   c2->SetLogy();
   nt.Draw("dz/ez", "abs(dz/ez)<10");
