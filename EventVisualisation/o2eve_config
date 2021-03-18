@@ -18,8 +18,8 @@ camera.R-Phi.zoom:                      1.0
 camera.Rho-Z.zoom:                      1.0
 
 simple.geom.default:                    R2
-simple.geom.R2.path:                    ${ALICE_ROOT}/EVE/resources/geometry/run2/
-simple.geom.R3.path:                    ${ALICE_ROOT}/EVE/resources/geometry/run3/
+simple.geom.R2.path:                    /home/mconcas/alice/n-tracker/data/pp
+simple.geom.R3.path:                    /home/mconcas/alice/n-tracker/data/pp 
 
 tracks.width:                           2
 

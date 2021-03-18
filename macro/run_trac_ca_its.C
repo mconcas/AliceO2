@@ -74,6 +74,10 @@ void run_trac_ca_its(bool cosmics = false,
 
   // o2::its::Tracker tracker(chainITS->GetITSTrackerTraits());
   o2::its::Tracker tracker(new o2::its::TrackerTraitsCPU());
+  if (useMaterialBudgetLUT) {
+    tracker.initMatBudLUTFromFile();
+    LOG(INFO) << "Using material budget lookup table";
+  }
   o2::its::ROframe event(0, 7);
 
   if (path.back() != '/') {
