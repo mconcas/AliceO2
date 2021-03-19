@@ -92,7 +92,7 @@ void CheckTrackerCA(std::string kineFile = "o2sim_Kine.root",
 
   // Look for events information in frames
   int loadedEventClust{-1};
-  int loadedEventTracks = -1;
+  int loadedEventTracks{-1};
 
   auto nEv = mcTree->GetEntriesFast();
   auto nRofClus = clusTree->GetEntriesFast();
@@ -100,7 +100,7 @@ void CheckTrackerCA(std::string kineFile = "o2sim_Kine.root",
   vector<DataFrames> clusterFrames(nEv);
   vector<DataFrames> trackFrames(nEv);
 
-  LOG(INFO) << "Find mc events in cluster frames.. ";
+  LOG(INFO) << "Find mc events in cluster frames";
   for (auto iRof{0}; iRof < nRofClus; iRof++) { // Cluster frames
     if (!clusTree->GetEvent(iRof))
       continue;
@@ -113,12 +113,12 @@ void CheckTrackerCA(std::string kineFile = "o2sim_Kine.root",
     }
   }
 
-  LOG(INFO) << "Find mc events in track frames.. ";
+  LOG(INFO) << "Find mc events in track frames";
   for (auto iRof{0}; iRof < nRofRec; iRof++) { // Track frames
     if (!recTree->GetEvent(iRof))
       continue;
     int loadedEventTracks = iRof;
-    for (size_t iLast{0}; iLast < recArr->size(); iLast++) { // Find the last MC event within this reconstructed entry
+    for (size_t iLast{0}; iLast < recArr->size(); iLast++) { // Find the last rec event info within this reconstructed entry
       auto lab = (*trkLabArr)[iLast];
       if (!lab.isValid()) {
         const TrackITS& recTrack = (*recArr)[iLast];

@@ -2,7 +2,7 @@
 
 # Cleanup
 shopt -s extglob
-rm -v !("CheckTrackerCA.C"|"run.sh"|"CreateDictionaries.C"|"run_trac_ca_its.C"|"matbud.root"|"DisplayTrack.C"|"CheckTracks.C")
+rm -v !("CheckTrackerCA.C"|"run_checks.sh"|"CreateDictionaries.C"|"run_trac_ca_its.C"|"matbud.root"|"DisplayTrack.C"|"CheckTracks.C")
 
 # Simulation
 o2-sim-serial -m PIPE ITS -g boxgen --configKeyValues 'BoxGun.pdg=2212 ; BoxGun.eta[0]=0 ; BoxGun.eta[1]=0; BoxGun.number=2; BoxGun.prange[0]=0.5; BoxGun.prange[1]=0.5' -n 1
