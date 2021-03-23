@@ -11,6 +11,7 @@
 /// @file   TrackerSpec.cxx
 
 #include <vector>
+#include <fstream>
 
 #include "TGeoGlobalMagField.h"
 

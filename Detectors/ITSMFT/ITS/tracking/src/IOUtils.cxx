@@ -16,7 +16,6 @@
 
 #include <iostream>
 #include <cstdlib>
-#include <fstream>
 #include <sstream>
 #include <tuple>
 #include <unordered_set>
@@ -127,8 +126,10 @@ std::vector<ROframe> ioutils::loadEventData(const std::string& fileName)
   return events;
 }
 
-void ioutils::loadEventData(ROframe& event, gsl::span<const itsmft::CompClusterExt> clusters,
-                            gsl::span<const unsigned char>::iterator& pattIt, const itsmft::TopologyDictionary& dict,
+void ioutils::loadEventData(ROframe& event,
+                            gsl::span<const itsmft::CompClusterExt> clusters,
+                            gsl::span<const unsigned char>::iterator& pattIt,
+                            const itsmft::TopologyDictionary& dict,
                             const dataformats::MCTruthContainer<MCCompLabel>* clsLabels)
 {
   if (clusters.empty()) {
@@ -164,7 +165,6 @@ void ioutils::loadEventData(ROframe& event, gsl::span<const itsmft::CompClusterE
     auto trkXYZ = geom->getMatrixT2L(sensorID) ^ locXYZ;
     // Transformation to the local --> global
     auto gloXYZ = geom->getMatrixL2G(sensorID) * locXYZ;
-
     event.addTrackingFrameInfoToLayer(layer, gloXYZ.x(), gloXYZ.y(), gloXYZ.z(), trkXYZ.x(), geom->getSensorRefAlpha(sensorID),
                                       std::array<float, 2>{trkXYZ.y(), trkXYZ.z()},
                                       std::array<float, 3>{sigmaY2, sigmaYZ, sigmaZ2});
@@ -179,9 +179,15 @@ void ioutils::loadEventData(ROframe& event, gsl::span<const itsmft::CompClusterE
   }
 }
 
-int ioutils::loadROFrameData(const o2::itsmft::ROFRecord& rof, ROframe& event, gsl::span<const itsmft::CompClusterExt> clusters, gsl::span<const unsigned char>::iterator& pattIt, const itsmft::TopologyDictionary& dict,
+int ioutils::loadROFrameData(const o2::itsmft::ROFRecord& rof,
+                             ROframe& event,
+                             gsl::span<const itsmft::CompClusterExt> clusters,
+                             gsl::span<const unsigned char>::iterator& pattIt,
+                             const itsmft::TopologyDictionary& dict,
                              const dataformats::MCTruthContainer<MCCompLabel>* mcLabels)
 {
+  std::fstream fDebugDumpFile;
+  fDebugDumpFile.open("errorDumps.txt", std::ios::app);
   event.clear();
   GeometryTGeo* geom = GeometryTGeo::Instance();
   geom->fillMatrixCache(o2::math_utils::bit2Mask(o2::math_utils::TransformType::T2L, o2::math_utils::TransformType::L2G));
@@ -214,6 +220,7 @@ int ioutils::loadROFrameData(const o2::itsmft::ROFRecord& rof, ROframe& event, g
     // Transformation to the local --> global
     auto gloXYZ = geom->getMatrixL2G(sensorID) * locXYZ;
 
+    fDebugDumpFile << sigmaY2 << "\t" << sigmaZ2 << std::endl;
     event.addTrackingFrameInfoToLayer(layer, gloXYZ.x(), gloXYZ.y(), gloXYZ.z(), trkXYZ.x(), geom->getSensorRefAlpha(sensorID),
                                       std::array<float, 2>{trkXYZ.y(), trkXYZ.z()},
                                       std::array<float, 3>{sigmaY2, sigmaYZ, sigmaZ2});
@@ -226,36 +233,9 @@ int ioutils::loadROFrameData(const o2::itsmft::ROFRecord& rof, ROframe& event, g
     event.addClusterExternalIndexToLayer(layer, first + clusterId);
     clusterId++;
   }
+  fDebugDumpFile.close();
   return clusters_in_frame.size();
 }
-
-// void ioutils::generateSimpleData(ROframe& event, const int phiDivs, const int zDivs = 1)
-// {
-//   const float angleOffset = constants::math::TwoPi / static_cast<float>(phiDivs);
-//   // Maximum z allowed on innermost layer should be: ~9,75
-//   const float zOffsetFirstLayer = (zDivs == 1) ? 0 : 1.5 * (LayersZCoordinate()[6] * LayersRCoordinate()[0]) / (LayersRCoordinate()[6] * (static_cast<float>(zDivs) - 1));
-//   std::vector<float> x, y;
-//   std::array<std::vector<float>, 7> z;
-//   for (size_t j{0}; j < zDivs; ++j) {
-//     for (size_t i{0}; i < phiDivs; ++i) {
-//       x.emplace_back(cos(i * angleOffset + 0.001)); // put an epsilon to move from periods (e.g. 20 clusters vs 20 cells)
-//       y.emplace_back(sin(i * angleOffset + 0.001));
-//       const float zFirstLayer{-static_cast<float>((zDivs - 1.) / 2.) * zOffsetFirstLayer + zOffsetFirstLayer * static_cast<float>(j)};
-//       z[0].emplace_back(zFirstLayer);
-//       for (size_t iLayer{1}; iLayer < 7; ++iLayer) {
-//         z[iLayer].emplace_back(zFirstLayer * LayersRCoordinate()[iLayer] / LayersRCoordinate()[0]);
-//       }
-//     }
-//   }
-
-//   for (int iLayer{0}; iLayer < 7; ++iLayer) {
-//     for (int i = 0; i < phiDivs * zDivs; i++) {
-//       o2::MCCompLabel label{i, 0, 0, false};
-//       event.addClusterLabelToLayer(iLayer, label);                                                                              //last argument : label, goes into mClustersLabel
-//       event.addClusterToLayer(iLayer, LayersRCoordinate()[iLayer] * x[i], LayersRCoordinate()[iLayer] * y[i], z[iLayer][i], i); //uses 1st constructor for clusters
-//     }
-//   }
-// }
 
 std::vector<std::unordered_map<int, Label>> ioutils::loadLabels(const int eventsNum, const std::string& fileName)
 {
@@ -348,8 +328,6 @@ void ioutils::writeRoadsReport(std::ofstream& correctRoadsOutputStream, std::ofs
     }
   }
 }
-
-
 
 } // namespace its
 } // namespace o2

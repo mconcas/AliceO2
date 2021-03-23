@@ -753,9 +753,9 @@ bool Tracker::kalmanPropagateTrack(const ROframe& event,
       }
     }
 
-    if (!track.correctForMaterial(xx0, -step * distance * density, !mMatLayerCylSet)) { // (first < last) ? -1. : 1.)
-      return false;
-    }
+    // if (!track.correctForMaterial(xx0, -step * distance * density, !mMatLayerCylSet)) { // (first < last) ? -1. : 1.)
+    //   return false;
+    // }
   }
 
   return status;
@@ -851,9 +851,9 @@ bool Tracker::smoothTrack(TrackITSExt& track, const int testedClusterIndex, cons
       distance = matbud.length;
     }
 
-    if (!outwardsTrack.correctForMaterial(xx0, -distance * density, !mMatLayerCylSet)) { // (first < last) ? -1. : 1.)
-      return false;
-    }
+    // if (!outwardsTrack.correctForMaterial(xx0, -distance * density, !mMatLayerCylSet)) { // (first < last) ? -1. : 1.)
+    //   return false;
+    // }
     // Finalize kalman propagation and set new track in place of the old one.
     kalmanPropagateTrack(event, outwardsTrack, level, outwardsTrack.getNumberOfClusters());
     track = outwardsTrack;

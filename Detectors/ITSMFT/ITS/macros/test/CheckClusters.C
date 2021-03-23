@@ -8,12 +8,14 @@
 #include <TNtuple.h>
 #include <TString.h>
 #include <TTree.h>
+#include <fstream>
 
 #include "ITSMFTBase/SegmentationAlpide.h"
 #include "ITSBase/GeometryTGeo.h"
 #include "DataFormatsITSMFT/CompCluster.h"
 #include "DataFormatsITSMFT/TopologyDictionary.h"
 #include "ITSMFTSimulation/Hit.h"
+#include "ITStracking/IOUtils.h"
 #include "DataFormatsITSMFT/ROFRecord.h"
 #include "MathUtils/Cartesian.h"
 #include "MathUtils/Utils.h"
@@ -50,6 +52,9 @@ void CheckClusters(std::string clusfile = "o2clus_its.root", std::string hitfile
   auto gman = o2::its::GeometryTGeo::Instance();
   gman->fillMatrixCache(o2::math_utils::bit2Mask(o2::math_utils::TransformType::T2L, o2::math_utils::TransformType::T2GRot,
                                                  o2::math_utils::TransformType::L2G)); // request cached transforms
+
+  std::fstream fDebugDumpFile;
+  fDebugDumpFile.open("errorDumpsClustersCheck.txt", std::ios_base::out);
 
   // Hits
   TFile fileH(hitfile.data());
@@ -151,6 +156,12 @@ void CheckClusters(std::string clusfile = "o2clus_its.root", std::string hitfile
       float errZ{0.f};
       int npix = 0;
       auto pattID = cluster.getPatternID();
+      float sigmaY2 = ioutils::DefClusError2Row, sigmaZ2 = ioutils::DefClusError2Col, sigmaYZ = 0; //Dummy COG errors (about half pixel size)
+      if (pattID != o2::itsmft::CompCluster::InvalidPatternID) {
+        sigmaY2 = dict.getErr2X(pattID);
+        sigmaZ2 = dict.getErr2Z(pattID);
+      }
+      fDebugDumpFile << sigmaY2 << "\t" << sigmaZ2 << std::endl;
       o2::math_utils::Point3D<float> locC;
       if (pattID == o2::itsmft::CompCluster::InvalidPatternID || dict.isGroup(pattID)) {
         o2::itsmft::ClusterPattern patt(pattIt);
@@ -232,4 +243,5 @@ void CheckClusters(std::string clusfile = "o2clus_its.root", std::string hitfile
 
   fout.cd();
   nt.Write();
+  fDebugDumpFile.close();
 }

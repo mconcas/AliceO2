@@ -89,7 +89,7 @@ void CookedTrackerDPL::init(InitContext& ic)
 
 void CookedTrackerDPL::run(ProcessingContext& pc)
 {
-  mTimer.Start(false);
+  std::fstream fDebugDumpFile;
   auto compClusters = pc.inputs().get<gsl::span<o2::itsmft::CompClusterExt>>("compClusters");
   gsl::span<const unsigned char> patterns = pc.inputs().get<gsl::span<unsigned char>>("patterns");
 
