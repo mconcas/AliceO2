@@ -82,3 +82,6 @@ o2_add_test_root_macro(run_digi2rawVarPage_its.C
 o2_add_test_root_macro(CheckTrackerCA.C
                        PUBLIC_LINK_LIBRARIES O2::ITStracking
                        LABELS its)
+
+o2_add_test_root_macro(inspectTracks.C
+                       LABELS its)

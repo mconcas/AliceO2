@@ -43,6 +43,10 @@
 #include "ITStracking/StandaloneDebugger.h"
 #endif
 
+#ifdef CA_STANDALONE_DEBUGGER
+#include "ITStracking/StandaloneDebugger.h"
+#endif
+
 namespace o2
 {
 
@@ -127,6 +131,9 @@ class Tracker
   o2::gpu::GPUChainITS* mRecoChain = nullptr;
 
 #ifdef CA_DEBUG
+  StandaloneDebugger* mDebugger;
+#endif
+#ifdef CA_STANDALONE_DEBUGGER
   StandaloneDebugger* mDebugger;
 #endif
 };

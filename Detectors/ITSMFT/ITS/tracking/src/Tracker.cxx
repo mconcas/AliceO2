@@ -21,6 +21,7 @@
 #include "ITStracking/TrackerTraits.h"
 #include "ITStracking/TrackerTraitsCPU.h"
 #include "ITStracking/TrackingConfigParam.h"
+#include "DetectorsBase/GeometryManager.h"
 
 #include "ReconstructionDataFormats/Track.h"
 #include <cassert>
@@ -54,13 +55,17 @@ Tracker::Tracker(o2::its::TrackerTraits* traits)
 #ifdef CA_DEBUG
   mDebugger = new StandaloneDebugger("dbg_ITSTrackerCPU.root");
 #endif
+#ifdef CA_STANDALONE_DEBUGGER
+  mDebugger = new StandaloneDebugger("smoother_debug.root");
+#endif
 }
-#ifdef CA_DEBUG
+
+#if defined(CA_DEBUG) || defined(CA_STANDALONE_DEBUGGER) 
 Tracker::~Tracker()
 {
   delete mDebugger;
 }
-#else
+#else 
 Tracker::~Tracker() = default;
 #endif
 
@@ -753,9 +758,9 @@ bool Tracker::kalmanPropagateTrack(const ROframe& event,
       }
     }
 
-    // if (!track.correctForMaterial(xx0, -step * distance * density, !mMatLayerCylSet)) { // (first < last) ? -1. : 1.)
-    //   return false;
-    // }
+    if (!track.correctForMaterial(xx0, -step * distance * density, !mMatLayerCylSet)) { // (first < last) ? -1. : 1.)
+      return false;
+    }
   }
 
   return status;
@@ -851,9 +856,9 @@ bool Tracker::smoothTrack(TrackITSExt& track, const int testedClusterIndex, cons
       distance = matbud.length;
     }
 
-    // if (!outwardsTrack.correctForMaterial(xx0, -distance * density, !mMatLayerCylSet)) { // (first < last) ? -1. : 1.)
-    //   return false;
-    // }
+    if (!outwardsTrack.correctForMaterial(xx0, -distance * density, !mMatLayerCylSet)) { // (first < last) ? -1. : 1.)
+      return false;
+    }
     // Finalize kalman propagation and set new track in place of the old one.
     kalmanPropagateTrack(event, outwardsTrack, level, outwardsTrack.getNumberOfClusters());
     track = outwardsTrack;
