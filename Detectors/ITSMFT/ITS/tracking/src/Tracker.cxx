@@ -30,6 +30,8 @@
 #include <cstdlib>
 #include <string>
 
+#include <random>
+
 namespace o2
 {
 namespace its
@@ -60,12 +62,12 @@ Tracker::Tracker(o2::its::TrackerTraits* traits)
 #endif
 }
 
-#if defined(CA_DEBUG) || defined(CA_STANDALONE_DEBUGGER) 
+#if defined(CA_DEBUG) || defined(CA_STANDALONE_DEBUGGER)
 Tracker::~Tracker()
 {
   delete mDebugger;
 }
-#else 
+#else
 Tracker::~Tracker() = default;
 #endif
 
@@ -245,6 +247,7 @@ void Tracker::findRoads(int& iteration)
 
 void Tracker::findTracks(const ROframe& event)
 {
+  std::default_random_engine generator;
   mTracks.reserve(mTracks.capacity() + mPrimaryVertexContext->getRoads().size());
   std::vector<TrackITSExt> tracks;
   tracks.reserve(mPrimaryVertexContext->getRoads().size());
@@ -317,6 +320,19 @@ void Tracker::findTracks(const ROframe& event)
     CA_DEBUGGER(backpropagatedCounters[nClusters - 4]++);
     temporaryTrack.getParamOut() = temporaryTrack;
     temporaryTrack.resetCovariance();
+    // std::normal_distribution<float> yD(temporaryTrack.getY(), std::sqrt(temporaryTrack.getSigmaY2()));
+    // std::normal_distribution<float> zD(temporaryTrack.getZ(), std::sqrt(temporaryTrack.getSigmaZ2()));
+    // std::normal_distribution<float> snpD(temporaryTrack.getSnp(), std::sqrt(temporaryTrack.getSigmaSnp2()));
+    // std::normal_distribution<float> tglD(temporaryTrack.getTgl(), std::sqrt(temporaryTrack.getSigmaTgl2()));
+    // std::normal_distribution<float> q2PtD(temporaryTrack.getQ2Pt(), std::sqrt(temporaryTrack.getSigma1Pt2()));
+    temporaryTrack.setY(0);
+    temporaryTrack.setZ(0);
+    // float snp = snpD(generator);
+    // snp = snp > 0.99f ? 0.99f : (snp < -0.99f ? -0.99f : snp);
+    temporaryTrack.setSnp(0.5);
+    temporaryTrack.setTgl(0.5);
+    temporaryTrack.setQ2Pt(1.6  );
+
     fitSuccess = fitTrack(event, temporaryTrack, mTrkParams[0].NLayers - 1, -1, -1, mTrkParams[0].FitIterationMaxChi2[1]);
 #ifdef CA_DEBUG
     mDebugger->dumpTrackToBranchWithInfo("testBranch", temporaryTrack, event, mPrimaryVertexContext, true);
@@ -336,16 +352,6 @@ void Tracker::findTracks(const ROframe& event)
   std::sort(tracks.begin(), tracks.end(),
             [](TrackITSExt& track1, TrackITSExt& track2) { return track1.isBetter(track2, 1.e6f); });
 
-#ifdef CA_DEBUG
-  // std::array<int, 26> sharingMatrix{0};
-  // int prevNclusters = 7;
-  // auto cumulativeIndex = [](int ncl) -> int {
-  //   constexpr int idx[5] = {0, 5, 11, 18, 26};
-  //   return idx[ncl - 4];
-  // };
-  // std::array<int, 4> xcheckCounters{0};
-#endif
-
   for (auto& track : tracks) {
     CA_DEBUGGER(int nClusters = 0);
     int nShared = 0;
@@ -356,24 +362,9 @@ void Tracker::findTracks(const ROframe& event)
       nShared += int(mPrimaryVertexContext->isClusterUsed(iLayer, track.getClusterIndex(iLayer)));
       CA_DEBUGGER(nClusters++);
     }
-
-    // #ifdef CA_DEBUG
-    //     assert(nClusters == track.getNumberOfClusters());
-    //     xcheckCounters[nClusters - 4]++;
-    //     assert(nShared <= nClusters);
-    //     sharingMatrix[cumulativeIndex(nClusters) + nShared]++;
-    // #endif
-
     if (nShared > mTrkParams[0].ClusterSharing) {
       continue;
     }
-
-    // #ifdef CA_DEBUG
-    //     nonsharingCounters[nClusters - 4]++;
-    //     assert(nClusters <= prevNclusters);
-    //     prevNclusters = nClusters;
-    // #endif
-
     for (int iLayer{0}; iLayer < mTrkParams[0].NLayers; ++iLayer) {
       if (track.getClusterIndex(iLayer) == constants::its::UnusedIndex) {
         continue;
@@ -382,49 +373,6 @@ void Tracker::findTracks(const ROframe& event)
     }
     mTracks.emplace_back(track);
   }
-
-#ifdef CA_DEBUG
-  std::cout << "+++ Found candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : roadCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  std::cout << "+++ Fitted candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : fitCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  std::cout << "+++ Backprop candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : backpropagatedCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  std::cout << "+++ Refitted candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : refitCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  // std::cout << "+++ Cross check counters for 4, 5, 6 and 7 clusters:\t";
-  // for (size_t iCount = 0; iCount < refitCounters.size(); ++iCount) {
-  //   std::cout << xcheckCounters[iCount] << "\t";
-  //   //assert(refitCounters[iCount] == xcheckCounters[iCount]);
-  // }
-  // std::cout << std::endl;
-
-  // std::cout << "+++ Nonsharing candidates with 4, 5, 6 and 7 clusters:\t";
-  // for (int count : nonsharingCounters)
-  //   std::cout << count << "\t";
-  // std::cout << std::endl;
-
-  // std::cout << "+++ Sharing matrix:\n";
-  // for (int iCl = 4; iCl <= 7; ++iCl) {
-  //   std::cout << "+++ ";
-  //   for (int iSh = cumulativeIndex(iCl); iSh < cumulativeIndex(iCl + 1); ++iSh) {
-  //     std::cout << sharingMatrix[iSh] << "\t";
-  //   }
-  //   std::cout << std::endl;
-  // }
-#endif
 }
 
 bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int end, int step, const float chi2cut)
@@ -704,11 +652,11 @@ float Tracker::getSmootherPredictedChi2(const o2::track::TrackParCov& outwT, // 
   std::array<double, 2> w1pp1 = {w1[0] * pp1[0] + w1[1] * pp1[1], w1[1] * pp1[0] + w1[2] * pp1[1]}; // W1 * P1
   std::array<double, 2> w2pp2 = {w2[0] * pp2[0] + w2[1] * pp2[1], w2[1] * pp2[0] + w2[2] * pp2[1]}; // W2 * P2
 
-  float Y = static_cast<float>(C[0] * (w1pp1[0] + w2pp2[0]) + C[1] * (w1pp1[1] + w2pp2[1])); // Pp: weighted normalized combination of the prediction:
+  float Y = static_cast<float>(C[0] * (w1pp1[0] + w2pp2[0]) + C[1] * (w1pp1[1] + w2pp2[1])); // Pp: weighted normalized combination of the predictions:
   float Z = static_cast<float>(C[1] * (w1pp1[0] + w2pp2[0]) + C[2] * (w1pp1[1] + w2pp2[1])); // Pp = [(W1 * P1) + (W2 * P2)] / (W1 + W2)
 
-  std::array<double, 2> delta = {Y - cls[0], Z - cls[1]};                          // Δ = Pp - X, X: space point of cluster (Y,Z)
-  std::array<double, 3> CCp = {C[0] + clCov[0], C[1] + clCov[1], C[2] + clCov[2]}; // Transformation of cluster covmat: CCp = C * Cov
+  std::array<double, 2> delta = {Y - cls[0], Z - cls[1]};                                                                                         // Δ = Pp - X, X: space point of cluster (Y,Z)
+  std::array<double, 3> CCp = {C[0] + static_cast<double>(clCov[0]), C[1] + static_cast<double>(clCov[1]), C[2] + static_cast<double>(clCov[2])}; // Transformation of cluster covmat: CCp = C * Cov
 
   float chi2 = static_cast<float>(delta[0] * (CCp[0] * delta[0] + CCp[1] * delta[1]) + delta[1] * (CCp[1] * delta[0] + CCp[2] * delta[1])); // chi2 = tΔ * (CCp * Δ)
 #ifdef CA_DEBUG
@@ -722,6 +670,18 @@ float Tracker::getSmootherPredictedChi2(const o2::track::TrackParCov& outwT, // 
   LOG(INFO) << "";
 #endif
   return chi2;
+}
+
+// Debug
+float Tracker::getTrackClusterChi2(const o2::track::TrackParCov& track, const std::array<float, 2>& cls,
+                                   const std::array<float, 3>& clCov)
+{
+  std::array<double, 2> pp1 = {static_cast<double>(track.getY()), static_cast<double>(track.getZ())}; // P1: predicted track Y,Z points
+  std::array<double, 3> c1 = {static_cast<double>(track.getSigmaY2()),
+                              static_cast<double>(track.getSigmaZY()),
+                              static_cast<double>(track.getSigmaZ2())}; // Cov. of the track
+  std::array<double, 3> CtCc = {static_cast<double>(clCov[0]) + c1[0], static_cast<double>(clCov[1]) + c1[1], static_cast<double>(clCov[2]) + c1[2]};
+  std::array<double, 3> w1 = getInverseSymm2D(c1); // Weight matrix
 }
 
 bool Tracker::kalmanPropagateTrack(const ROframe& event,

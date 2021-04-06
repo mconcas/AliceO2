@@ -112,6 +112,10 @@ class Tracker
   bool kalmanPropagateOutwardsTrack(const ROframe& event, o2::its::TrackITSExt& track, const int first, const int last);
   void smoothTracks(const ROframe& event, std::vector<TrackITSExt>& tracks);
 
+  // Debug
+  float getTrackClusterChi2(const o2::track::TrackParCov&, const std::array<float, 2>&, const std::array<float, 3>&);
+
+  // Benchmark
   template <typename... T>
   float evaluateTask(void (Tracker::*)(T...), const char*, std::ostream& ostream, T&&... args);
 
