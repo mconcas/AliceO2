@@ -17,7 +17,6 @@
 #include "ITStracking/Cell.h"
 #include "ITStracking/Constants.h"
 #include "ITStracking/IndexTableUtils.h"
-#include "DetectorsBase/Propagator.h"
 #include "ITStracking/Tracklet.h"
 #include "ITStracking/TrackerTraits.h"
 #include "ITStracking/TrackerTraitsCPU.h"
@@ -367,49 +366,6 @@ void Tracker::findTracks(const ROframe& event)
     }
     mTracks.emplace_back(track);
   }
-
-#ifdef CA_DEBUG
-  std::cout << "+++ Found candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : roadCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  std::cout << "+++ Fitted candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : fitCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  std::cout << "+++ Backprop candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : backpropagatedCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  std::cout << "+++ Refitted candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : refitCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  // std::cout << "+++ Cross check counters for 4, 5, 6 and 7 clusters:\t";
-  // for (size_t iCount = 0; iCount < refitCounters.size(); ++iCount) {
-  //   std::cout << xcheckCounters[iCount] << "\t";
-  //   //assert(refitCounters[iCount] == xcheckCounters[iCount]);
-  // }
-  // std::cout << std::endl;
-
-  // std::cout << "+++ Nonsharing candidates with 4, 5, 6 and 7 clusters:\t";
-  // for (int count : nonsharingCounters)
-  //   std::cout << count << "\t";
-  // std::cout << std::endl;
-
-  // std::cout << "+++ Sharing matrix:\n";
-  // for (int iCl = 4; iCl <= 7; ++iCl) {
-  //   std::cout << "+++ ";
-  //   for (int iSh = cumulativeIndex(iCl); iSh < cumulativeIndex(iCl + 1); ++iSh) {
-  //     std::cout << sharingMatrix[iSh] << "\t";
-  //   }
-  //   std::cout << std::endl;
-  // }
-#endif
 }
 
 bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int end, int step, o2::base::PropagatorImpl<float>* propPtr, const float chi2cut)
@@ -425,7 +381,7 @@ bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int 
       return false;
     }
 
-    if (!propPtr->propagateToX(track, trackingHit.xTrackingFrame, getBz())) {
+    if (!propPtr->propagateToX(track, trackingHit.xTrackingFrame, getBz(), o2::base::PropagatorImpl<float>::MAX_SIN_PHI, o2::base::PropagatorImpl<float>::MAX_STEP, mCorrType)) {
       return false;
     }
 
@@ -649,6 +605,9 @@ track::TrackParCov Tracker::buildTrackSeed(const Cluster& cluster1, const Cluste
 void Tracker::getGlobalConfiguration()
 {
   auto& tc = o2::its::TrackerParamConfig::Instance();
+  if (tc.useMatCorrTGeo) {
+    setCorrType(o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrTGeo);
+  }
 }
 
 } // namespace its
