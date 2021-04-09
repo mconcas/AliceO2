@@ -411,7 +411,7 @@ void Tracker::findTracks(const ROframe& event)
 
 bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int end, int step, const float chi2cut)
 {
-  auto propInstance =  o2::base::Propagator::Instance();
+  auto propInstance = o2::base::Propagator::Instance();
   track.setChi2(0);
   for (int iLayer{start}; iLayer != end; iLayer += step) {
     if (track.getClusterIndex(iLayer) == constants::its::UnusedIndex) {
