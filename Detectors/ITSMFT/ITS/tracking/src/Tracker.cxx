@@ -221,10 +221,10 @@ void Tracker::findRoads(int& iteration)
         // currentCell.setLevel(0);
       }
     }
-#ifdef CA_DEBUG
-    nRoads += mPrimaryVertexContext->getRoads().size();
-    std::cout << "+++ Roads with " << iLevel + 2 << " clusters: " << nRoads << " / " << mPrimaryVertexContext->getRoads().size() << std::endl;
-#endif
+    // #ifdef CA_DEBUG
+    //     nRoads += mPrimaryVertexContext->getRoads().size();
+    //     std::cout << "+++ Roads with " << iLevel + 2 << " clusters: " << nRoads << " / " << mPrimaryVertexContext->getRoads().size() << std::endl;
+    // #endif
   }
 }
 
@@ -303,9 +303,7 @@ void Tracker::findTracks(const ROframe& event)
     temporaryTrack.getParamOut() = temporaryTrack;
     temporaryTrack.resetCovariance();
     fitSuccess = fitTrack(event, temporaryTrack, mTrkParams[0].NLayers - 1, -1, -1, mTrkParams[0].FitIterationMaxChi2[1]);
-#ifdef CA_DEBUG
-    mDebugger->dumpTrackToBranchWithInfo("testBranch", temporaryTrack, event, mPrimaryVertexContext, true);
-#endif
+
     if (!fitSuccess) {
       continue;
     }
@@ -365,77 +363,175 @@ void Tracker::findTracks(const ROframe& event)
     mTracks.emplace_back(track);
   }
 
-#ifdef CA_DEBUG
-  std::cout << "+++ Found candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : roadCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  std::cout << "+++ Fitted candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : fitCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  std::cout << "+++ Backprop candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : backpropagatedCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  std::cout << "+++ Refitted candidates with 4, 5, 6 and 7 clusters:\t";
-  for (int count : refitCounters)
-    std::cout << count << "\t";
-  std::cout << std::endl;
-
-  // std::cout << "+++ Cross check counters for 4, 5, 6 and 7 clusters:\t";
-  // for (size_t iCount = 0; iCount < refitCounters.size(); ++iCount) {
-  //   std::cout << xcheckCounters[iCount] << "\t";
-  //   //assert(refitCounters[iCount] == xcheckCounters[iCount]);
-  // }
-  // std::cout << std::endl;
-
-  // std::cout << "+++ Nonsharing candidates with 4, 5, 6 and 7 clusters:\t";
-  // for (int count : nonsharingCounters)
-  //   std::cout << count << "\t";
-  // std::cout << std::endl;
-
-  // std::cout << "+++ Sharing matrix:\n";
-  // for (int iCl = 4; iCl <= 7; ++iCl) {
-  //   std::cout << "+++ ";
-  //   for (int iSh = cumulativeIndex(iCl); iSh < cumulativeIndex(iCl + 1); ++iSh) {
-  //     std::cout << sharingMatrix[iSh] << "\t";
-  //   }
+  // #ifdef CA_DEBUG
+  //   std::cout << "+++ Found candidates with 4, 5, 6 and 7 clusters:\t";
+  //   for (int count : roadCounters)
+  //     std::cout << count << "\t";
   //   std::cout << std::endl;
-  // }
-#endif
+
+  //   std::cout << "+++ Fitted candidates with 4, 5, 6 and 7 clusters:\t";
+  //   for (int count : fitCounters)
+  //     std::cout << count << "\t";
+  //   std::cout << std::endl;
+
+  //   std::cout << "+++ Backprop candidates with 4, 5, 6 and 7 clusters:\t";
+  //   for (int count : backpropagatedCounters)
+  //     std::cout << count << "\t";
+  //   std::cout << std::endl;
+
+  //   std::cout << "+++ Refitted candidates with 4, 5, 6 and 7 clusters:\t";
+  //   for (int count : refitCounters)
+  //     std::cout << count << "\t";
+  //   std::cout << std::endl;
+
+  //   // std::cout << "+++ Cross check counters for 4, 5, 6 and 7 clusters:\t";
+  //   // for (size_t iCount = 0; iCount < refitCounters.size(); ++iCount) {
+  //   //   std::cout << xcheckCounters[iCount] << "\t";
+  //   //   //assert(refitCounters[iCount] == xcheckCounters[iCount]);
+  //   // }
+  //   // std::cout << std::endl;
+
+  //   // std::cout << "+++ Nonsharing candidates with 4, 5, 6 and 7 clusters:\t";
+  //   // for (int count : nonsharingCounters)
+  //   //   std::cout << count << "\t";
+  //   // std::cout << std::endl;
+
+  //   // std::cout << "+++ Sharing matrix:\n";
+  //   // for (int iCl = 4; iCl <= 7; ++iCl) {
+  //   //   std::cout << "+++ ";
+  //   //   for (int iSh = cumulativeIndex(iCl); iSh < cumulativeIndex(iCl + 1); ++iSh) {
+  //   //     std::cout << sharingMatrix[iSh] << "\t";
+  //   //   }
+  //   //   std::cout << std::endl;
+  //   // }
+  // #endif
 }
 
 bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int end, int step, const float chi2cut)
 {
   auto propInstance = o2::base::Propagator::Instance();
+  o2::its::TrackITSExt trackCopy{track};
   track.setChi2(0);
+  trackCopy.setChi2(0);
+
+  bool interrupt{false};
+  int layerF{-1};
+  float corrClusChi2;
+  TrackingFrameInfo correctTrackingHit;
+  if ((start > end) && start > 5) { // last iteration
+    FakeTrackInfo<7> tmpInfo{mPrimaryVertexContext, event, track, false};
+    if (tmpInfo.nFakeClusters == 1) {
+      for (int i{0}; i < track.getNumberOfClusters(); ++i) {
+        if (tmpInfo.mcLabels[i] != tmpInfo.mainLabel) {
+          layerF = i;
+          break;
+        }
+      }
+      LOG(WARN) << "Found track with one fake cluster!\nlabels:";
+      for (int il{0}; il < 7; ++il) {
+        std::cout << "\t" << tmpInfo.mcLabels[il];
+      }
+      int correct = event.getFirstClusterIDFromLabel(layerF, tmpInfo.mainLabel);
+      std::cout << "\nFake cluster is on layer: " << layerF << ", id of correct cluster: " << correct;
+      if (correct != -1)
+        std::cout << ", counter proof: " << event.getClusterLabels(layerF, correct) << std::endl;
+
+      if (correct != -1) {
+        correctTrackingHit = event.getTrackingFrameInfoOnLayer(layerF).at(correct);
+        interrupt = true;
+      }
+    }
+  }
+
   for (int iLayer{start}; iLayer != end; iLayer += step) {
     if (track.getClusterIndex(iLayer) == constants::its::UnusedIndex) {
       continue;
     }
     const TrackingFrameInfo& trackingHit = event.getTrackingFrameInfoOnLayer(iLayer).at(track.getClusterIndex(iLayer));
 
+    if (interrupt && (iLayer == layerF)) {
+      LOG(WARN) << "Fake hit x: " << trackingHit.xCoordinate << " y: " << trackingHit.yCoordinate << " z: " << trackingHit.zCoordinate << "x tracking frame: " << trackingHit.xTrackingFrame;
+      LOG(WARN) << "Correct hit x: " << correctTrackingHit.xCoordinate << " y: " << correctTrackingHit.yCoordinate << " z: " << correctTrackingHit.zCoordinate << "x tracking frame" << correctTrackingHit.xTrackingFrame;
+      LOG(WARN) << "covariance fake hit: " << trackingHit.covarianceTrackingFrame[0] << " " << trackingHit.covarianceTrackingFrame[1] << " " << trackingHit.covarianceTrackingFrame[2];
+      LOG(WARN) << "covariance true hit: " << correctTrackingHit.covarianceTrackingFrame[0] << " " << correctTrackingHit.covarianceTrackingFrame[1] << " " << correctTrackingHit.covarianceTrackingFrame[2];
+      LOG(WARN) << "before propagation >> orig Y: " << track.getY() << " Z: " << track.getZ() << " X: " << track.getX();
+      LOG(WARN) << "before propagation >> copy Y: " << trackCopy.getY() << " Z: " << trackCopy.getZ() << " X: " << trackCopy.getX();
+      LOG(WARN) << "covariance orig track: \n\t" << track.getCov()[0] << " " << track.getCov()[1] << " " << track.getCov()[2] << " " << track.getCov()[3] << "\n\t"
+                << track.getCov()[4] << " "
+                << track.getCov()[5] << " " << track.getCov()[6] << " " << track.getCov()[7] << "\n\t"
+                << track.getCov()[8] << " " << track.getCov()[9] << " " << track.getCov()[10] << " "
+                << track.getCov()[11] << "\n\t"
+                << track.getCov()[12] << " " << track.getCov()[13] << " " << track.getCov()[14];
+      LOG(WARN) << "covariance copy track: \n\t" << trackCopy.getCov()[0] << " " << trackCopy.getCov()[1] << " " << trackCopy.getCov()[2] << " " << trackCopy.getCov()[3] << "\n\t"
+                << trackCopy.getCov()[4] << " "
+                << trackCopy.getCov()[5] << " " << trackCopy.getCov()[6] << " " << trackCopy.getCov()[7] << "\n\t"
+                << trackCopy.getCov()[8] << " " << trackCopy.getCov()[9] << " " << trackCopy.getCov()[10] << " "
+                << trackCopy.getCov()[11] << "\n\t"
+                << trackCopy.getCov()[12] << " " << trackCopy.getCov()[13] << " " << trackCopy.getCov()[14];
+
+      if (!trackCopy.rotate(correctTrackingHit.alphaTrackingFrame)) {
+        return false;
+      }
+      if (!propInstance->propagateToX(trackCopy, correctTrackingHit.xTrackingFrame, getBz(), o2::base::PropagatorImpl<float>::MAX_SIN_PHI, o2::base::PropagatorImpl<float>::MAX_STEP, mCorrType)) {
+        return false;
+      }
+      corrClusChi2 = track.getPredictedChi2(correctTrackingHit.positionTrackingFrame, correctTrackingHit.covarianceTrackingFrame);
+    } else {
+      if (!trackCopy.rotate(trackingHit.alphaTrackingFrame)) {
+        return false;
+      }
+      if (!propInstance->propagateToX(trackCopy, trackingHit.xTrackingFrame, getBz(), o2::base::PropagatorImpl<float>::MAX_SIN_PHI, o2::base::PropagatorImpl<float>::MAX_STEP, mCorrType)) {
+        return false;
+      }
+      auto predChi2Copy{trackCopy.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
+      trackCopy.setChi2(trackCopy.getChi2() + predChi2Copy);
+      if (!trackCopy.o2::track::TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
+        return false;
+      }
+    }
+
+    // Actual track
     if (!track.rotate(trackingHit.alphaTrackingFrame)) {
       return false;
     }
-
     if (!propInstance->propagateToX(track, trackingHit.xTrackingFrame, getBz(), o2::base::PropagatorImpl<float>::MAX_SIN_PHI, o2::base::PropagatorImpl<float>::MAX_STEP, mCorrType)) {
       return false;
     }
 
     auto predChi2{track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
+
+    if (interrupt && (iLayer == layerF)) {
+      LOG(WARN) << "iLayer " << iLayer << " pred: " << predChi2 << " fixed: " << corrClusChi2;
+      mDebugger->dumpTrkChi2(predChi2, corrClusChi2);
+      LOG(WARN) << "covariance orig track: \n\t" << track.getCov()[0] << " " << track.getCov()[1] << " " << track.getCov()[2] << " " << track.getCov()[3] << "\n\t"
+                << track.getCov()[4] << " "
+                << track.getCov()[5] << " " << track.getCov()[6] << " " << track.getCov()[7] << "\n\t"
+                << track.getCov()[8] << " " << track.getCov()[9] << " " << track.getCov()[10] << " "
+                << track.getCov()[11] << "\n\t"
+                << track.getCov()[12] << " " << track.getCov()[13] << " " << track.getCov()[14];
+      LOG(WARN) << "covariance copy track: \n\t" << trackCopy.getCov()[0] << " " << trackCopy.getCov()[1] << " " << trackCopy.getCov()[2] << " " << trackCopy.getCov()[3] << "\n\t"
+                << trackCopy.getCov()[4] << " "
+                << trackCopy.getCov()[5] << " " << trackCopy.getCov()[6] << " " << trackCopy.getCov()[7] << "\n\t"
+                << trackCopy.getCov()[8] << " " << trackCopy.getCov()[9] << " " << trackCopy.getCov()[10] << " "
+                << trackCopy.getCov()[11] << "\n\t"
+                << trackCopy.getCov()[12] << " " << trackCopy.getCov()[13] << " " << trackCopy.getCov()[14];
+      LOG(WARN) << "after propagation >> orig Y: " << track.getY() << " Z: " << track.getZ();
+      LOG(WARN) << "after propagation >> copy Y: " << trackCopy.getY() << " Z: " << trackCopy.getZ();
+    }
     if (predChi2 > chi2cut) {
       return false;
     }
     track.setChi2(track.getChi2() + predChi2);
+#ifdef CA_DEBUG
+    int iteration = (step > 0) ? 1 : 2;
+    mDebugger->dumpTmpTrackToBranchWithInfo("Dumps", iLayer, iteration, track, event, mPrimaryVertexContext, predChi2, true);
+#endif
     if (!track.o2::track::TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
       return false;
     }
   }
+  // if (interrupt)
+  //   LOG(FATAL) << "Breaking here!";
   return true;
 }
 
@@ -483,11 +579,9 @@ void Tracker::computeRoadsMClabels(const ROframe& event)
   }
 
   mPrimaryVertexContext->initialiseRoadLabels();
-
   int roadsNum{static_cast<int>(mPrimaryVertexContext->getRoads().size())};
 
   for (int iRoad{0}; iRoad < roadsNum; ++iRoad) {
-
     Road& currentRoad{mPrimaryVertexContext->getRoads()[iRoad]};
     MCCompLabel maxOccurrencesValue{constants::its::UnusedIndex, constants::its::UnusedIndex,
                                     constants::its::UnusedIndex, false};
@@ -497,7 +591,6 @@ void Tracker::computeRoadsMClabels(const ROframe& event)
 
     for (int iCell{0}; iCell < mTrkParams[0].CellsPerRoad(); ++iCell) {
       const int currentCellIndex{currentRoad[iCell]};
-
       if (currentCellIndex == constants::its::UnusedIndex) {
         if (isFirstRoadCell) {
           continue;
@@ -505,19 +598,14 @@ void Tracker::computeRoadsMClabels(const ROframe& event)
           break;
         }
       }
-
       const Cell& currentCell{mPrimaryVertexContext->getCells()[iCell][currentCellIndex]};
-
       if (isFirstRoadCell) {
-
         const int cl0index{mPrimaryVertexContext->getClusters()[iCell][currentCell.getFirstClusterIndex()].clusterId};
         auto& cl0labs{event.getClusterLabels(iCell, cl0index)};
         maxOccurrencesValue = cl0labs;
         count = 1;
-
         const int cl1index{mPrimaryVertexContext->getClusters()[iCell + 1][currentCell.getSecondClusterIndex()].clusterId};
         const auto& cl1labs{event.getClusterLabels(iCell + 1, cl1index)};
-
         if (cl1labs == maxOccurrencesValue) {
           ++count;
         } else {
@@ -525,26 +613,21 @@ void Tracker::computeRoadsMClabels(const ROframe& event)
           count = 1;
           isFakeRoad = true;
         }
-
         isFirstRoadCell = false;
       }
-
       const int cl2index{mPrimaryVertexContext->getClusters()[iCell + 2][currentCell.getThirdClusterIndex()].clusterId};
       const auto& cl2labs{event.getClusterLabels(iCell + 2, cl2index)};
-
       if (cl2labs == maxOccurrencesValue) {
         ++count;
       } else {
         --count;
         isFakeRoad = true;
       }
-
       if (count == 0) {
         maxOccurrencesValue = cl2labs;
         count = 1;
       }
     }
-
     mPrimaryVertexContext->setRoadLabel(iRoad, maxOccurrencesValue.getRawValue(), isFakeRoad);
   }
 }

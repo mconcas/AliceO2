@@ -118,7 +118,7 @@ void TrackerTraitsCPU::computeLayerTracklets()
     }
   }
 #ifdef CA_DEBUG
-  std::cout << "+++ Number of tracklets per layer: ";
+  // std::cout << "+++ Number of tracklets per layer: ";
   for (int iLayer{0}; iLayer < mTrkParams.TrackletsPerRoad(); ++iLayer) {
     std::cout << primaryVertexContext->getTracklets()[iLayer].size() << "\t";
   }
@@ -246,7 +246,7 @@ void TrackerTraitsCPU::computeLayerCells()
     }
   }
 #ifdef CA_DEBUG
-  std::cout << "+++ Number of cells per layer: ";
+  // std::cout << "+++ Number of cells per layer: ";
   for (int iLayer{0}; iLayer < mTrkParams.CellsPerRoad(); ++iLayer) {
     std::cout << primaryVertexContext->getCells()[iLayer].size() << "\t";
   }

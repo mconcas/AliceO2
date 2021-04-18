@@ -57,6 +57,7 @@ class ROframe final
   const TrackingFrameInfo& getClusterTrackingFrameInfo(int layerId, const Cluster& cl) const;
   const MCCompLabel& getClusterLabels(int layerId, const Cluster& cl) const;
   const MCCompLabel& getClusterLabels(int layerId, const int clId) const;
+  int getFirstClusterIDFromLabel(int layerId, const MCCompLabel& label) const;
   int getClusterExternalIndex(int layerId, const int clId) const;
   std::vector<int> getTracksId(const int layerId, const std::vector<Cluster>& cl);
 
@@ -110,6 +111,21 @@ inline const MCCompLabel& ROframe::getClusterLabels(int layerId, const Cluster& 
 inline const MCCompLabel& ROframe::getClusterLabels(int layerId, const int clId) const
 {
   return mClusterLabels[layerId][clId];
+}
+
+inline int ROframe::getFirstClusterIDFromLabel(int layerId, const MCCompLabel& label) const
+{
+  // Returns the cluster id of the first label that matches label variable
+  int retVal{-1};
+  if (!label.isNoise()) {
+    for (size_t i{0}; i < mClusterLabels[layerId].size(); ++i) {
+      if (label == mClusterLabels[layerId][i]) {
+        retVal = i;
+        break;
+      }
+    }
+  }
+  return retVal;
 }
 
 inline int ROframe::getClusterExternalIndex(int layerId, const int clId) const
