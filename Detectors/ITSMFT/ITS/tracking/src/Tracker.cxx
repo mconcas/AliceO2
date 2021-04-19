@@ -433,9 +433,11 @@ bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int 
       }
       int correct = event.getFirstClusterIDFromLabel(layerF, tmpInfo.mainLabel);
       std::cout << "\nFake cluster is on layer: " << layerF << ", id of correct cluster: " << correct;
-      if (correct != -1)
+      if (correct != -1) {
         std::cout << ", counter proof: " << event.getClusterLabels(layerF, correct) << std::endl;
-
+      } else {
+        std::cout << std::endl;
+      }
       if (correct != -1) {
         correctTrackingHit = event.getTrackingFrameInfoOnLayer(layerF).at(correct);
         interrupt = true;
@@ -450,8 +452,8 @@ bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int 
     const TrackingFrameInfo& trackingHit = event.getTrackingFrameInfoOnLayer(iLayer).at(track.getClusterIndex(iLayer));
 
     if (interrupt && (iLayer == layerF)) {
-      LOG(WARN) << "Fake hit x: " << trackingHit.xCoordinate << " y: " << trackingHit.yCoordinate << " z: " << trackingHit.zCoordinate << "x tracking frame: " << trackingHit.xTrackingFrame;
-      LOG(WARN) << "Correct hit x: " << correctTrackingHit.xCoordinate << " y: " << correctTrackingHit.yCoordinate << " z: " << correctTrackingHit.zCoordinate << "x tracking frame" << correctTrackingHit.xTrackingFrame;
+      LOG(WARN) << "Fake hit x: " << trackingHit.xCoordinate << " y: " << trackingHit.yCoordinate << " z: " << trackingHit.zCoordinate << " x tracking frame: " << trackingHit.xTrackingFrame;
+      LOG(WARN) << "Correct hit x: " << correctTrackingHit.xCoordinate << " y: " << correctTrackingHit.yCoordinate << " z: " << correctTrackingHit.zCoordinate << " x tracking frame: " << correctTrackingHit.xTrackingFrame;
       LOG(WARN) << "covariance fake hit: " << trackingHit.covarianceTrackingFrame[0] << " " << trackingHit.covarianceTrackingFrame[1] << " " << trackingHit.covarianceTrackingFrame[2];
       LOG(WARN) << "covariance true hit: " << correctTrackingHit.covarianceTrackingFrame[0] << " " << correctTrackingHit.covarianceTrackingFrame[1] << " " << correctTrackingHit.covarianceTrackingFrame[2];
       LOG(WARN) << "before propagation >> orig Y: " << track.getY() << " Z: " << track.getZ() << " X: " << track.getX();
@@ -475,7 +477,7 @@ bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int 
       if (!propInstance->propagateToX(trackCopy, correctTrackingHit.xTrackingFrame, getBz(), o2::base::PropagatorImpl<float>::MAX_SIN_PHI, o2::base::PropagatorImpl<float>::MAX_STEP, mCorrType)) {
         return false;
       }
-      corrClusChi2 = track.getPredictedChi2(correctTrackingHit.positionTrackingFrame, correctTrackingHit.covarianceTrackingFrame);
+      corrClusChi2 = trackCopy.getPredictedChi2(correctTrackingHit.positionTrackingFrame, correctTrackingHit.covarianceTrackingFrame);
     } else {
       if (!trackCopy.rotate(trackingHit.alphaTrackingFrame)) {
         return false;

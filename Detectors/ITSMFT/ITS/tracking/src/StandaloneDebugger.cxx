@@ -277,7 +277,7 @@ void StandaloneDebugger::dumpTmpTrackToBranchWithInfo(std::string branchName, in
   FakeTrackInfo<7> t{pvc, event, track, dumpClusters};
   auto fakeLabel = t.occurrences[1].first;
   auto nfake = t.nFakeClusters;
-  int layerF;
+  int layerF{-1};
   for (int i{0}; i < 7; ++i) {
     if (t.mcLabels[i] != t.mainLabel) {
       layerF = i;
@@ -302,7 +302,7 @@ void StandaloneDebugger::dumpTrkChi2(float chiFake, float chiTrue)
   (*mTreeStream)
     << "Chi2s"
     << "fake=" << chiFake
-    << "correct=" << chiTrue 
+    << "correct=" << chiTrue
     << "\n";
 }
 } // namespace its
