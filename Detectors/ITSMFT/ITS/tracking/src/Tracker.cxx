@@ -420,21 +420,25 @@ bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int 
   TrackingFrameInfo correctTrackingHit;
   if ((start > end) && start > 5) { // last iteration
     FakeTrackInfo<7> tmpInfo{mPrimaryVertexContext, event, track, false};
-    if (tmpInfo.nFakeClusters == 1) {
+    if (tmpInfo.nFakeClusters == 1 && tmpInfo.clusStatuses[0] == 0) {
       for (int i{0}; i < track.getNumberOfClusters(); ++i) {
-        if (tmpInfo.mcLabels[i] != tmpInfo.mainLabel) {
+        if (tmpInfo.clusStatuses[i] != 1) {
           layerF = i;
           break;
         }
       }
-      LOG(WARN) << "Found track with one fake cluster!\nlabels:";
+      LOG(WARN) << "Found track with one fake cluster!\nlabels: ";
       for (int il{0}; il < 7; ++il) {
-        std::cout << "\t" << tmpInfo.mcLabels[il];
+        std::cout << "(";
+        for (auto& l : tmpInfo.mcLabels[il]) {
+          std::cout << " " << l;
+        }
+        std::cout << ")\t";
       }
       int correct = event.getFirstClusterIDFromLabel(layerF, tmpInfo.mainLabel);
-      std::cout << "\nFake cluster is on layer: " << layerF << ", id of correct cluster: " << correct;
+      std::cout << "\nFake cluster is on layer: " << layerF << ", id of correct cluster: " << correct << ", id of fake cluster: " << track.getClusterIndex(layerF);
       if (correct != -1) {
-        std::cout << ", counter proof: " << event.getClusterLabels(layerF, correct) << std::endl;
+        std::cout << ", counter proof: " << event.getClusterFirstLabel(layerF, correct) << std::endl;
       } else {
         std::cout << std::endl;
       }
@@ -503,7 +507,7 @@ bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int 
     auto predChi2{track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
 
     if (interrupt && (iLayer == layerF)) {
-      LOG(WARN) << "iLayer " << iLayer << " pred: " << predChi2 << " fixed: " << corrClusChi2;
+      LOG(WARN) << "iLayer " << iLayer << " pred chi2: fake ==> " << predChi2 << " fixed ==> " << corrClusChi2;
       mDebugger->dumpTrkChi2(predChi2, corrClusChi2);
       LOG(WARN) << "covariance orig track: \n\t" << track.getCov()[0] << " " << track.getCov()[1] << " " << track.getCov()[2] << " " << track.getCov()[3] << "\n\t"
                 << track.getCov()[4] << " "
@@ -603,11 +607,11 @@ void Tracker::computeRoadsMClabels(const ROframe& event)
       const Cell& currentCell{mPrimaryVertexContext->getCells()[iCell][currentCellIndex]};
       if (isFirstRoadCell) {
         const int cl0index{mPrimaryVertexContext->getClusters()[iCell][currentCell.getFirstClusterIndex()].clusterId};
-        auto& cl0labs{event.getClusterLabels(iCell, cl0index)};
+        auto& cl0labs{event.getClusterFirstLabel(iCell, cl0index)};
         maxOccurrencesValue = cl0labs;
         count = 1;
         const int cl1index{mPrimaryVertexContext->getClusters()[iCell + 1][currentCell.getSecondClusterIndex()].clusterId};
-        const auto& cl1labs{event.getClusterLabels(iCell + 1, cl1index)};
+        const auto& cl1labs{event.getClusterFirstLabel(iCell + 1, cl1index)};
         if (cl1labs == maxOccurrencesValue) {
           ++count;
         } else {
@@ -618,7 +622,7 @@ void Tracker::computeRoadsMClabels(const ROframe& event)
         isFirstRoadCell = false;
       }
       const int cl2index{mPrimaryVertexContext->getClusters()[iCell + 2][currentCell.getThirdClusterIndex()].clusterId};
-      const auto& cl2labs{event.getClusterLabels(iCell + 2, cl2index)};
+      const auto& cl2labs{event.getClusterFirstLabel(iCell + 2, cl2index)};
       if (cl2labs == maxOccurrencesValue) {
         ++count;
       } else {
@@ -636,42 +640,42 @@ void Tracker::computeRoadsMClabels(const ROframe& event)
 
 void Tracker::computeTracksMClabels(const ROframe& event)
 {
-  /// Moore's Voting Algorithm
   if (!event.hasMCinformation()) {
     return;
   }
-
   int tracksNum{static_cast<int>(mTracks.size())};
-
   for (auto& track : mTracks) {
-
     MCCompLabel maxOccurrencesValue{constants::its::UnusedIndex, constants::its::UnusedIndex,
                                     constants::its::UnusedIndex, false};
-    int count{0};
-    bool isFakeTrack{false};
-
+    std::vector<std::pair<MCCompLabel, int>> occurrences;
     for (int iCluster = 0; iCluster < TrackITSExt::MaxClusters; ++iCluster) {
       const int index = track.getClusterIndex(iCluster);
       if (index == constants::its::UnusedIndex) {
         continue;
       }
-      const MCCompLabel& currentLabel = event.getClusterLabels(iCluster, index);
-      if (currentLabel == maxOccurrencesValue) {
-        ++count;
-      } else {
-        if (count != 0) { // only in the first iteration count can be 0 at this point
-          isFakeTrack = true;
-          --count;
-        }
-        if (count == 0) {
-          maxOccurrencesValue = currentLabel;
-          count = 1;
+      auto clusterLabels = event.getClusterLabels(iCluster, index);
+      for (auto& label : clusterLabels) {
+        if (label.isSet()) {
+          bool found = false;
+          for (auto& entry : occurrences) {
+            if (label == entry.first) {
+              found = true;
+              ++entry.second;
+              break;
+            }
+          }
+          if (!found) {
+            occurrences.emplace_back(label, 1);
+          }
         }
       }
       track.setExternalClusterIndex(iCluster, event.getClusterExternalIndex(iCluster, index));
     }
-
-    if (isFakeTrack) {
+    std::sort(std::begin(occurrences), std::end(occurrences), [](auto e1, auto e2) {
+      return e1.second > e2.second;
+    });
+    maxOccurrencesValue = occurrences[0].first;
+    if (occurrences[0].second < track.getNumberOfClusters()) {
       maxOccurrencesValue.setFakeFlag();
     }
     mTrackLabels.emplace_back(maxOccurrencesValue);

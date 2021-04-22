@@ -44,6 +44,7 @@ class ClusterLines;
 using constants::its::UnusedIndex;
 
 #if !defined(__CUDACC__) && !defined(__HIPCC__)
+#include <gsl/gsl>
 template <int numClusters = TrackITSExt::MaxClusters>
 struct FakeTrackInfo {
  public:
@@ -69,20 +70,35 @@ struct FakeTrackInfo {
       if (extIndex == -1) {
         continue;
       }
-      o2::MCCompLabel mcLabel = event.getClusterLabels(iCluster, extIndex);
-      mcLabels[iCluster] = mcLabel;
-      bool found = false;
+      // Get labels related to this cluster
+      auto labels = event.getClusterLabels(iCluster, extIndex);
+      for (auto& label : labels) {
+        if (label.isSet()) { // Store only set labels
+          mcLabels[iCluster].emplace_back(label);
+        }
+      }
 
+      bool found = false;
+      // Lookup if any of the labels has already an entry in the occurrences
       for (size_t iOcc{0}; iOcc < occurrences.size(); ++iOcc) {
         std::pair<o2::MCCompLabel, int>& occurrence = occurrences[iOcc];
-        if (mcLabel == occurrence.first) {
-          ++occurrence.second;
-          found = true;
+        for (auto& label : labels) {
+          if (label == occurrence.first && label.isSet()) {
+            ++occurrence.second;
+            found = true;
+            break;
+          }
+        }
+        if (found) {
           break;
         }
       }
       if (!found) {
-        occurrences.emplace_back(mcLabel, 1);
+        for (auto& label : labels) {
+          if (label.isSet()) {
+            occurrences.emplace_back(label, 1);
+          }
+        }
       }
     }
 
@@ -101,19 +117,29 @@ struct FakeTrackInfo {
       }
     }
 
+    // Check status of clusters related to main label
     for (size_t iCluster{0}; iCluster < track.getNumberOfClusters(); ++iCluster) {
       int extIndex = track.getClusterIndex(iCluster);
       if (extIndex == -1) {
         continue;
       }
-      o2::MCCompLabel lbl = event.getClusterLabels(iCluster, extIndex);
-      if (lbl == mainLabel && occurrences[0].second > 1 && !lbl.isNoise()) { // if we have MaxClusters fake clusters -> occurrences[0].second = 1
-        clusStatuses[iCluster] = 1;
-      } else {
+
+      auto labels = event.getClusterLabels(iCluster, extIndex);
+      bool fake{true};
+      for (auto& label : labels) {
+        if (label == mainLabel && occurrences[0].second > 1 && !label.isNoise()) { // if we have MaxClusters fake clusters -> occurrences[0].second = 1
+          clusStatuses[iCluster] = 1;
+          fake = false;
+          break;
+        }
+      }
+      if (fake) {
         clusStatuses[iCluster] = 0;
         ++nFakeClusters;
       }
     }
+
+    // Store clusters at convenience
     if (storeClusters) {
       for (auto iCluster{0}; iCluster < track.getNumberOfClusters(); ++iCluster) {
         const int index = track.getClusterIndex(iCluster);
@@ -126,7 +152,8 @@ struct FakeTrackInfo {
   }
 
   // Data
-  std::vector<MCCompLabel> mcLabels;
+  std::vector<std::vector<MCCompLabel>>
+    mcLabels; // Multiple labels per cluster
   std::vector<std::pair<MCCompLabel, int>>
     occurrences;
   MCCompLabel mainLabel;
@@ -171,8 +198,8 @@ class StandaloneDebugger
   void fillVerticesInfoTree(float x, float y, float z, int size, int rId, int eId, float pur);
 
   // Tracker debug utilities
-  void dumpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, const bool dumpClusters = false);
-  void dumpTmpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, float pChi2, const bool dumpClusters = false);
+  void dumpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe& event, PrimaryVertexContext* pvc, const bool dumpClusters = false);
+  void dumpTmpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe& event, PrimaryVertexContext* pvc, float pChi2, const bool dumpClusters = false);
   void dumpTrkChi2(float chiFake, float chiTrue);
   static int getBinIndex(const float, const int, const float, const float);
 
