@@ -17,6 +17,7 @@
 #include "ITStracking/Cell.h"
 #include "ITStracking/Constants.h"
 #include "ITStracking/IndexTableUtils.h"
+#include "ITStracking/Smoother.h"
 #include "ITStracking/Tracklet.h"
 #include "ITStracking/TrackerTraits.h"
 #include "ITStracking/TrackerTraitsCPU.h"
@@ -36,12 +37,6 @@ namespace o2
 {
 namespace its
 {
-
-constexpr std::array<double, 3> getInverseSymm2D(const std::array<double, 3>& mat)
-{
-  const double det = mat[0] * mat[2] - mat[1] * mat[1];
-  return std::array<double, 3>{mat[2] / det, -mat[1] / det, mat[0] / det};
-}
 
 using constants::its::UnusedIndex;
 const MCCompLabel unusedMCLabel = {UnusedIndex, UnusedIndex,
@@ -103,6 +98,7 @@ void Tracker::clustersToTracks(const ROframe& event, std::ostream& timeBenchmark
       total += evaluateTask(&Tracker::findRoads, "Road finding", timeBenchmarkOutputStream, iteration);
       total += evaluateTask(&Tracker::findTracks, "Track finding", timeBenchmarkOutputStream, event);
     }
+    total += evaluateTask(&Tracker::smoothTracks, "Track smoothing", timeBenchmarkOutputStream, event);
     if (constants::DoTimeBenchmarks && fair::Logger::Logging(fair::Severity::info)) {
       timeBenchmarkOutputStream << std::setw(2) << " - "
                                 << "Vertex processing completed in: " << total << "ms" << std::endl;
@@ -247,7 +243,6 @@ void Tracker::findRoads(int& iteration)
 
 void Tracker::findTracks(const ROframe& event)
 {
-  std::default_random_engine generator;
   mTracks.reserve(mTracks.capacity() + mPrimaryVertexContext->getRoads().size());
   std::vector<TrackITSExt> tracks;
   tracks.reserve(mPrimaryVertexContext->getRoads().size());
@@ -320,23 +315,9 @@ void Tracker::findTracks(const ROframe& event)
     CA_DEBUGGER(backpropagatedCounters[nClusters - 4]++);
     temporaryTrack.getParamOut() = temporaryTrack;
     temporaryTrack.resetCovariance();
-    // std::normal_distribution<float> yD(temporaryTrack.getY(), std::sqrt(temporaryTrack.getSigmaY2()));
-    // std::normal_distribution<float> zD(temporaryTrack.getZ(), std::sqrt(temporaryTrack.getSigmaZ2()));
-    // std::normal_distribution<float> snpD(temporaryTrack.getSnp(), std::sqrt(temporaryTrack.getSigmaSnp2()));
-    // std::normal_distribution<float> tglD(temporaryTrack.getTgl(), std::sqrt(temporaryTrack.getSigmaTgl2()));
-    // std::normal_distribution<float> q2PtD(temporaryTrack.getQ2Pt(), std::sqrt(temporaryTrack.getSigma1Pt2()));
-    temporaryTrack.setY(0);
-    temporaryTrack.setZ(0);
-    // float snp = snpD(generator);
-    // snp = snp > 0.99f ? 0.99f : (snp < -0.99f ? -0.99f : snp);
-    temporaryTrack.setSnp(0.5);
-    temporaryTrack.setTgl(0.5);
-    temporaryTrack.setQ2Pt(1.6  );
 
     fitSuccess = fitTrack(event, temporaryTrack, mTrkParams[0].NLayers - 1, -1, -1, mTrkParams[0].FitIterationMaxChi2[1]);
-#ifdef CA_DEBUG
-    mDebugger->dumpTrackToBranchWithInfo("testBranch", temporaryTrack, event, mPrimaryVertexContext, true);
-#endif
+
     if (!fitSuccess) {
       continue;
     }
@@ -345,9 +326,6 @@ void Tracker::findTracks(const ROframe& event)
     CA_DEBUGGER(assert(nClusters == temporaryTrack.getNumberOfClusters()));
   }
   //mTraits->refitTracks(event.getTrackingFrameInfo(), tracks);
-
-  if (mUseSmoother)
-    smoothTracks(event, tracks);
 
   std::sort(tracks.begin(), tracks.end(),
             [](TrackITSExt& track1, TrackITSExt& track2) { return track1.isBetter(track2, 1.e6f); });
@@ -619,221 +597,46 @@ void Tracker::getGlobalConfiguration()
   setUseSmoother(tc.useKalmanSmoother);
 }
 
-// Smoother
-float Tracker::getSmootherPredictedChi2(const o2::track::TrackParCov& outwT, // outwards track: from innermost cluster to outermost
-                                        const o2::track::TrackParCov& inwT,  // inwards track: from outermost cluster to innermost
-                                        const std::array<float, 2>& cls,
-                                        const std::array<float, 3>& clCov)
+void Tracker::smoothTracks(const ROframe& event)
 {
-  // Tracks need to be already propagated, compute only chi2
-  // Symmetric covariances assumed
+  ////////////////////////////////////////////
+  //      Debug finally promoted tracks     //
+  ////////////////////////////////////////////
 
-  if (outwT.getX() != inwT.getX()) {
-    LOG(ERROR) << "Tracks need to be propagated to the same point! inwT.X=" << inwT.getX() << " outwT.X=" << outwT.getX();
-  }
+  for (int iTrack{0}; iTrack < mTracks.size(); ++iTrack) {
+    auto& track = mTracks[iTrack];
+    FakeTrackInfo<7> fi{mPrimaryVertexContext, event, track, false};
+    Smoother<7> sm{track, 3, event, getBz(), mCorrType};
+    int layerF = -1;
+    if (fi.nFakeClusters == 1) {
+      for (int i{0}; i < track.getNumberOfClusters(); ++i) {
+        if (fi.clusStatuses[i] != 1) {
+          layerF = i;
+          break;
+        }
+      }
+      LOG(WARN) << "Found track with one fake cluster!\nlabels: ";
+      // for (int il{0}; il < 7; ++il) {
+      //   std::cout << "(";
 
-  std::array<double, 2> pp1 = {static_cast<double>(outwT.getY()), static_cast<double>(outwT.getZ())}; // P1: predicted Y,Z points
-  std::array<double, 2> pp2 = {static_cast<double>(inwT.getY()), static_cast<double>(inwT.getZ())};   // P2: predicted Y,Z points
-
-  std::array<double, 3> c1 = {static_cast<double>(outwT.getSigmaY2()),
-                              static_cast<double>(outwT.getSigmaZY()),
-                              static_cast<double>(outwT.getSigmaZ2())}; // Cov. track 1
-
-  std::array<double, 3> c2 = {static_cast<double>(inwT.getSigmaY2()),
-                              static_cast<double>(inwT.getSigmaZY()),
-                              static_cast<double>(inwT.getSigmaZ2())}; // Cov. track 2
-
-  std::array<double, 3> w1 = getInverseSymm2D(c1); // weight matrices
-  std::array<double, 3> w2 = getInverseSymm2D(c2);
-
-  std::array<double, 3> w1w2 = {w1[0] + w2[0], w1[1] + w2[1], w1[2] + w2[2]}; // (W1 + W2)
-  std::array<double, 3> C = getInverseSymm2D(w1w2);                           // C = (W1+W2)^-1
-
-  std::array<double, 2> w1pp1 = {w1[0] * pp1[0] + w1[1] * pp1[1], w1[1] * pp1[0] + w1[2] * pp1[1]}; // W1 * P1
-  std::array<double, 2> w2pp2 = {w2[0] * pp2[0] + w2[1] * pp2[1], w2[1] * pp2[0] + w2[2] * pp2[1]}; // W2 * P2
-
-  float Y = static_cast<float>(C[0] * (w1pp1[0] + w2pp2[0]) + C[1] * (w1pp1[1] + w2pp2[1])); // Pp: weighted normalized combination of the predictions:
-  float Z = static_cast<float>(C[1] * (w1pp1[0] + w2pp2[0]) + C[2] * (w1pp1[1] + w2pp2[1])); // Pp = [(W1 * P1) + (W2 * P2)] / (W1 + W2)
-
-  std::array<double, 2> delta = {Y - cls[0], Z - cls[1]};                                                                                         // Δ = Pp - X, X: space point of cluster (Y,Z)
-  std::array<double, 3> CCp = {C[0] + static_cast<double>(clCov[0]), C[1] + static_cast<double>(clCov[1]), C[2] + static_cast<double>(clCov[2])}; // Transformation of cluster covmat: CCp = C * Cov
-
-  float chi2 = static_cast<float>(delta[0] * (CCp[0] * delta[0] + CCp[1] * delta[1]) + delta[1] * (CCp[1] * delta[0] + CCp[2] * delta[1])); // chi2 = tΔ * (CCp * Δ)
-#ifdef CA_DEBUG
-  LOG(INFO) << "Propagated t1_y: " << pp1[0] << " t1_z: " << pp1[1];
-  LOG(INFO) << "Propagated t2_y: " << pp2[0] << " t2_z: " << pp2[1];
-  LOG(INFO) << "Smoothed prediction Y: " << Y << " Z: " << Z;
-  LOG(INFO) << "cov t1: 0: " << c1[0] << " 1: " << c1[1] << " 2: " << c1[2];
-  LOG(INFO) << "cov t2: 0: " << c2[0] << " 1: " << c2[1] << " 2: " << c2[2];
-  LOG(INFO) << "cov Pr: 0: " << C[0] << " 1: " << C[1] << " 2: " << C[2];
-  LOG(INFO) << "chi2: " << chi2;
-  LOG(INFO) << "";
-#endif
-  return chi2;
-}
-
-// Debug
-float Tracker::getTrackClusterChi2(const o2::track::TrackParCov& track, const std::array<float, 2>& cls,
-                                   const std::array<float, 3>& clCov)
-{
-  std::array<double, 2> pp1 = {static_cast<double>(track.getY()), static_cast<double>(track.getZ())}; // P1: predicted track Y,Z points
-  std::array<double, 3> c1 = {static_cast<double>(track.getSigmaY2()),
-                              static_cast<double>(track.getSigmaZY()),
-                              static_cast<double>(track.getSigmaZ2())}; // Cov. of the track
-  std::array<double, 3> CtCc = {static_cast<double>(clCov[0]) + c1[0], static_cast<double>(clCov[1]) + c1[1], static_cast<double>(clCov[2]) + c1[2]};
-  std::array<double, 3> w1 = getInverseSymm2D(c1); // Weight matrix
-}
-
-bool Tracker::kalmanPropagateTrack(const ROframe& event,
-                                   o2::its::TrackITSExt& track,
-                                   const int first,
-                                   const int last)
-{
-  // Propagate track in the interval [first, last)
-  int step = (first < last) ? 1 : -1;
-
-  float radiationLength = 9.36f; // Radiation length of Si [cm]
-  float density = 2.33f;         // Density of Si [g/cm^3]
-  float distance;                // Default thickness
-  bool status{false};
-
-  for (auto iLevel{first}; iLevel != last; iLevel += step) {
-    float xx0 = ((iLevel > 2) ? 0.008f : 0.003f); // Thickness in units of X0
-    distance = xx0 * 9.37f;                       // Thickness in cm
-    const TrackingFrameInfo& tF = event.getTrackingFrameInfoOnLayer(iLevel).at(track.getClusterIndex(iLevel));
-    status = track.rotate(tF.alphaTrackingFrame);
-    status &= track.propagateTo(tF.xTrackingFrame, getBz());
-    track.setChi2(track.getChi2() +
-                  track.getPredictedChi2(tF.positionTrackingFrame, tF.covarianceTrackingFrame));
-    status &= track.o2::track::TrackParCov::update(tF.positionTrackingFrame, tF.covarianceTrackingFrame);
-    if (mMatLayerCylSet) {
-      if (iLevel != first || iLevel != last) {
-        const auto startingCluster = mPrimaryVertexContext->getClusters()[iLevel][track.getClusterIndex(iLevel)];
-        const auto endingCluster = mPrimaryVertexContext->getClusters()[iLevel + step][track.getClusterIndex(iLevel + step)]; // first/second in the direction of the kalman propagation
-
-        auto matbud = mMatLayerCylSet->getMatBudget(startingCluster.xCoordinate, startingCluster.yCoordinate, startingCluster.zCoordinate, endingCluster.xCoordinate, endingCluster.yCoordinate, endingCluster.zCoordinate);
-        xx0 = matbud.meanX2X0;
-        density = matbud.meanRho;
-        distance = matbud.length;
+      for (auto& l : fi.mcLabels /*[il]*/) {
+        std::cout << " " << l;
+      }
+      // std::cout << ")\t";
+      int correct = event.getFirstClusterIDFromLabel(layerF, fi.mainLabel);
+      std::cout << "\nFake cluster is on layer: " << layerF << ", id of correct cluster: " << correct << ", id of fake cluster: " << track.getClusterIndex(layerF);
+      if (correct != -1) {
+        std::cout << ", counter proof: " << event.getClusterLabels(layerF, correct) << std::endl;
+        // sm.testCluster(correct, event);
+        mDebugger->dumpLayerFake(layerF);
+      } else {
+        std::cout << std::endl;
       }
     }
-
-    if (!track.correctForMaterial(xx0, -step * distance * density, !mMatLayerCylSet)) { // (first < last) ? -1. : 1.)
-      return false;
-    }
   }
 
-  return status;
-}
+  // Old smoother
 
-bool Tracker::smoothTrack(TrackITSExt& track, const int testedClusterIndex, const int level, const ROframe& event)
-{
-  // This method should be the core functionality for decision-taking based on the Kalman smoothing approach.
-  // If the substitution of a given cluster in a track provides a better local "smoother chi2" the cluster is substituted.
-  // Selection is performed comparing the local chi2 obtained with propagation at the layer of the track models in opposite directions.
-  // Returns true if tested cluster provides better smoothed chi2; track is updated accordingly.
-  // Returns false otherwise; track is left untouched.
-  bool status;
-  constexpr float radiationLength = 9.36f; // Radiation length of Si [cm]
-  constexpr float density = 2.33f;         // Density of Si [g/cm^3]
-
-  // Need to copy the input track in case we change its clusters.
-  o2::its::TrackITSExt outwardsTrack = track; // outwards track: from innermost cluster to outermost
-  o2::its::TrackITSExt inwardsTrack{outwardsTrack.getParamOut(),
-                                    static_cast<short>(outwardsTrack.getNumberOfClusters()), -999, static_cast<std::uint32_t>(event.getROFrameId()),
-                                    outwardsTrack.getParamOut(), outwardsTrack.getClusterIndexes()}; // inwards track: from outermost cluster to innermost
-  outwardsTrack.resetCovariance();
-  outwardsTrack.setChi2(0);
-  inwardsTrack.resetCovariance();
-  inwardsTrack.setChi2(0);
-
-  // Seeding of tracks is done using their first two clusters respectively.
-  // They are propagated up to the cluster before the moothing level
-  kalmanPropagateTrack(event, outwardsTrack, 0, level);
-  kalmanPropagateTrack(event, inwardsTrack, inwardsTrack.getNumberOfClusters() - 1, inwardsTrack.getNumberOfClusters() - level);
-
-  std::array<TrackingFrameInfo, 2> choices; // put into array to reduce code repetition
-  choices[0] = event.getTrackingFrameInfoOnLayer(level).at(track.getClusterIndex(level));
-  choices[1] = event.getTrackingFrameInfoOnLayer(level).at(testedClusterIndex);
-
-  float bestChi2{o2::constants::math::VeryBig};
-  bool changed{false};
-  for (auto tf : choices) {
-    // perform first two steps of the fits but do not update the track
-    auto outwardsTrackCopy = outwardsTrack;
-    auto inwardsTrackCopy = inwardsTrack;
-    status = inwardsTrackCopy.rotate(tf.alphaTrackingFrame);
-    if (!status) {
-      LOG(INFO) << "Failed rotation inwards track in smoother";
-      return status;
-    }
-    status &= inwardsTrackCopy.propagateTo(tf.xTrackingFrame, getBz());
-    if (!status) {
-      LOG(INFO) << "Failed propagation inwards track in smoother";
-      return status;
-    }
-    status &= outwardsTrackCopy.rotate(tf.alphaTrackingFrame);
-    if (!status) {
-      LOG(INFO) << "Failed rotation outwards track in smoother";
-      return status;
-    }
-    status &= outwardsTrackCopy.propagateTo(tf.xTrackingFrame, getBz());
-    if (!status) {
-      LOG(INFO) << "Failed propagation outwards track in smoother";
-      return status;
-    }
-    float localChi2 = getSmootherPredictedChi2(outwardsTrackCopy, inwardsTrackCopy, tf.positionTrackingFrame, tf.covarianceTrackingFrame);
-
-    if (localChi2 < bestChi2) {
-      if (bestChi2 != o2::constants::math::VeryBig) {
-        // this is only if tested cluster gave better local chi2 -> update track cluster list
-        outwardsTrack.setExternalClusterIndex(level, testedClusterIndex);
-        changed = true;
-      }
-      bestChi2 = localChi2;
-    }
-  }
-
-  // If track info changed: continue fitting process with new cluster
-  if (changed) {
-    float density = 2.33f;                       // Density of Si [g/cm^3]
-    float distance;                              // Default thickness
-    float xx0 = ((level > 2) ? 0.008f : 0.003f); // Thickness in units of X0
-    distance = xx0 * 9.37f;                      // Thickness in cm
-
-    // Finalize fitting step here
-    outwardsTrack.setChi2(outwardsTrack.getChi2() +
-                          outwardsTrack.getPredictedChi2(choices[1].positionTrackingFrame, choices[1].covarianceTrackingFrame));
-    status &= outwardsTrack.o2::track::TrackParCov::update(choices[1].positionTrackingFrame, choices[1].covarianceTrackingFrame);
-    if (mMatLayerCylSet) {
-      const auto startingCluster = mPrimaryVertexContext->getClusters()[level][outwardsTrack.getClusterIndex(level)];
-      const auto endingCluster = mPrimaryVertexContext->getClusters()[level + 1][outwardsTrack.getClusterIndex(level + 1)]; // first/second in the direction of the kalman propagation
-
-      auto matbud = mMatLayerCylSet->getMatBudget(startingCluster.xCoordinate, startingCluster.yCoordinate, startingCluster.zCoordinate,
-                                                  endingCluster.xCoordinate, endingCluster.yCoordinate, endingCluster.zCoordinate);
-      xx0 = matbud.meanX2X0;
-      density = matbud.meanRho;
-      distance = matbud.length;
-    }
-
-    if (!outwardsTrack.correctForMaterial(xx0, -distance * density, !mMatLayerCylSet)) { // (first < last) ? -1. : 1.)
-      return false;
-    }
-    // Finalize kalman propagation and set new track in place of the old one.
-    kalmanPropagateTrack(event, outwardsTrack, level, outwardsTrack.getNumberOfClusters());
-    track = outwardsTrack;
-
-    return true;
-  }
-
-  return false;
-}
-
-void Tracker::smoothTracks(const ROframe& event, std::vector<TrackITSExt>& tracks)
-{
-  // Operate on groups of siblings trying to shuffle their clusters to find a better chi2
-  constexpr float radiationLength = 9.36f; // Radiation length of Si [cm]
-  constexpr float density = 2.33f;         // Density of Si [g/cm^3]
   // for (auto& indexed : mPrimaryVertexContext->getTracksIndexTable()) {
   //   for (auto iFirstTrack{indexed.first}; iFirstTrack < indexed.first + indexed.second; ++iFirstTrack) {
   //     o2::its::TrackITSExt outwardsTrack = tracks[iFirstTrack]; // outwards track: from innermost cluster to outermost
@@ -848,7 +651,7 @@ void Tracker::smoothTracks(const ROframe& event, std::vector<TrackITSExt>& track
   //       o2::its::TrackITSExt outwardsTrackCopy = outwardsTrack;
   //       // work with copies of the inner track to start from the same conditions at each iteration
 
-  //       kalmanPropagateOutwardsTrack(event, outwardsTrackCopy, 2, smoothLevel);
+  // kalmanPropagateOutwardsTrack(event, outwardsTrackCopy, 2, smoothLevel);
   //       float bestChi2{o2::constants::math::VeryBig};
   //       for (auto iCandidate{indexed.first}; iCandidate < /*iFirstTrack + 1*/ indexed.first + indexed.second; ++iCandidate) { // shuffler
 

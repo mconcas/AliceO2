@@ -16,19 +16,16 @@
 #include "ITStracking/Tracklet.h"
 #include "ITStracking/ClusterLines.h"
 #include "CommonUtils/TreeStreamRedirector.h"
-#include "DataFormatsITS/TrackITS.h"
-#include "ITStracking/ROframe.h"
 #include "ITStracking/StandaloneDebugger.h"
 
 #include "TH1I.h"
 #include "TMath.h"
+#include "TString.h"
 
 namespace o2
 {
 namespace its
 {
-
-using constants::its::UnusedIndex;
 
 StandaloneDebugger::StandaloneDebugger(const std::string debugTreeFileName)
 {
@@ -260,7 +257,7 @@ int StandaloneDebugger::getBinIndex(const float value, const int size, const flo
 }
 
 // Tracker
-void StandaloneDebugger::dumpTrackToBranchWithInfo(std::string branchName, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, const bool dumpClusters)
+void StandaloneDebugger::dumpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, const bool dumpClusters)
 {
   FakeTrackInfo<7> t{pvc, event, track, dumpClusters};
 
@@ -272,6 +269,48 @@ void StandaloneDebugger::dumpTrackToBranchWithInfo(std::string branchName, o2::i
   (*mTreeStream)
     << "TracksInfo"
     << t
+    << "\n";
+}
+
+void StandaloneDebugger::dumpTmpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, float pChi2, const bool dumpClusters)
+{
+  FakeTrackInfo<7> t{pvc, event, track, dumpClusters};
+  auto fakeLabel = t.occurrences[1].first;
+  auto nfake = t.nFakeClusters;
+  int layerF;
+  for (int i{0}; i < 7; ++i) {
+    if (t.mcLabels[i] != t.mainLabel) {
+      layerF = i;
+      break;
+    }
+  }
+
+  if (nfake < 2) {
+    float chi2 = t.track.getChi2();
+    (*mTreeStream)
+      << branchName.data()
+      << "chi2=" << chi2
+      << "layer=" << layerF
+      << "iteration=" << iteration
+      << "nfake=" << nfake
+      << "\n";
+  }
+}
+
+void StandaloneDebugger::dumpTrkChi2(float chiFake, float chiTrue)
+{
+  (*mTreeStream)
+    << "Chi2s"
+    << "fake=" << chiFake
+    << "correct=" << chiTrue
+    << "\n";
+}
+
+void StandaloneDebugger::dumpLayerFake(int l)
+{
+  (*mTreeStream)
+    << "layer"
+    << "N=" << l
     << "\n";
 }
 } // namespace its

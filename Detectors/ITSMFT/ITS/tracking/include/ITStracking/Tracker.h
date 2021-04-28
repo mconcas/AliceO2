@@ -110,7 +110,8 @@ class Tracker
   bool initializeSmootherTracks(const ROframe& event, o2::its::TrackITSExt& outwT,
                                 o2::its::TrackITSExt& inwT, const int startIt = 0, const int startOt = 6);
   bool kalmanPropagateOutwardsTrack(const ROframe& event, o2::its::TrackITSExt& track, const int first, const int last);
-  void smoothTracks(const ROframe& event, std::vector<TrackITSExt>& tracks);
+  void smoothTracks(const ROframe& event);
+  bool smoothTrack(TrackITSExt& track, const int testedClusterIndex, const int level, const ROframe& event);
 
   // Debug
   float getTrackClusterChi2(const o2::track::TrackParCov&, const std::array<float, 2>&, const std::array<float, 3>&);

@@ -47,19 +47,30 @@ using constants::its::UnusedIndex;
 template <int numClusters = TrackITSExt::MaxClusters>
 struct FakeTrackInfo {
  public:
-  FakeTrackInfo();
-  FakeTrackInfo(PrimaryVertexContext* pvc, const ROframe& event, TrackITSExt& track, bool storeClusters) : isFake{false}, isAmbiguousId{false}, mainLabel{UnusedIndex, UnusedIndex, UnusedIndex, false}
+  FakeTrackInfo() = default;
+  FakeTrackInfo(PrimaryVertexContext* pvc, const ROframe& event, TrackITSExt& track, bool storeClusters) : isFake{false},
+                                                                                                           isAmbiguousId{false},
+                                                                                                           track{track},
+                                                                                                           mainLabel{UnusedIndex, UnusedIndex, UnusedIndex, false}
   {
     occurrences.clear();
+    mcLabels.clear();
+    mcLabels.resize(track.getNumberOfClusters());
+    clusters.clear();
+    clusters.resize(track.getNumberOfClusters());
+    trackingFrameInfos.clear();
+    trackingFrameInfos.resize(track.getNumberOfClusters());
+
     for (auto& c : clusStatuses) {
       c = -1;
     }
-    for (size_t iCluster{0}; iCluster < numClusters; ++iCluster) {
+    for (size_t iCluster{0}; iCluster < track.getNumberOfClusters(); ++iCluster) {
       int extIndex = track.getClusterIndex(iCluster);
       if (extIndex == -1) {
         continue;
       }
       o2::MCCompLabel mcLabel = event.getClusterLabels(iCluster, extIndex);
+      mcLabels[iCluster] = mcLabel;
       bool found = false;
 
       for (size_t iOcc{0}; iOcc < occurrences.size(); ++iOcc) {
@@ -90,7 +101,7 @@ struct FakeTrackInfo {
       }
     }
 
-    for (size_t iCluster{0}; iCluster < numClusters; ++iCluster) {
+    for (size_t iCluster{0}; iCluster < track.getNumberOfClusters(); ++iCluster) {
       int extIndex = track.getClusterIndex(iCluster);
       if (extIndex == -1) {
         continue;
@@ -104,7 +115,7 @@ struct FakeTrackInfo {
       }
     }
     if (storeClusters) {
-      for (auto iCluster{0}; iCluster < numClusters; ++iCluster) {
+      for (auto iCluster{0}; iCluster < track.getNumberOfClusters(); ++iCluster) {
         const int index = track.getClusterIndex(iCluster);
         if (index != constants::its::UnusedIndex) {
           clusters[iCluster] = pvc->getClusters()[iCluster][index];
@@ -115,12 +126,14 @@ struct FakeTrackInfo {
   }
 
   // Data
+  std::vector<MCCompLabel> mcLabels;
   std::vector<std::pair<MCCompLabel, int>>
     occurrences;
   MCCompLabel mainLabel;
   std::array<int, numClusters> clusStatuses;
-  std::array<o2::its::Cluster, numClusters> clusters;
-  std::array<o2::its::TrackingFrameInfo, numClusters> trackingFrameInfos;
+  std::vector<o2::its::Cluster> clusters;
+  std::vector<o2::its::TrackingFrameInfo> trackingFrameInfos;
+  o2::its::TrackITSExt track;
 
   bool isFake;
   bool isAmbiguousId;
@@ -158,8 +171,10 @@ class StandaloneDebugger
   void fillVerticesInfoTree(float x, float y, float z, int size, int rId, int eId, float pur);
 
   // Tracker debug utilities
-  void dumpTrackToBranchWithInfo(std::string branchName, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, const bool dumpClusters = false);
-
+  void dumpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, const bool dumpClusters = false);
+  void dumpTmpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, float pChi2, const bool dumpClusters = false);
+  void dumpTrkChi2(float chiFake, float chiTrue);
+  void dumpLayerFake(int l);
   static int getBinIndex(const float, const int, const float, const float);
 
  private:
