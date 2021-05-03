@@ -29,16 +29,20 @@ class Smoother
  public:
   Smoother(TrackITSExt& track, int layer, const ROframe& event, float bZ, o2::base::PropagatorF::MatCorrType corr);
   ~Smoother() = default;
+  bool isValidInit() const { return mInitStatus; }
   bool testCluster(const int clusterId, const ROframe& event);
   bool getSmoothedTrack();
-
-  float getSmoothedPredictedChi2(const o2::track::TrackParCov& outwTrack,
-                                 const o2::track::TrackParCov& inwTrack,
-                                 const std::array<float, 2>& cls,
-                                 const std::array<float, 3>& clCov);
+  float getChi2() const { return mBestChi2; }
+  float getLastChi2() const { return mLastChi2; }
 
  private:
-  bool isSmoothed = false;
+  float computeSmoothedPredictedChi2(const o2::track::TrackParCov& outwTrack,
+                                     const o2::track::TrackParCov& inwTrack,
+                                     const std::array<float, 2>& cls,
+                                     const std::array<float, 3>& clCov);
+  bool smoothTrack();
+
+ private:
   int mLayerToSmooth;
   float mBz;                                // Magnetic field along Z
   bool mInitStatus;                         // State after the initialization
@@ -46,6 +50,7 @@ class Smoother
   TrackITSExt mInwardsTrack;                // outwards track: from innermost cluster to outermost
   TrackITSExt mOutwardsTrack;               // inwards track: from outermost cluster to innermost
   float mBestChi2;                          // Best value of local smoothed chi2
+  float mLastChi2 = 1e8;                    // Latest computed chi2
 };
 } // namespace its
 } // namespace o2

@@ -306,11 +306,23 @@ void StandaloneDebugger::dumpTrkChi2(float chiFake, float chiTrue)
     << "\n";
 }
 
-void StandaloneDebugger::dumpLayerFake(int l)
+void StandaloneDebugger::dumpLayerFake(int l, bool hascorrect)
 {
   (*mTreeStream)
     << "layer"
     << "N=" << l
+    << "Exists=" << hascorrect
+    << "\n";
+}
+
+void StandaloneDebugger::dumpSmootherChi2(int layer, float original, float smoothed, int trackLength)
+{
+  (*mTreeStream)
+    << "SmootherChi2"
+    << "layer=" << layer
+    << "fake=" << original
+    << "smoothed=" << smoothed
+    << "length=" << trackLength
     << "\n";
 }
 } // namespace its

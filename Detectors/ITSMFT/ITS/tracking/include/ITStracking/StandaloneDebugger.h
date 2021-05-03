@@ -55,24 +55,24 @@ struct FakeTrackInfo {
   {
     occurrences.clear();
     mcLabels.clear();
-    mcLabels.resize(track.getNumberOfClusters());
+    mcLabels.resize(numClusters);
     clusters.clear();
-    clusters.resize(track.getNumberOfClusters());
+    clusters.resize(numClusters);
     trackingFrameInfos.clear();
-    trackingFrameInfos.resize(track.getNumberOfClusters());
+    trackingFrameInfos.resize(numClusters);
 
     for (auto& c : clusStatuses) {
       c = -1;
     }
-    for (size_t iCluster{0}; iCluster < track.getNumberOfClusters(); ++iCluster) {
+    for (size_t iCluster{0}; iCluster < numClusters; ++iCluster) {
       int extIndex = track.getClusterIndex(iCluster);
       if (extIndex == -1) {
         continue;
       }
       o2::MCCompLabel mcLabel = event.getClusterLabels(iCluster, extIndex);
       mcLabels[iCluster] = mcLabel;
-      bool found = false;
 
+      bool found = false;
       for (size_t iOcc{0}; iOcc < occurrences.size(); ++iOcc) {
         std::pair<o2::MCCompLabel, int>& occurrence = occurrences[iOcc];
         if (mcLabel == occurrence.first) {
@@ -101,10 +101,10 @@ struct FakeTrackInfo {
       }
     }
 
-    for (size_t iCluster{0}; iCluster < track.getNumberOfClusters(); ++iCluster) {
+    for (size_t iCluster{0}; iCluster < numClusters; ++iCluster) {
       int extIndex = track.getClusterIndex(iCluster);
       if (extIndex == -1) {
-        continue;
+        continue; // clusStatuses[iCluster] => -1 // unset
       }
       o2::MCCompLabel lbl = event.getClusterLabels(iCluster, extIndex);
       if (lbl == mainLabel && occurrences[0].second > 1 && !lbl.isNoise()) { // if we have MaxClusters fake clusters -> occurrences[0].second = 1
@@ -174,8 +174,11 @@ class StandaloneDebugger
   void dumpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, const bool dumpClusters = false);
   void dumpTmpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, float pChi2, const bool dumpClusters = false);
   void dumpTrkChi2(float chiFake, float chiTrue);
-  void dumpLayerFake(int l);
+  void dumpLayerFake(int l, bool hascorrect);
   static int getBinIndex(const float, const int, const float, const float);
+
+  // Smoother debug utilities
+  void dumpSmootherChi2(int layer, float original, float smoothed, int trackLength);
 
  private:
   std::string mDebugTreeFileName = "dbg_ITS.root"; // output filename
