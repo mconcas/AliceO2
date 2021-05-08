@@ -144,6 +144,30 @@ class TrackITSExt : public TrackITS
     return mIndex;
   }
 
+  int getFirstClusterLayer()
+  {
+    int first;
+    for (int iLayer{0}; iLayer < MaxClusters; ++iLayer) {
+      if (mIndex[iLayer] != -1) {
+        first = iLayer;
+        break;
+      }
+    }
+    return first;
+  }
+
+  int getLastClusterLayer()
+  {
+    int last;
+    for (int iLayer{MaxClusters - 1}; iLayer > -1; --iLayer) {
+      if (mIndex[iLayer] != -1) {
+        last = iLayer;
+        break;
+      }
+    }
+    return last;
+  }
+
  private:
   std::array<int, MaxClusters> mIndex = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}; ///< Indices of associated clusters
   ClassDefNV(TrackITSExt, 2);

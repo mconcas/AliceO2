@@ -49,11 +49,8 @@ Tracker::Tracker(o2::its::TrackerTraits* traits)
   mMemParams.resize(1);
   mTraits = traits;
   mPrimaryVertexContext = mTraits->getPrimaryVertexContext();
-#ifdef CA_DEBUG
-  mDebugger = new StandaloneDebugger("dbg_ITSTrackerCPU.root");
-#endif
 #ifdef CA_STANDALONE_DEBUGGER
-  mDebugger = new StandaloneDebugger("smoother_debug.root");
+  mDebugger = new StandaloneDebugger("dbg_ITSTrackerCPU.root");
 #endif
 }
 
@@ -607,47 +604,50 @@ void Tracker::smoothTracks(const ROframe& event)
   ////////////////////////////////////////////
   for (int iTrack{0}; iTrack < mTracks.size(); ++iTrack) {
     auto& track = mTracks[iTrack];
-    FakeTrackInfo<7> fi{mPrimaryVertexContext, event, track, false};
-    int layerF = -1;
-    if (fi.nFakeClusters == 1) {
-      for (int i{0}; i < 7; ++i) {
-        if (fi.mcLabels[i].isSet() && fi.mcLabels[i] != fi.mainLabel) {
-          layerF = i;
-          break;
-        }
-      }
-      LOG(WARN) << "Found track with one fake cluster!\nlabels: ";
-      // for (int il{0}; il < 7; ++il) {
-      //   std::cout << "(";
-
-      for (auto& l : fi.mcLabels /*[il]*/) {
-        std::cout << " " << l;
-      }
-      // std::cout << ")\t";
-      int correct = event.getFirstClusterIDFromLabel(layerF, fi.mainLabel);
-      bool hasCorrect = correct != -1 ? true : false;
-      std::cout << "\nFake cluster is on layer: " << layerF << ", id of correct cluster: " << correct << ", id of fake cluster: " << track.getClusterIndex(layerF);
-      if (correct != -1) {
-        std::cout << ", counter_proof: " << event.getClusterLabels(layerF, correct) << std::endl;
-        Smoother<7> sm{track, layerF, event, getBz(), mCorrType};
-        if (sm.isValidInit()) {
-          float smChi2Initial{sm.getChi2()};
-          bool better = sm.testCluster(correct, event);
-          float smChi2Tested{-1.f};
-          if (better) {
-            smChi2Tested = sm.getLastChi2();
-          }
-          auto trackLength = track.getNumberOfClusters();
-          mDebugger->dumpSmootherChi2(layerF, smChi2Initial, smChi2Tested, trackLength);
-        } else {
-          std::cout << std::endl;
-        }
-      } else {
-        std::cout << std::endl;
-      }
-      mDebugger->dumpLayerFake(layerF, hasCorrect);
-    }
+    int layerToSmooth{3};
+    
+    // FakeTrackInfo<7> fi{mPrimaryVertexContext, event, track, false};
+    // int layerF = -1;
+    // if (fi.nFakeClusters == 1) {
+    // for (int i{0}; i < 7; ++i) {
+    // if (fi.mcLabels[i].isSet() && fi.mcLabels[i] != fi.mainLabel) {
+    // layerF = i;
+    // break;
+    // }
+    // }
+    // LOG(WARN) << "Found track with one fake cluster!\nlabels: ";
+    //for (int il{0}; il < 7; ++il) {
+    //  std::cout << "(";
+    //
+    // for (auto& l : fi.mcLabels /*[il]*/) {
+    // std::cout << " " << l;
+    // }
+    // std::cout << ")\t";
+    // int correct = event.getFirstClusterIDFromLabel(layerF, fi.mainLabel);
+    // bool hasCorrect = correct != -1 ? true : false;
+    // std::cout << "\nFake cluster is on layer: " << layerF << ", id of correct cluster: " << correct << ", id of fake cluster: " << track.getClusterIndex(layerF);
+    // if (correct != -1) {
+    // std::cout << ", counter_proof: " << event.getClusterLabels(layerF, correct) << std::endl;
+    // Smoother<7> sm{track, layerF, event, getBz(), mCorrType};
+    // if (sm.isValidInit()) {
+    // float smChi2Initial{sm.getChi2()};
+    // bool better = sm.testCluster(correct, event);
+    // float smChi2Tested{-1.f};
+    // if (better) {
+    // smChi2Tested = sm.getLastChi2();
+    // }
+    // auto trackLength = track.getNumberOfClusters();
+    // auto startLayer = track.getFirstClusterLayer();
+    // mDebugger->dumpSmootherChi2(layerF, smChi2Initial, smChi2Tested, startLayer, trackLength);
+    // } else {
+    // std::cout << std::endl;
+    // }
+    // } else {
+    // std::cout << std::endl;
+    // }
+    // mDebugger->dumpLayerFake(layerF, hasCorrect);
   }
 }
+
 } // namespace its
 } // namespace o2

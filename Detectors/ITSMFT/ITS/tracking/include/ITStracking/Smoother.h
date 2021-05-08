@@ -18,6 +18,10 @@
 #include "DetectorsBase/Propagator.h"
 #include "ITStracking/ROframe.h"
 
+#if defined(CA_DEBUG) || defined(CA_STANDALONE_DEBUGGER)
+#include "ITStracking/StandaloneDebugger.h"
+#endif
+
 namespace o2
 {
 namespace its
@@ -28,8 +32,12 @@ class Smoother
 {
  public:
   Smoother(TrackITSExt& track, int layer, const ROframe& event, float bZ, o2::base::PropagatorF::MatCorrType corr);
-  ~Smoother() = default;
-  bool isValidInit() const { return mInitStatus; }
+  ~Smoother();
+
+  bool isValidInit() const
+  {
+    return mInitStatus;
+  }
   bool testCluster(const int clusterId, const ROframe& event);
   bool getSmoothedTrack();
   float getChi2() const { return mBestChi2; }
@@ -51,6 +59,10 @@ class Smoother
   TrackITSExt mOutwardsTrack;               // inwards track: from outermost cluster to innermost
   float mBestChi2;                          // Best value of local smoothed chi2
   float mLastChi2 = 1e8;                    // Latest computed chi2
+
+#if defined(CA_DEBUG) || defined(CA_STANDALONE_DEBUGGER)
+  StandaloneDebugger* mDebugger;
+#endif
 };
 } // namespace its
 } // namespace o2

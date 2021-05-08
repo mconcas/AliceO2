@@ -315,13 +315,14 @@ void StandaloneDebugger::dumpLayerFake(int l, bool hascorrect)
     << "\n";
 }
 
-void StandaloneDebugger::dumpSmootherChi2(int layer, float original, float smoothed, int trackLength)
+void StandaloneDebugger::dumpSmootherChi2(int layer, float original, float smoothed, int startLayer, int trackLength)
 {
   (*mTreeStream)
     << "SmootherChi2"
     << "layer=" << layer
     << "fake=" << original
     << "smoothed=" << smoothed
+    << "startLayer=" << startLayer
     << "length=" << trackLength
     << "\n";
 }

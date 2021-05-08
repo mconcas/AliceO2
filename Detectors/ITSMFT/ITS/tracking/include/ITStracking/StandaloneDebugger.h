@@ -178,7 +178,7 @@ class StandaloneDebugger
   static int getBinIndex(const float, const int, const float, const float);
 
   // Smoother debug utilities
-  void dumpSmootherChi2(int layer, float original, float smoothed, int trackLength);
+  void dumpSmootherChi2(int layer, float original, float smoothed, int startLayer, int trackLength);
 
  private:
   std::string mDebugTreeFileName = "dbg_ITS.root"; // output filename

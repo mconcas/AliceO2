@@ -27,6 +27,10 @@ Smoother<D>::Smoother(TrackITSExt& track, int smoothingLayer, const ROframe& eve
                                                                                                                                          mBz(bZ),
                                                                                                                                          mCorr(corr)
 {
+#if defined(CA_DEBUG) || defined(CA_STANDALONE_DEBUGGER)
+  mDebugger = new StandaloneDebugger("dbg_ITSSmootherCPU.root");
+#endif
+
   auto propInstance = o2::base::Propagator::Instance();
   const TrackingFrameInfo& originalTf = event.getTrackingFrameInfoOnLayer(mLayerToSmooth).at(track.getClusterIndex(mLayerToSmooth));
 
@@ -107,6 +111,17 @@ Smoother<D>::Smoother(TrackITSExt& track, int smoothingLayer, const ROframe& eve
     LOG(INFO) << "Smoothed chi2 on original cluster: " << mBestChi2;
   }
 }
+
+#if defined(CA_DEBUG) || defined(CA_STANDALONE_DEBUGGER)
+template<unsigned int D>
+Smoother<D>::~Smoother()
+{
+  delete mDebugger;
+}
+#else
+template<unsigned int D>
+Smoother<D>::~Smoother() = default;
+#endif
 
 template <unsigned int D>
 float Smoother<D>::computeSmoothedPredictedChi2(const o2::track::TrackParCov& firstTrack,  // outwards track: from innermost cluster to outermost
