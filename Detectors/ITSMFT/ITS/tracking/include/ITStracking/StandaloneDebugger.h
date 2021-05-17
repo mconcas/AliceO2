@@ -111,6 +111,7 @@ struct FakeTrackInfo {
         clusStatuses[iCluster] = 1;
       } else {
         clusStatuses[iCluster] = 0;
+        firstFakeIndex = (firstFakeIndex == -1) ? iCluster : firstFakeIndex;
         ++nFakeClusters;
       }
     }
@@ -136,6 +137,7 @@ struct FakeTrackInfo {
   o2::its::TrackITSExt track;
 
   bool isFake;
+  int firstFakeIndex = -1;
   bool isAmbiguousId;
   int nFakeClusters = 0;
   ClassDefNV(FakeTrackInfo, 1);

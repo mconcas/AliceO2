@@ -81,6 +81,7 @@ GPUhdi() constexpr GPUArray<float, LayersNumber> InverseZBinSize()
                                         0.5f * ZBins / (zSize[3]), 0.5f * ZBins / (zSize[4]), 0.5f * ZBins / (zSize[5]),
                                         0.5f * ZBins / (zSize[6])}};
 }
+
 inline float getInverseZCoordinate(const int layerIndex)
 {
   return 0.5f * ZBins / LayersZCoordinate()[layerIndex];

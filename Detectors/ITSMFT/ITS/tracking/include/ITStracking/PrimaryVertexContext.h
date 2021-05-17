@@ -63,6 +63,7 @@ class PrimaryVertexContext
   auto& getIndexTables() { return mIndexTables; }
   auto& getTracklets() { return mTracklets; }
   auto& getTrackletsLookupTable() { return mTrackletsLookupTable; }
+  auto& getIndexTablesUtils() { return mIndexTableUtils; }
 
   void initialiseRoadLabels();
   void setRoadLabel(int i, const unsigned long long& lab, bool fake);

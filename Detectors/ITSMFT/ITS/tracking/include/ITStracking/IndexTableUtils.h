@@ -19,6 +19,7 @@
 #include <array>
 #include <utility>
 #include <vector>
+#include <iostream>
 #endif
 
 #include "ITStracking/Constants.h"
@@ -43,7 +44,6 @@ class IndexTableUtils
   GPUhdi() int getPhiBinIndex(const float) const;
   GPUhdi() int getBinIndex(const int, const int) const;
   GPUhdi() int countRowSelectedBins(const int*, const int, const int, const int) const;
-  GPUhdi() int4 getNeigbourhoodRange(const float z, const float phi, const int layer, const float epsilon) const;
 
   GPUhdi() int getNzBins() const { return mNzBins; }
   GPUhdi() int getNphiBins() const { return mNphiBins; }
@@ -97,29 +97,6 @@ GPUhdi() int IndexTableUtils::countRowSelectedBins(const int* indexTable, const 
   const int maxBinIndex{firstBinIndex + maxZBinIndex - minZBinIndex + 1};
 
   return indexTable[maxBinIndex] - indexTable[firstBinIndex];
-}
-
-GPUhdi() int4 IndexTableUtils::getNeigbourhoodRange(const float z, const float phi, const int layer, const float epsilon) const
-{
-  // Needed to find clusters nearby a given point.
-  // Get 2D index table ranges corresponding to neighbourhood of length epsilon around (z,phi) coordinates.
-  // Return information as cluster indices + span length to iterate on.
-  // Range must be smaller than bin size -> max area: 2x2 bins.
-
-  const float zRangeMin = z - epsilon;
-  const float phiRangeMin = math_utils::getNormalizedPhiCoordinate(phi - epsilon / constants::its2::LayersRCoordinate()[layer]);
-  const float zRangeMax = z + epsilon;
-  const float phiRangeMax = math_utils::getNormalizedPhiCoordinate(phi + epsilon / constants::its2::LayersRCoordinate()[layer]);
-
-  int p11 = o2::gpu::GPUCommonMath::Max(0, getZBinIndex(layer, zRangeMin));               // Either table border or bin
-  int p12 = getPhiBinIndex(math_utils::getNormalizedPhiCoordinate(phiRangeMin));          // No boundaries, just take bin corresponding to normalized period
-  int p21 = o2::gpu::GPUCommonMath::Min(getNzBins() - 1, getZBinIndex(layer, zRangeMax)); // Either table border or bin
-  int p22 = getPhiBinIndex(math_utils::getNormalizedPhiCoordinate(phiRangeMax));          // No boundaries
-
-  return int4{p11,
-              p22 - p12 + 1,
-              p21,
-              p22 - p12 + 1};
 }
 
 } // namespace its

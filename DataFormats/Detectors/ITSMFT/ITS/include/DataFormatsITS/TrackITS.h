@@ -168,8 +168,29 @@ class TrackITSExt : public TrackITS
     return last;
   }
 
+  bool isBetterOutChi2(const TrackITSExt& best, float maxChi2) const
+  {
+    int ncl = getNumberOfClusters();
+    int nclb = best.getNumberOfClusters();
+
+    if (ncl >= nclb) {
+      float chi2 = getChi2Out();
+      if (chi2 < maxChi2) {
+        if (ncl > nclb || chi2 < best.getChi2Out()) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  float getChi2Out() const { return mChi2Out; }
+  void setChi2Out(const float chi2Out) { mChi2Out = chi2Out; }
+
  private:
   std::array<int, MaxClusters> mIndex = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}; ///< Indices of associated clusters
+  float mChi2Out = -999.f;
+
   ClassDefNV(TrackITSExt, 2);
 };
 } // namespace its
