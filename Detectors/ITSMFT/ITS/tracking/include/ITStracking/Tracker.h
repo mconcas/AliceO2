@@ -60,6 +60,12 @@ namespace its
 class PrimaryVertexContext;
 class TrackerTraits;
 
+struct intermediateChi2 {
+  std::array<float, 7> firstIteration = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
+  std::array<float, 7> secondIteration = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
+  std::array<float, 7> thirdIteration = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
+};
+
 class Tracker
 {
 
@@ -98,7 +104,7 @@ class Tracker
   void findCellsNeighbours(int& iteration);
   void findRoads(int& iteration);
   void findTracks(const ROframe& ev);
-  bool fitTrack(const ROframe& event, TrackITSExt& track, int start, int end, int step, const float chi2cut = o2::constants::math::VeryBig);
+  bool fitTrack(const ROframe& event, TrackITSExt& track, int start, int end, int step, std::array<float, 7>& tmpChi2, const float chi2cut = o2::constants::math::VeryBig);
   void traverseCellsTree(const int, const int);
   void computeRoadsMClabels(const ROframe&);
   void computeTracksMClabels(const ROframe&);
@@ -133,6 +139,8 @@ class Tracker
   std::uint32_t mROFrame = 0;
   std::vector<TrackITSExt> mTracks;
   std::vector<MCCompLabel> mTrackLabels;
+  std::vector<std::pair<o2::its::FakeTrackInfo<7>, intermediateChi2>> mDebugRoad;
+  std::vector<intermediateChi2> mIntermediateTrackChi2;
   o2::gpu::GPUChainITS* mRecoChain = nullptr;
 
 #ifdef CA_DEBUG
