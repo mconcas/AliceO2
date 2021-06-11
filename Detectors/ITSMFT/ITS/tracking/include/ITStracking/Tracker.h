@@ -141,6 +141,11 @@ class Tracker
   std::vector<MCCompLabel> mTrackLabels;
   std::vector<std::pair<o2::its::FakeTrackInfo<7>, intermediateChi2>> mDebugRoad;
   std::vector<intermediateChi2> mIntermediateTrackChi2;
+  int noCorrectClusterFound = 0;
+  int noCorrectChi2Associated = 0;
+  int noCorrectCellFound = 0;
+  int hasCorrectCount = 0;
+  int noCorrectRoadFound = 0;
   o2::gpu::GPUChainITS* mRecoChain = nullptr;
 
 #ifdef CA_DEBUG

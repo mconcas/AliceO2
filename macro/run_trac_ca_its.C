@@ -249,28 +249,28 @@ void run_trac_ca_its(bool cosmics = false,
     // trackParams[2].MinTrackLength = 4;
     // ---
     // Uncomment for pp
-    trackParams.resize(2);
-    std::array<const float, 5> kmaxDCAxy1 = {1.f * 2.0, 0.4f * 2.0, 0.4f * 2.0, 2.0f * 2.0, 3.f * 2.0};
-    std::array<const float, 5> kmaxDCAz1 = {1.f * 2.0, 0.4f * 2.0, 0.4f * 2.0, 2.0f * 2.0, 3.f * 2.0};
-    std::array<const float, 4> kmaxDN1 = {0.005f * 2.0, 0.0035f * 2.0, 0.009f * 2.0, 0.03f * 2.0};
-    std::array<const float, 4> kmaxDP1 = {0.02f * 2.0, 0.005f * 2.0, 0.006f * 2.0, 0.007f * 2.0};
-    std::array<const float, 6> kmaxDZ1 = {1.f * 2.0, 1.f * 2.0, 2.0f * 2.0, 2.0f * 2.0, 2.0f * 2.0, 2.0f * 2.0};
-    const float kDoublTanL1 = 0.05f * 5.;
-    const float kDoublPhi1 = 0.2f * 5.;
-    trackParams[1].MinTrackLength = 4;
-    trackParams[1].TrackletMaxDeltaPhi = 0.3;
-    trackParams[1].CellMaxDeltaPhi = 0.2 * 2;
-    trackParams[1].CellMaxDeltaTanLambda = 0.05 * 2;
-    std::copy(kmaxDZ1.begin(), kmaxDZ1.end(), trackParams[1].TrackletMaxDeltaZ.begin());
-    std::copy(kmaxDCAxy1.begin(), kmaxDCAxy1.end(), trackParams[1].CellMaxDCA.begin());
-    std::copy(kmaxDCAz1.begin(), kmaxDCAz1.end(), trackParams[1].CellMaxDeltaZ.begin());
-    std::copy(kmaxDP1.begin(), kmaxDP1.end(), trackParams[1].NeighbourMaxDeltaCurvature.begin());
-    std::copy(kmaxDN1.begin(), kmaxDN1.end(), trackParams[1].NeighbourMaxDeltaN.begin());
-    memParams.resize(2);
-    for (auto& coef : memParams[1].CellsMemoryCoefficients)
-      coef *= 40;
-    for (auto& coef : memParams[1].TrackletsMemoryCoefficients)
-      coef *= 40;
+    trackParams.resize(1);
+    // std::array<const float, 5> kmaxDCAxy1 = {1.f * 2.0, 0.4f * 2.0, 0.4f * 2.0, 2.0f * 2.0, 3.f * 2.0};
+    // std::array<const float, 5> kmaxDCAz1 = {1.f * 2.0, 0.4f * 2.0, 0.4f * 2.0, 2.0f * 2.0, 3.f * 2.0};
+    // std::array<const float, 4> kmaxDN1 = {0.005f * 2.0, 0.0035f * 2.0, 0.009f * 2.0, 0.03f * 2.0};
+    // std::array<const float, 4> kmaxDP1 = {0.02f * 2.0, 0.005f * 2.0, 0.006f * 2.0, 0.007f * 2.0};
+    // std::array<const float, 6> kmaxDZ1 = {1.f * 2.0, 1.f * 2.0, 2.0f * 2.0, 2.0f * 2.0, 2.0f * 2.0, 2.0f * 2.0};
+    // const float kDoublTanL1 = 0.05f * 5.;
+    // const float kDoublPhi1 = 0.2f * 5.;
+    // trackParams[1].MinTrackLength = 7;
+    // trackParams[1].TrackletMaxDeltaPhi = 0.3;
+    // trackParams[1].CellMaxDeltaPhi = 0.2 * 2;
+    // trackParams[1].CellMaxDeltaTanLambda = 0.05 * 2;
+    // std::copy(kmaxDZ1.begin(), kmaxDZ1.end(), trackParams[1].TrackletMaxDeltaZ.begin());
+    // std::copy(kmaxDCAxy1.begin(), kmaxDCAxy1.end(), trackParams[1].CellMaxDCA.begin());
+    // std::copy(kmaxDCAz1.begin(), kmaxDCAz1.end(), trackParams[1].CellMaxDeltaZ.begin());
+    // std::copy(kmaxDP1.begin(), kmaxDP1.end(), trackParams[1].NeighbourMaxDeltaCurvature.begin());
+    // std::copy(kmaxDN1.begin(), kmaxDN1.end(), trackParams[1].NeighbourMaxDeltaN.begin());
+    memParams.resize(1);
+    // for (auto& coef : memParams[1].CellsMemoryCoefficients)
+    //   coef *= 40;
+    // for (auto& coef : memParams[1].TrackletsMemoryCoefficients)
+    //   coef *= 40;
     // ---
   }
 
@@ -280,9 +280,13 @@ void run_trac_ca_its(bool cosmics = false,
   gsl::span<const unsigned char> patt(patterns->data(), patterns->size());
   auto pattIt = patt.begin();
   auto clSpan = gsl::span(cclusters->data(), cclusters->size());
-
+  int counterEvent = 0;
   for (auto& rof : *rofs) {
-
+    counterEvent++;
+    if (counterEvent != 111) {
+      continue;
+    }
+    std::cout << "ROF: " << counterEvent << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     auto it = pattIt;
     o2::its::ioutils::loadROFrameData(rof, event, clSpan, pattIt, dict, labels);
@@ -303,12 +307,16 @@ void run_trac_ca_its(bool cosmics = false,
     if (!vertITS.empty()) {
       // Using only the first vertex in the list
       std::cout << " - Reconstructed vertex: x = " << vertITS[0].getX() << " y = " << vertITS[0].getY() << " x = " << vertITS[0].getZ() << std::endl;
-      event.addPrimaryVertex(vertITS[0].getX(), vertITS[0].getY(), vertITS[0].getZ());
+      // LOG(FATAL) << event.getPrimaryVertex(0).x << " " << event.getPrimaryVertex(0).y << " " << event.getPrimaryVertex(0).z;
+      // LOG(FATAL) << " --- " << event.getPrimaryVerticesNum();
+      // event.addPrimaryVertex(vertITS[0].getX(), vertITS[0].getY(), vertITS[0].getZ());
+
     } else {
       std::cout << " - Vertex not reconstructed, tracking skipped" << std::endl;
     }
     trackClIdx.clear();
     tracksITS.clear();
+
     tracker.clustersToTracks(event);
 
     auto end = std::chrono::high_resolution_clock::now();

@@ -257,19 +257,24 @@ int StandaloneDebugger::getBinIndex(const float value, const int size, const flo
 }
 
 // Tracker
-void StandaloneDebugger::dumpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, const bool dumpClusters)
+void StandaloneDebugger::dumpTrackToBranchWithInfo(std::string branchName, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, const bool dumpClusters)
 {
   FakeTrackInfo<7> t{pvc, event, track, dumpClusters};
 
   (*mTreeStream)
-    << branchName.data()
-    << track
+    << "FakeTrackInfo"
+    << "FakeTrackInfos=" << t
     << "\n";
 
-  (*mTreeStream)
-    << "TracksInfo"
-    << t
-    << "\n";
+  for (auto iStatus{0}; iStatus < t.clusStatuses.size(); ++iStatus) {
+    if (t.clusStatuses[iStatus] == 0) {
+      (*mTreeStream)
+        << "fakeClusters"
+        << "nfakes=" << t.nFakeClusters
+        << "layer=" << iStatus
+        << "\n";
+    }
+  }
 }
 
 void StandaloneDebugger::dumpTmpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, float pChi2, const bool dumpClusters)
@@ -306,12 +311,16 @@ void StandaloneDebugger::dumpTrkChi2(float chiFake, float chiTrue)
     << "\n";
 }
 
-void StandaloneDebugger::dumpLayerFake(int l, bool hascorrect)
+void StandaloneDebugger::dumpLayerFake(int l, bool hascorrect, float phi, float eta, float pt, MCCompLabel& label)
 {
   (*mTreeStream)
     << "layer"
     << "N=" << l
     << "Exists=" << hascorrect
+    << "Phi=" << phi
+    << "Eta=" << eta
+    << "Pt=" << pt
+    << "label=" << label
     << "\n";
 }
 

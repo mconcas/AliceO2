@@ -72,11 +72,8 @@ void Tracker::clustersToTracks(const ROframe& event, std::ostream& timeBenchmark
   mDebugRoad.clear();
 
   for (int iVertex = 0; iVertex < verticesNum; ++iVertex) {
-
     float total{0.f};
-
     for (int iteration = 0; iteration < mTrkParams.size(); ++iteration) {
-
       int numCls = 0;
       for (unsigned int iLayer{0}; iLayer < mTrkParams[iteration].NLayers; ++iLayer) {
         numCls += event.getClusters()[iLayer].size();
@@ -102,6 +99,7 @@ void Tracker::clustersToTracks(const ROframe& event, std::ostream& timeBenchmark
       timeBenchmarkOutputStream << std::setw(2) << " - "
                                 << "Vertex processing completed in: " << total << "ms" << std::endl;
     }
+    LOG(WARN) << "has correct: " << hasCorrectCount << " \t no cluster: " << noCorrectClusterFound << " \t no cell: " << noCorrectCellFound << " \t no road: " << noCorrectRoadFound << " \t chi2 messed up: " << noCorrectChi2Associated;
   }
   if (verticesNum > 0) {
     float smoothElapsed = evaluateTask(&Tracker::smoothTracks, "Track smoothing", timeBenchmarkOutputStream, event);
@@ -307,6 +305,7 @@ void Tracker::findTracks(const ROframe& event)
       temporaryTrack.setExternalClusterIndex(iC, clusters[iC], clusters[iC] != constants::its::UnusedIndex);
     }
     intermediateChi2 tmpChi2s;
+    // temporaryTrack.resetCovariance();
     bool fitSuccess = fitTrack(event, temporaryTrack, mTrkParams[0].NLayers - 4, -1, -1, tmpChi2s.firstIteration);
     if (!fitSuccess) {
       continue;
@@ -326,20 +325,49 @@ void Tracker::findTracks(const ROframe& event)
     if (!fitSuccess) {
       continue;
     }
+
+    // ---
+    FakeTrackInfo<7> testInfo{mPrimaryVertexContext, event, temporaryTrack, false};
+    FakeTrackInfo<7> testInfoR{mPrimaryVertexContext, event, road};
+    if (testInfo.mainLabel != testInfoR.mainLabel) {
+      LOG(FATAL) << "die";
+    }
+    if (testInfo.mainLabel.getEventID() == 52 && testInfo.mainLabel.getTrackID() == 894) {
+      for (size_t i{0}; i < 7; ++i) {
+        std::cout << tmpChi2s.thirdIteration[i] << " | ";
+      }
+      for (auto iLabel{0}; iLabel < testInfo.mcLabels.size(); ++iLabel) {
+        auto& l = testInfo.mcLabels[iLabel];
+        std::cout << "\n"
+                  << l << " -> " << temporaryTrack.getClusterIndex(iLabel);
+      }
+      LOG(FATAL) << "\nfatalizing...";
+    }
+
+    // -----
     FakeTrackInfo<7> fir{mPrimaryVertexContext, event, road};
     if (fir.nFakeClusters == 0) {
       mDebugRoad.emplace_back(fir, tmpChi2s);
-      // LOG(FATAL) << " >>> label: " << fir.mainLabel;
     }
     CA_DEBUGGER(refitCounters[nClusters - 4]++);
     tracks.emplace_back(temporaryTrack);
     chi2s.emplace_back(tmpChi2s);
     CA_DEBUGGER(assert(nClusters == temporaryTrack.getNumberOfClusters()));
   }
-  //mTraits->refitTracks(event.getTrackingFrameInfo(), tracks);
 
   std::sort(tracks.begin(), tracks.end(),
-            [](TrackITSExt& track1, TrackITSExt& track2) { return track1.isBetterOutChi2(track2, 1.e6f); });
+            [](TrackITSExt& track1, TrackITSExt& track2) { return track1.isBetter(track2, 1.e6f); });
+
+  for (auto& track : tracks) {
+    FakeTrackInfo<7> info{mPrimaryVertexContext, event, track, false};
+    if (info.mainLabel.getEventID() == 52 && info.mainLabel.getTrackID() == 894) {
+      for (auto iLabel{0}; iLabel < info.mcLabels.size(); ++iLabel) {
+        auto& l = info.mcLabels[iLabel];
+        std::cout << l << " -> " << track.getClusterIndex(iLabel) << "\t";
+      }
+      std::cout << " chi2: " << track.getChi2() << std::endl;
+    }
+  }
 
   for (int iTrack{0}; iTrack < tracks.size(); ++iTrack) {
     auto& track = tracks[iTrack];
@@ -362,8 +390,169 @@ void Tracker::findTracks(const ROframe& event)
       }
       mPrimaryVertexContext->markUsedCluster(iLayer, track.getClusterIndex(iLayer));
     }
+    // FakeTrackInfo<7> testInfo{mPrimaryVertexContext, event, track, false};
+    // if (!testInfo.isFake && testInfo.mainLabel.getEventID() == 52 && testInfo.mainLabel.getTrackID() == 894) {
+    //   LOG(WARN) << "Pushing correct track!";
+    //   for (auto iLabel{0}; iLabel < testInfo.mcLabels.size(); ++iLabel) {
+    //     auto& l = testInfo.mcLabels[iLabel];
+    //     std::cout << "\n"
+    //               << l << " -> " << track.getClusterIndex(iLabel);
+    //   }
+    //   LOG(FATAL) << "fatalizing...";
+    // }
+    // if (testInfo.isFake && testInfo.mainLabel.getEventID() == 52 && testInfo.mainLabel.getTrackID() == 894) {
+    //   LOG(WARN) << "Pushing fake track!";
+    //   for (auto iLabel{0}; iLabel < testInfo.mcLabels.size(); ++iLabel) {
+    //     auto& l = testInfo.mcLabels[iLabel];
+    //     std::cout << "\n"
+    //               << l << " -> " << track.getClusterIndex(iLabel);
+    //   }
+    //   LOG(FATAL) << "fatalizing...";
+    // }
     mTracks.emplace_back(track);
     mIntermediateTrackChi2.emplace_back(chi2);
+    if (track.getChi2() != mIntermediateTrackChi2.back().thirdIteration[0]) {
+      LOG(FATAL) << "track.getChi2() != mIntermediateTrackChi2.back().thirdIteration[0]";
+    };
+  }
+
+  /// ---
+  for (int iTrack{0}; iTrack < mTracks.size(); ++iTrack) {
+    auto& track = mTracks[iTrack];
+    FakeTrackInfo<7> fi{mPrimaryVertexContext, event, track, false};
+    if (fi.nFakeClusters == 1 && fi.firstFakeIndex == 6 && track.getNClusters() == 7) {
+      LOG(WARN) << "Track with one fake cluster!\nlabels: ";
+      for (auto iLabel{0}; iLabel < fi.mcLabels.size(); ++iLabel) {
+        auto& l = fi.mcLabels[iLabel];
+        std::cout << "\n"
+                  << l << " -> " << track.getClusterIndex(iLabel);
+      }
+      std::cout << std::endl
+                << fi.track.getChi2() << std::endl;
+      int correct = event.getFirstClusterIDFromLabel(6, fi.mainLabel);
+      bool hasCorrect = correct != -1 ? true : false;
+      std::cout << "\nId of correct: " << correct << ", id of fake: " << track.getClusterIndex(6);
+      // If we found correct cluster to exist
+      if (hasCorrect) {
+        hasCorrectCount++;
+        std::cout << ", check label: " << event.getClusterLabels(6, correct) << std::endl;
+        bool foundRoad{false};
+        std::pair<o2::its::FakeTrackInfo<7>, o2::its::intermediateChi2> correctRoadInfo;
+        // Loop over the correct roads
+        for (auto iRoad{0}; iRoad < mDebugRoad.size(); ++iRoad) {
+          correctRoadInfo = mDebugRoad[iRoad];
+          if (correctRoadInfo.first.mainLabel == fi.mainLabel) {
+            LOG(WARN) << "Found a match, dumping road labels:";
+            for (auto iLabel{0}; iLabel < correctRoadInfo.first.mcLabels.size(); ++iLabel) {
+              auto& l = correctRoadInfo.first.mcLabels[iLabel];
+              auto& clid = correctRoadInfo.first.roadClusters[iLabel];
+              std::cout << "\n"
+                        << l << " -> " << clid;
+            }
+            std::cout << std::endl;
+            if (correctRoadInfo.first.occurrences.size() == 1 && correctRoadInfo.first.occurrences[0].second == 7) {
+              foundRoad = true;
+              break;
+            }
+          }
+        }
+        if (!foundRoad) {
+          noCorrectRoadFound++;
+          bool cellNotFound{false};
+          LOG(WARN) << "Could not find road with 7 correct clusters, browsing cells";
+          LOG(WARN) << correctRoadInfo.first.sroad[4];
+          for (auto iCell{0}; iCell < mPrimaryVertexContext->getCells()[4].size(); ++iCell) {
+            auto index_0 = mPrimaryVertexContext->getCells()[4][iCell].getFirstClusterIndex();
+            auto index_1 = mPrimaryVertexContext->getCells()[4][iCell].getSecondClusterIndex();
+            auto index_2 = mPrimaryVertexContext->getCells()[4][iCell].getThirdClusterIndex();
+
+            index_0 = mPrimaryVertexContext->getClusters()[4][index_0].clusterId;
+            index_1 = mPrimaryVertexContext->getClusters()[5][index_1].clusterId;
+            index_2 = mPrimaryVertexContext->getClusters()[6][index_2].clusterId;
+
+            o2::MCCompLabel mcLabel_0 = event.getClusterLabels(4, index_0);
+            o2::MCCompLabel mcLabel_1 = event.getClusterLabels(5, index_1);
+            o2::MCCompLabel mcLabel_2 = event.getClusterLabels(6, index_2);
+
+            LOG(WARN) << "Processing: " << mcLabel_0 << " " << mcLabel_1 << " " << mcLabel_2;
+            if (mcLabel_0 == mcLabel_1 && mcLabel_0 == mcLabel_2 && mcLabel_0 == fi.mainLabel) {
+              LOG(WARN) << "Cell exists, " << mcLabel_0 << " id: " << iCell << " cluster ids: " << index_0 << " " << index_1 << " " << index_2;
+            } else {
+              LOG(WARN) << "Cell does not exist!";
+              cellNotFound = true;
+            }
+          }
+          if (cellNotFound) {
+            noCorrectCellFound++;
+          }
+          for (auto& tracklet : mPrimaryVertexContext->getTracklets()[5]) {
+            o2::MCCompLabel mcLabel_0 = event.getClusterLabels(5, mPrimaryVertexContext->getClusters()[5][tracklet.firstClusterIndex].clusterId);
+            o2::MCCompLabel mcLabel_1 = event.getClusterLabels(6, mPrimaryVertexContext->getClusters()[6][tracklet.secondClusterIndex].clusterId);
+            LOG(WARN) << "Tracklet labels: " << mcLabel_0 << " " << mcLabel_1;
+          }
+        } else {
+          float sumRoadFirst{0.f};
+          float sumRoadSecond{0.f};
+          float sumRoadThird{0.f};
+          float sumWinnerFirst{0.f};
+          float sumWinnerSecond{0.f};
+          float sumWinnerThird{0.f};
+          // 1
+          std::cout << "1 iteration, Correct road: ";
+          for (size_t i{0}; i < 7; ++i) {
+            std::cout << correctRoadInfo.second.firstIteration[i] << " | ";
+            // sumRoadFirst += correctRoadInfo.second.firstIteration[i];
+          }
+          std::cout << std::endl;
+          // std::cout << " sum: " << sumRoadFirst << std::endl;
+          std::cout << "1 iteration, Winning track: ";
+          for (size_t i{0}; i < 7; ++i) {
+            std::cout << mIntermediateTrackChi2[iTrack].firstIteration[i] << " | ";
+            // sumWinnerFirst += mIntermediateTrackChi2[iTrack].firstIteration[i];
+          }
+          std::cout << std::endl;
+          // std::cout << " sum: " << sumWinnerFirst << std::endl;
+          // 2
+          std::cout << "2 iteration, Correct road: ";
+          for (size_t i{0}; i < 7; ++i) {
+            std::cout << correctRoadInfo.second.secondIteration[i] << " | ";
+            // sumRoadSecond += correctRoadInfo.second.secondIteration[i];
+          }
+          std::cout << std::endl;
+          // std::cout << " sum: " << sumRoadSecond << std::endl;
+          std::cout << "2 iteration, Winning track: ";
+          for (size_t i{0}; i < 7; ++i) {
+            std::cout << mIntermediateTrackChi2[iTrack].secondIteration[i] << " | ";
+            // sumWinnerSecond += mIntermediateTrackChi2[iTrack].secondIteration[i];
+          }
+          std::cout << std::endl;
+          // std::cout << " sum: " << sumWinnerSecond << std::endl;
+          // 3
+          std::cout << "3 iteration, Correct road: ";
+          for (size_t i{0}; i < 7; ++i) {
+            std::cout << correctRoadInfo.second.thirdIteration[i] << " | ";
+            // sumRoadThird += correctRoadInfo.second.thirdIteration[i];
+          }
+          std::cout << std::endl;
+          // std::cout << " sum: " << sumRoadThird << std::endl;
+          std::cout << "3 iteration, Winning track: ";
+          for (size_t i{0}; i < 7; ++i) {
+            std::cout << mIntermediateTrackChi2[iTrack].thirdIteration[i] << " | ";
+            // sumWinnerThird += mIntermediateTrackChi2[iTrack].thirdIteration[i];
+          }
+          std::cout << std::endl;
+          // std::cout << " sum: " << sumWinnerThird << std::endl;
+          // }
+          if (correctRoadInfo.second.thirdIteration[6] > mIntermediateTrackChi2[iTrack].thirdIteration[6]) {
+            noCorrectChi2Associated++;
+          } else {
+            LOG(FATAL) << "This should not happen, fatalizing";
+          }
+        }
+      } else {
+        noCorrectClusterFound++;
+      }
+    }
   }
 }
 
@@ -393,7 +582,7 @@ bool Tracker::fitTrack(const ROframe& event, TrackITSExt& track, int start, int 
     if (!track.o2::track::TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
       return false;
     }
-    tmpChi2[iLayer] = predChi2;
+    tmpChi2[iLayer] = track.getChi2();
   }
   return true;
 }
@@ -721,34 +910,23 @@ void Tracker::smoothTracks(const ROframe& event)
   for (int iTrack{0}; iTrack < mTracks.size(); ++iTrack) {
     auto& track = mTracks[iTrack];
     FakeTrackInfo<7> fi{mPrimaryVertexContext, event, track, false};
-    int layerF = -1;
-    if (fi.nFakeClusters == 1 && fi.firstFakeIndex == 6 && track.getNClusters() == 7) {
-      for (int i{0}; i < 7; ++i) {
-        if (fi.mcLabels[i].isSet() && fi.mcLabels[i] != fi.mainLabel) {
-          layerF = i;
-          break;
-        }
-      }
+    if (fi.nFakeClusters == 1) {
       LOG(WARN) << "Found track with one fake cluster!\nlabels: ";
-      // for (int il{0}; il < 7; ++il) {
-      //   std::cout << "(";
-
-      for (auto& l : fi.mcLabels /*[il]*/) {
+      for (auto& l : fi.mcLabels) {
         std::cout << " " << l;
       }
-      // std::cout << ")\t";
-      int correct = event.getFirstClusterIDFromLabel(layerF, fi.mainLabel);
+      int correct = event.getFirstClusterIDFromLabel(fi.firstFakeIndex, fi.mainLabel);
       bool hasCorrect = correct != -1 ? true : false;
-      std::cout << "\nFake cluster is on layer: " << layerF << ", id of correct cluster: " << correct << ", id of fake cluster: " << track.getClusterIndex(layerF);
+      std::cout << "\nFake cluster is on layer: " << fi.firstFakeIndex << ", id of correct cluster: " << correct << ", id of fake cluster: " << track.getClusterIndex(fi.firstFakeIndex);
       if (correct != -1) {
-        std::cout << ", proof: " << event.getClusterLabels(layerF, correct) << std::endl;
+        std::cout << ", proof: " << event.getClusterLabels(fi.firstFakeIndex, correct) << std::endl;
         bool foundRoad{false};
         std::pair<o2::its::FakeTrackInfo<7>, o2::its::intermediateChi2> road;
         for (auto iRoad{0}; iRoad < mDebugRoad.size(); ++iRoad) {
           road = mDebugRoad[iRoad];
           if (road.first.mainLabel == fi.mainLabel) {
             LOG(WARN) << "Found a match, dumping road labels...";
-            for (auto& l : road.first.mcLabels /*[il]*/) {
+            for (auto& l : road.first.mcLabels) {
               std::cout << " " << l;
             }
             std::cout << std::endl;
@@ -758,85 +936,8 @@ void Tracker::smoothTracks(const ROframe& event)
             }
           }
         }
-        if (!foundRoad) {
-          LOG(WARN) << "Could not find road with 7 correct clusters, browsing cells";
-          for (auto iCell{0}; iCell < mPrimaryVertexContext->getCells()[4].size(); ++iCell) {
-            auto index_0 = mPrimaryVertexContext->getCells()[4][iCell].getFirstClusterIndex();
-            auto index_1 = mPrimaryVertexContext->getCells()[4][iCell].getSecondClusterIndex();
-            auto index_2 = mPrimaryVertexContext->getCells()[4][iCell].getThirdClusterIndex();
-            // if (index_0 != constants::its::UnusedIndex && index_1 != constants::its::UnusedIndex && index_2 != constants::its::UnusedIndex) {
-            index_0 = mPrimaryVertexContext->getClusters()[4][index_0].clusterId;
-            index_1 = mPrimaryVertexContext->getClusters()[5][index_1].clusterId;
-            index_2 = mPrimaryVertexContext->getClusters()[6][index_2].clusterId;
 
-            o2::MCCompLabel mcLabel_0 = event.getClusterLabels(4, index_0);
-            o2::MCCompLabel mcLabel_1 = event.getClusterLabels(5, index_1);
-            o2::MCCompLabel mcLabel_2 = event.getClusterLabels(6, index_2);
-
-            LOG(WARN) << "Processing: " << mcLabel_0 << " " << mcLabel_1 << " " << mcLabel_2;
-            if (mcLabel_0 == mcLabel_1 && mcLabel_0 == mcLabel_2 && mcLabel_0 == fi.mainLabel) {
-              LOG(WARN) << "Cell exists, " << mcLabel_0 << " id: " << iCell << " cluster ids: " << index_0 << " " << index_1 << " " << index_2;
-            } else {
-              LOG(WARN) << "Cell does not exist!";
-            }
-            // }
-          }
-          LOG(FATAL) << "fatalizing...";
-        } else {
-          if (road.second.secondIteration[6] < mIntermediateTrackChi2[iTrack].secondIteration[6]) {
-            LOG(WARN) << "mismatch: " << road.second.secondIteration[6] << " vs: " << mIntermediateTrackChi2[iTrack].secondIteration[6];
-
-            float sumRoadFirst{0.f};
-            float sumRoadSecond{0.f};
-            float sumRoadThird{0.f};
-            float sumWinnerFirst{0.f};
-            float sumWinnerSecond{0.f};
-            float sumWinnerThird{0.f};
-            // 1
-            std::cout << "1 iteration, MC road: ";
-            for (size_t i{0}; i < 7; ++i) {
-              std::cout << road.second.firstIteration[i] << " | ";
-              sumRoadFirst += road.second.firstIteration[i];
-            }
-            std::cout << " sum: " << sumRoadFirst << std::endl;
-            std::cout << "1 iteration, W track: ";
-            for (size_t i{0}; i < 7; ++i) {
-              std::cout << mIntermediateTrackChi2[iTrack].firstIteration[i] << " | ";
-              sumWinnerFirst += mIntermediateTrackChi2[iTrack].firstIteration[i];
-            }
-            std::cout << " sum: " << sumWinnerFirst << std::endl;
-            // 2
-            std::cout << "2 iteration, MC road: ";
-            for (size_t i{0}; i < 7; ++i) {
-              std::cout << road.second.secondIteration[i] << " | ";
-              sumRoadSecond += road.second.secondIteration[i];
-            }
-            std::cout << " sum: " << sumRoadSecond << std::endl;
-            std::cout << "2 iteration, W track: ";
-            for (size_t i{0}; i < 7; ++i) {
-              std::cout << mIntermediateTrackChi2[iTrack].secondIteration[i] << " ";
-              sumWinnerSecond += mIntermediateTrackChi2[iTrack].secondIteration[i];
-            }
-            std::cout << " sum: " << sumWinnerSecond << std::endl;
-            // 3
-            std::cout << "3 iteration, MC road: ";
-            for (size_t i{0}; i < 7; ++i) {
-              std::cout << road.second.thirdIteration[i] << " | ";
-              sumRoadThird += road.second.thirdIteration[i];
-            }
-            std::cout << " sum: " << sumRoadThird << std::endl;
-            std::cout << "3 iteration, W track: ";
-            for (size_t i{0}; i < 7; ++i) {
-              std::cout << mIntermediateTrackChi2[iTrack].thirdIteration[i] << " | ";
-              sumWinnerThird += mIntermediateTrackChi2[iTrack].thirdIteration[i];
-            }
-            std::cout << " sum: " << sumWinnerThird << std::endl;
-
-            LOG(FATAL) << "fatalizing ...";
-          }
-        }
-
-        Smoother<7> sm{track, layerF, event, getBz(), mCorrType};
+        Smoother<7> sm{track, fi.firstFakeIndex, event, getBz(), mCorrType};
         if (sm.isValidInit()) {
           float smChi2Initial{sm.getChi2()};
           bool better = sm.testCluster(correct, event);
@@ -846,14 +947,15 @@ void Tracker::smoothTracks(const ROframe& event)
           }
           auto trackLength = track.getNumberOfClusters();
           auto startLayer = track.getFirstClusterLayer();
-          mDebugger->dumpSmootherChi2(layerF, smChi2Initial, smChi2Tested, startLayer, trackLength);
+          mDebugger->dumpSmootherChi2(fi.firstFakeIndex, smChi2Initial, smChi2Tested, startLayer, trackLength);
         } else {
           std::cout << std::endl;
         }
       } else {
         std::cout << std::endl;
       }
-      mDebugger->dumpLayerFake(layerF, hasCorrect);
+      mDebugger->dumpLayerFake(fi.firstFakeIndex, hasCorrect, track.getPhi(), track.getEta(), track.getPt(), fi.mainLabel);
+      mDebugger->dumpTrackToBranchWithInfo("trackInfo", track, event, mPrimaryVertexContext, false);
     }
   }
 }

@@ -127,7 +127,9 @@ struct FakeTrackInfo {
     }
   }
 
-  FakeTrackInfo(PrimaryVertexContext* pvc, const ROframe& event, o2::its::Road& road)
+  FakeTrackInfo(PrimaryVertexContext* pvc, const ROframe& event, o2::its::Road& road) : isFake{false},
+                                                                                        isAmbiguousId{false},
+                                                                                        mainLabel{UnusedIndex, UnusedIndex, UnusedIndex, false}
   {
     occurrences.clear();
     mcLabels.clear();
@@ -135,13 +137,13 @@ struct FakeTrackInfo {
     clusters.clear();
     clusters.resize(numClusters);
     trackingFrameInfos.clear();
+    roadClusters.resize(numClusters, constants::its::UnusedIndex);
     trackingFrameInfos.resize(numClusters);
-
+    sroad = road;
     for (auto& c : clusStatuses) {
       c = -1;
     }
 
-    std::vector<int> roadClusters(numClusters, constants::its::UnusedIndex);
     int lastCellLevel = constants::its::UnusedIndex;
     for (int iCell{0}; iCell < numClusters - 2; ++iCell) { // cellsperroad = numClusters -2
       const int cellIndex = road[iCell];
@@ -227,6 +229,9 @@ struct FakeTrackInfo {
   std::vector<o2::its::Cluster> clusters;
   std::vector<o2::its::TrackingFrameInfo> trackingFrameInfos;
   o2::its::TrackITSExt track;
+  // road
+  std::vector<int> roadClusters;
+  o2::its::Road sroad;
 
   bool isFake;
   int firstFakeIndex = -1;
@@ -265,10 +270,10 @@ class StandaloneDebugger
   void fillVerticesInfoTree(float x, float y, float z, int size, int rId, int eId, float pur);
 
   // Tracker debug utilities
-  void dumpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, const bool dumpClusters = false);
+  void dumpTrackToBranchWithInfo(std::string branchName, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, const bool dumpClusters = false);
   void dumpTmpTrackToBranchWithInfo(std::string branchName, int layer, int iteration, o2::its::TrackITSExt track, const ROframe event, PrimaryVertexContext* pvc, float pChi2, const bool dumpClusters = false);
   void dumpTrkChi2(float chiFake, float chiTrue);
-  void dumpLayerFake(int l, bool hascorrect);
+  void dumpLayerFake(int l, bool hascorrect, float phi, float eta, float pt, MCCompLabel& label);
   static int getBinIndex(const float, const int, const float, const float);
 
   // Smoother debug utilities
