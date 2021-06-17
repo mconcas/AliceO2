@@ -207,7 +207,6 @@ void TrackerDPL::run(ProcessingContext& pc)
       assert(ncl == nclf);
       LOG(WARN) << trc.getPattern();
       allTracks.emplace_back(trc);
-      
     }
   };
 
