@@ -9,10 +9,13 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 ///
-/// \file benchmark.cxx
+/// \file benchmark.cu
 /// \author mconcas@cern.ch
 ///
-#include "Shared/Kernels.h"
+#include "../Shared/Kernels.h"
+#if defined(__HIPCC__)
+#include "hip/hip_runtime.h"
+#endif
 #define VERSION "version 0.1-latest-#6773"
 
 bool parseArgs(o2::benchmark::benchmarkOpts& conf, int argc, const char* argv[])
