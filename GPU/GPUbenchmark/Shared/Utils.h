@@ -264,9 +264,9 @@ struct gpuState {
   float chunkReservedGB; // Size of each partition (GB)
 
   // General containers and state
-  chunk_t* scratchPtr;                           // Pointer to scratch buffer
-  size_t scratchSize;                            // Size of scratch area (B)
-  std::vector<chunk_t*> partAddrOnHost;          // Pointers to scratch partitions on host vector
+  chunk_t* scratchPtr;                         // Pointer to scratch buffer
+  size_t scratchSize;                          // Size of scratch area (B)
+  std::vector<chunk_t*> partAddrOnHost;        // Pointers to scratch partitions on host vector
   std::vector<std::pair<int, int>> testChunks; // Vector of definitions for arbitrary chunks
 
   // Static info
