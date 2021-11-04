@@ -28,6 +28,7 @@
 #include "ITStracking/Cluster.h"
 #include "ITStracking/Configuration.h"
 #include "ITStracking/Constants.h"
+#include "ITStracking/ClusterLines.h"
 #include "ITStracking/Definitions.h"
 #include "ITStracking/Road.h"
 #include "ITStracking/Tracklet.h"
@@ -73,6 +74,8 @@ class TimeFrame final
 
   int getSortedIndex(int rof, int layer, int i) const;
   int getNrof() const;
+
+  void resetBeamXY(const float x, const float y, const float w = 0);
   float getBeamX() const;
   float getBeamY() const;
 
@@ -97,7 +100,7 @@ class TimeFrame final
   std::vector<MCCompLabel>& getCellsLabel(int layer) { return mCellLabels[layer]; }
 
   bool hasMCinformation() const;
-  void initialise(const int iteration, const MemoryParameters& memParam, const TrackingParameters& trkParam);
+  void initialise(const int iteration, const MemoryParameters& memParam, const TrackingParameters& trkParam, const int maxLayers = 7);
 
   bool isClusterUsed(int layer, int clusterId) const;
   void markUsedCluster(int layer, int clusterId);
@@ -114,6 +117,14 @@ class TimeFrame final
   std::vector<Road>& getRoads();
   std::vector<TrackITSExt>& getTracks(int rof) { return mTracks[rof]; }
   std::vector<MCCompLabel>& getTracksLabel(int rof) { return mTracksLabel[rof]; }
+
+  // Vertexer
+  std::vector<int>& getIndexTableL0(int tf);
+  std::array<std::vector<int>, 2>& getNFoundTracklets(int tf);
+  std::vector<Line>& getLines(int tf);
+  std::vector<ClusterLines>& getTrackletClusters(int tf);
+  gsl::span<const Tracklet> getFoundTracklets(int rofId, int combId) const;
+  // \Vertexer
 
   void initialiseRoadLabels();
   void setRoadLabel(int i, const unsigned long long& lab, bool fake);
@@ -174,10 +185,17 @@ class TimeFrame final
   std::vector<int> mBogusClusters; /// keep track of clusters with wild coordinates
 
   std::vector<index_table_t> mIndexTables;
+  std::vector<std::vector<int>> mIndexTablesL0;
   std::vector<std::vector<Tracklet>> mTracklets;
   std::vector<std::vector<int>> mTrackletsLookupTable;
 
   std::vector<std::pair<unsigned long long, bool>> mRoadLabels;
+
+  // Vertexer
+  std::vector<std::array<std::vector<int>, 2>> mNFoundTracklets;
+  std::vector<std::vector<Line>> mLines;
+  std::vector<std::vector<ClusterLines>> mTrackletClusters;
+  std::vector<std::vector<int>> mROframesTrackletsVert;
 };
 
 inline const Vertex& TimeFrame::getPrimaryVertex(const int vertexIndex) const { return mPrimaryVertices[vertexIndex]; }
@@ -203,7 +221,14 @@ inline bool TimeFrame::empty() const { return getTotalClusters() == 0; }
 
 inline int TimeFrame::getSortedIndex(int rof, int layer, int index) const { return mROframesClusters[layer][rof] + index; }
 
-inline int TimeFrame::getNrof() const { return mNrof; };
+inline int TimeFrame::getNrof() const { return mNrof; }
+
+inline void TimeFrame::resetBeamXY(const float x, const float y, const float w)
+{
+  mBeamPos[0] = x;
+  mBeamPos[1] = y;
+  mBeamPosWeight = w;
+}
 
 inline float TimeFrame::getBeamX() const { return mBeamPos[0]; }
 
@@ -271,6 +296,21 @@ inline index_table_t& TimeFrame::getIndexTables(int tf)
   return mIndexTables[tf];
 }
 
+inline std::vector<int>& TimeFrame::getIndexTableL0(int tf)
+{
+  return mIndexTablesL0[tf];
+}
+
+inline std::vector<Line>& TimeFrame::getLines(int tf)
+{
+  return mLines[tf];
+}
+
+inline std::vector<ClusterLines>& TimeFrame::getTrackletClusters(int tf)
+{
+  return mTrackletClusters[tf];
+}
+
 template <typename... T>
 void TimeFrame::addClusterToLayer(int layer, T&&... values)
 {
@@ -327,6 +367,11 @@ inline const unsigned long long& TimeFrame::getRoadLabel(int i) const
   return mRoadLabels[i].first;
 }
 
+inline std::array<std::vector<int>, 2>& TimeFrame::getNFoundTracklets(int tf)
+{
+  return mNFoundTracklets[tf];
+}
+
 inline bool TimeFrame::isRoadFake(int i) const
 {
   return mRoadLabels[i].second;
@@ -355,6 +400,15 @@ inline std::vector<std::vector<std::vector<int>>>& TimeFrame::getCellsNeighbours
 }
 
 inline std::vector<Road>& TimeFrame::getRoads() { return mRoads; }
+
+inline gsl::span<const Tracklet> TimeFrame::getFoundTracklets(int rofId, int combId) const
+{
+  if (rofId < 0 || rofId >= mNrof) {
+    return gsl::span<const Tracklet>();
+  }
+  int startIdx{mROframesTrackletsVert[combId][rofId]};
+  return {&mTracklets[combId][startIdx], static_cast<gsl::span<Tracklet>::size_type>(mROframesTrackletsVert[combId][rofId + 1] - startIdx)};
+}
 
 } // namespace its
 } // namespace o2

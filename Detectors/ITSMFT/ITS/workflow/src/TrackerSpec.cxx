@@ -216,6 +216,7 @@ void TrackerDPL::run(ProcessingContext& pc)
   TimeFrame mTimeFrame;
   mTracker->adoptTimeFrame(mTimeFrame);
   mTracker->setBz(mBz);
+  mVertexer->adoptTimeFrame(mTimeFrame);
 
   gsl::span<const unsigned char>::iterator pattIt = patterns.begin();
 
@@ -250,7 +251,7 @@ void TrackerDPL::run(ProcessingContext& pc)
     std::vector<Vertex> vtxVecLoc;
     if (multCut) {
       if (mRunVertexer) {
-        vertexerElapsedTime += mVertexer->clustersToVertices(event, false, logger);
+        vertexerElapsedTime += mVertexer->clustersToVertices(false, logger);
         auto allVerts = mVertexer->exportVertices();
         multCut = allVerts.size() == 0;
         for (const auto& vtx : allVerts) {
