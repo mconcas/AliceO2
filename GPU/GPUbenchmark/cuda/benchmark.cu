@@ -60,7 +60,7 @@ bool parseArgs(o2::benchmark::benchmarkOpts& conf, int argc, const char* argv[])
     }
 
     if (vm.count("inspect")) {
-     conf.dumpChunks = true;
+      conf.dumpChunks = true;
     }
 
     bpo::notify(vm);
