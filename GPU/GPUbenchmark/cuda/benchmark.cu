@@ -36,9 +36,9 @@ bool parseArgs(o2::benchmark::benchmarkOpts& conf, int argc, const char* argv[])
     "mode,m", bpo::value<std::vector<std::string>>()->multitoken()->default_value(std::vector<std::string>{"seq", "con", "dis"}, "seq con dis"), "Mode: sequential, concurrent or distributed.")(
     "nruns,n", bpo::value<int>()->default_value(1), "Number of times each test is run.")(
     "outfile,o", bpo::value<std::string>()->default_value("benchmark_result"), "Output file name to store results.")(
-    "prime,p", bpo::value<int>()->default_value(0), "Prime number to be used for the test.")(   
+    "prime,p", bpo::value<int>()->default_value(0), "Prime number to be used for the test.")(
     "streams,s", bpo::value<int>()->default_value(8), "Size of the pool of streams available for concurrent tests.")(
-    "test,t", bpo::value<std::vector<std::string>>()->multitoken()->default_value(std::vector<std::string>{"read", "write", "copy","rread", "rwrite", "rcopy"}, "read write copy rread rwrite rcopy"), "Tests to be performed.")(
+    "test,t", bpo::value<std::vector<std::string>>()->multitoken()->default_value(std::vector<std::string>{"read", "write", "copy", "rread", "rwrite", "rcopy"}, "read write copy rread rwrite rcopy"), "Tests to be performed.")(
     "version,v", "Print version.")(
     "extra,x", "Print extra info for each available device.");
   try {
@@ -82,7 +82,7 @@ bool parseArgs(o2::benchmark::benchmarkOpts& conf, int argc, const char* argv[])
   conf.kernelLaunches = vm["launches"].as<int>();
   conf.nTests = vm["nruns"].as<int>();
   conf.streams = vm["streams"].as<int>();
-  
+
   conf.prime = vm["prime"].as<int>();
   if ((conf.prime > 0 && !is_prime(conf.prime))) {
     std::cerr << "Invalid prime number: " << conf.prime << std::endl;
@@ -98,20 +98,20 @@ bool parseArgs(o2::benchmark::benchmarkOpts& conf, int argc, const char* argv[])
     } else if (test == "copy") {
       conf.tests.push_back(Test::Copy);
     } else if (test == "rread") {
-      if(!vm["prime"].as<int>()) {
+      if (!vm["prime"].as<int>()) {
         std::cerr << "Prime number must be specified for rread test." << std::endl;
         exit(1);
       }
       conf.tests.push_back(Test::RandomRead);
     } else if (test == "rwrite") {
-      if(!vm["prime"].as<int>()) {
+      if (!vm["prime"].as<int>()) {
         std::cerr << "Prime number must be specified for rwrite test." << std::endl;
-        exit(1); 
+        exit(1);
       }
       conf.tests.push_back(Test::RandomWrite);
     } else if (test == "rcopy") {
-      if(!vm["prime"].as<int>()) {
-        std::cerr << "Prime number must be specified for rcopy test." << std::endl; 
+      if (!vm["prime"].as<int>()) {
+        std::cerr << "Prime number must be specified for rcopy test." << std::endl;
         exit(1);
       }
       conf.tests.push_back(Test::RandomCopy);

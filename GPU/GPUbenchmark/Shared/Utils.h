@@ -169,7 +169,7 @@ inline float computeThroughput(Test test, float result, float chunkSizeGB, int n
 {
   // https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html
   // Eff_bandwidth (GB/s) = (B_r + B_w) / (~1e9 * Time (s))
- 
+
   return 1e3 * chunkSizeGB * ntests / result;
 }
 
