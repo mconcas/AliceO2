@@ -26,6 +26,7 @@
 #include <boost/program_options.hpp>
 #include <vector>
 #include <string>
+#include <cmath>
 #include <TTree.h>
 #include <TFile.h>
 
@@ -169,18 +170,18 @@ inline float computeThroughput(Test test, float result, float chunkSizeGB, int n
 {
   // https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html
   // Eff_bandwidth (GB/s) = (B_r + B_w) / (~1e9 * Time (s))
- 
+
   return 1e3 * chunkSizeGB * ntests / result;
 }
 
 template <class chunk_t>
 inline size_t getBufferCapacity(float chunkSizeGB, int prime)
 {
-  auto chunkSizeBytes = static_cast<size_t>(GB * chunkSizeGB) & 0xFFFFFFFFFFFFF000;
+  auto chunkCapacity = (static_cast<size_t>(GB * chunkSizeGB) & 0xFFFFFFFFFFFFF000) / sizeof(chunk_t);
   if (!prime) {
-    return chunkSizeBytes / sizeof(chunk_t);
+    return chunkCapacity;
   } else {
-    return (chunkSizeBytes % prime == 0) ? (chunkSizeBytes - 0x1000) / sizeof(chunk_t) : chunkSizeBytes / sizeof(chunk_t);
+    return (chunkCapacity % prime == 0) ? (chunkCapacity - 0x1000) : chunkCapacity;
   }
 }
 
@@ -215,7 +216,7 @@ inline bool is_prime(const int n)
   if (n == 0 || n == 1) {
     isPrime = false;
   } else {
-    for (int i = 2; i <= n / 2; ++i) {
+    for (int i = 2; i <= sqrt(n); ++i) {
       if (n % i == 0) {
         isPrime = false;
         break;
