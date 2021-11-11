@@ -185,31 +185,6 @@ inline size_t getBufferCapacity(float chunkSizeGB, int prime)
   }
 }
 
-// LCG: https://rosettacode.org/wiki/Linear_congruential_generator
-class LCGRnd
-{
- public:
-  __host__ __device__ void seed(unsigned int s) { mSeed = s; }
-
- protected:
-  __host__ __device__ LCGRnd() : mSeed{0}, mA{0}, mC{0}, mM(2147483648) {}
-  __host__ __device__ int rnd() { return (mSeed = (mA * mSeed + mC) % mM); }
-
-  int mA, mC;
-  unsigned int mM, mSeed;
-};
-
-class BSDRnd : public LCGRnd
-{
- public:
-  __host__ __device__ BSDRnd()
-  {
-    mA = 1103515245;
-    mC = 12345;
-  }
-  __host__ __device__ int rnd() { return LCGRnd::rnd(); }
-};
-
 inline bool is_prime(const int n)
 {
   bool isPrime = true;
