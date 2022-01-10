@@ -278,8 +278,10 @@ void VertexerTraits::computeTracklets()
 
     LOG(info) << "Total tracklets 0-1 " << mTimeFrame->getTracklets()[0].size();
     LOG(info) << "Total tracklets 2-1 " << mTimeFrame->getTracklets()[1].size();
-    LOG(info) << "Found 0-1 in roframe " << rofId << ": " << mTimeFrame->getFoundTracklets(rofId, static_cast<int>(TrackletMode::Layer0Layer1)).size();
-    LOG(info) << "Found 2-1 in roframe " << rofId << ": " << mTimeFrame->getFoundTracklets(rofId, static_cast<int>(TrackletMode::Layer1Layer2)).size();
+    int sum01 = std::accumulate(mTimeFrame->getNFoundTracklets(rofId)[0].begin(), mTimeFrame->getNFoundTracklets(rofId)[0].end(), 0);
+    int sum12 = std::accumulate(mTimeFrame->getNFoundTracklets(rofId)[1].begin(), mTimeFrame->getNFoundTracklets(rofId)[1].end(), 0);
+    LOG(info) << "Found 0-1 in roframe " << rofId << ": " << sum01;
+    LOG(info) << "Found 2-1 in roframe " << rofId << ": " << sum12;
   }
 }
 
