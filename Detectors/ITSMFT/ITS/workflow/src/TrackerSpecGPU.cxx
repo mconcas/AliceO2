@@ -38,7 +38,6 @@
 #include "ITSReconstruction/FastMultEstConfig.h"
 #include "ITSReconstruction/FastMultEst.h"
 #include <fmt/format.h>
-#include "../../tracking/GPU/ITStrackingGPU/TimeFrameGPU.h"
 
 namespace o2
 {
@@ -218,7 +217,12 @@ void TrackerGPUDPL::run(ProcessingContext& pc)
   gsl::span<const unsigned char>::iterator pattIt = patterns.begin();
 
   gsl::span<itsmft::ROFRecord> rofspan(rofs);
-  mTracker->fillTimeFrameGPU(rofspan, compClusters, pattIt, mDict, labels);
+  if (!mTracker->getTimeFrameGPU()) {
+    LOG(info) << "NULL POINTERRRRRRRRRRRRRRRRRRRR";
+  }
+  mTracker->getTimeFrameGPU()->loadROFrameData(rofspan, compClusters, pattIt, mDict, labels);
+  mTracker->loadToDevice();
+
   // timeFrameGPU.loadROFrameData(rofspan, compClusters, pattIt, mDict, labels);
   pattIt = patterns.begin();
   std::vector<int> savedROF;

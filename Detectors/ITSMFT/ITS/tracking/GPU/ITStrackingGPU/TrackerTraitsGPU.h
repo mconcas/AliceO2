@@ -35,12 +35,17 @@ class TrackerTraitsGPU : public TrackerTraits
  public:
   TrackerTraitsGPU() = default;
   ~TrackerTraitsGPU() override = default;
-  template <class... T>
-  void fillTimeFrame(T&&... args);
+  void loadToDevice() override;
+  gpu::TimeFrameGPU<NLayers>* getTimeFrameGPU() override
+  {
+    std::cout << "SON IOOOOOOOOOOOOOOOO\n";
+    return &mTimeFrameGPU;
+  }
 
   // void computeLayerCells() final;
   // void computeLayerTracklets() final;
   // void refitTracks(const std::vector<std::vector<TrackingFrameInfo>>& tf, std::vector<TrackITSExt>& tracks) override;
+
  private:
   gpu::TimeFrameGPU<NLayers> mTimeFrameGPU;
 };

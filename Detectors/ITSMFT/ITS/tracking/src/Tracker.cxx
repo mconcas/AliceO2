@@ -100,6 +100,16 @@ void Tracker::computeCells()
   mTraits->computeLayerCells();
 }
 
+TimeFrame* Tracker::getTimeFrameGPU()
+{
+  return (TimeFrame*)mTraits->getTimeFrameGPU();
+}
+
+void Tracker::loadToDevice()
+{
+  mTraits->loadToDevice();
+}
+
 void Tracker::findCellsNeighbours(int& iteration)
 {
 #ifdef OPTIMISATION_OUTPUT

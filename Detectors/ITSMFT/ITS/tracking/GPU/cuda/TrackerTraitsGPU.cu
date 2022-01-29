@@ -57,10 +57,8 @@ GPUd() const int4 getBinsRect(const Cluster& currentCluster, const int layerInde
 }
 
 template <int NLayers>
-template <typename... T>
-void TrackerTraitsGPU<NLayers>::fillTimeFrame(T&&... args)
+void TrackerTraitsGPU<NLayers>::loadToDevice()
 {
-  mTimeFrameGPU.loadROFrameData(std::forward<T>(args)...);
   mTimeFrameGPU.loadToDevice();
 }
 
