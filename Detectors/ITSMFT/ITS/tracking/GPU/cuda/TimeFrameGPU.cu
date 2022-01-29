@@ -12,34 +12,6 @@
 
 #include "ITStrackingGPU/TimeFrameGPU.h"
 
-// #include "DataFormatsITSMFT/Cluster.h"
-// #include "DataFormatsITSMFT/CompCluster.h"
-// #include "DataFormatsITSMFT/ROFRecord.h"
-// #include "DataFormatsITSMFT/TopologyDictionary.h"
-// #include "ITSBase/GeometryTGeo.h"
-// #include "ITSMFTBase/SegmentationAlpide.h"
-
-// namespace
-// {
-// struct ClusterHelper {
-//   float phi;
-//   float r;
-//   int bin;
-//   int ind;
-// };
-
-// float MSangle(float mass, float p, float xX0)
-// {
-//   float beta = p / o2::gpu::GPUCommonMath::Hypot(mass, p);
-//   return 0.0136f * o2::gpu::GPUCommonMath::Sqrt(xX0) * (1.f + 0.038f * o2::gpu::GPUCommonMath::Log(xX0)) / (beta * p);
-// }
-
-// float Sq(float v)
-// {
-//   return v * v;
-// }
-// } // namespace
-
 namespace o2
 {
 namespace its
