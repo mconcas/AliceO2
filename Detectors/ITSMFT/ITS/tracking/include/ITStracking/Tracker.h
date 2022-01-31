@@ -71,6 +71,7 @@ class Tracker
 
   void clustersToTracks(
     std::function<void(std::string s)> = [](std::string s) { std::cout << s << std::endl; }, std::function<void(std::string s)> = [](std::string s) { std::cerr << s << std::endl; });
+  void clustersToTracksGPU(std::function<void(std::string s)> = [](std::string s) { std::cout << s << std::endl; });
   void setSmoothing(bool v) { mApplySmoothing = v; }
   bool getSmoothing() const { return mApplySmoothing; }
 

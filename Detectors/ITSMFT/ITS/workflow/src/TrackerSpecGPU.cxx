@@ -211,19 +211,13 @@ void TrackerGPUDPL::run(ProcessingContext& pc)
   const auto& multEstConf = FastMultEstConfig::Instance(); // parameters for mult estimation and cuts
   FastMultEst multEst;                                     // mult estimator
 
-  // o2::its::gpu::TimeFrameGPU<7> timeFrameGPU;
-  // mTracker->adoptTimeFrame(timeFrameGPU);
   // mTracker->setBz(mBz);
   gsl::span<const unsigned char>::iterator pattIt = patterns.begin();
-
   gsl::span<itsmft::ROFRecord> rofspan(rofs);
-  if (!mTracker->getTimeFrameGPU()) {
-    LOG(info) << "NULL POINTERRRRRRRRRRRRRRRRRRRR";
-  }
-  mTracker->getTimeFrameGPU()->loadROFrameData(rofspan, compClusters, pattIt, mDict, labels);
-  mTracker->loadToDevice();
 
-  // timeFrameGPU.loadROFrameData(rofspan, compClusters, pattIt, mDict, labels);
+  mTracker->getTimeFrameGPU()->setBz(mBz);
+  mTracker->getTimeFrameGPU()->loadROFrameData(rofspan, compClusters, pattIt, mDict, labels);
+
   pattIt = patterns.begin();
   std::vector<int> savedROF;
   auto logger = [&](std::string s) { LOG(info) << s; };
@@ -275,7 +269,8 @@ void TrackerGPUDPL::run(ProcessingContext& pc)
     }
     cutTotalMult += !multCut;
     processingMask.push_back(multCut);
-    // timeFrameGPU.addPrimaryVertices(vtxVecLoc);
+
+    mTracker->getTimeFrameGPU()->addPrimaryVertices(vtxVecLoc);
 
     vtxROF.setNEntries(vtxVecLoc.size());
     for (const auto& vtx : vtxVecLoc) {
@@ -289,19 +284,19 @@ void TrackerGPUDPL::run(ProcessingContext& pc)
   LOG(info) << fmt::format("\t - Cluster multiplicity selection rejected {}/{} ROFs", cutClusterMult, rofspan.size());
   LOG(info) << fmt::format("\t - Vertex multiplicity selection rejected {}/{} ROFs", cutVertexMult, rofspan.size());
   LOG(info) << fmt::format(" - Vertex seeding total elapsed time: {} ms for {} clusters in {} ROFs", vertexerElapsedTime, nclUsed, rofspan.size());
-  // LOG(info) << fmt::format(" - Beam position computed for the TF: {}, {}", timeFrameGPU.getBeamX(), timeFrameGPU.getBeamY());
+  LOG(info) << fmt::format(" - Beam position computed for the TF: {}, {}", mTracker->getTimeFrameGPU()->getBeamX(), mTracker->getTimeFrameGPU()->getBeamY());
 
-  // timeFrameGPU.setMultiplicityCutMask(processingMask);
-  // mTracker->clustersToTracks(logger);
-  // if (timeFrameGPU.hasBogusClusters()) {
-  //   LOG(warning) << fmt::format(" - The processed timeframe had {} clusters with wild z coordinates, check the dictionaries", timeFrameGPU.hasBogusClusters());
+  mTracker->getTimeFrameGPU()->setMultiplicityCutMask(processingMask);
+  mTracker->clustersToTracksGPU(logger);
+  // if (mTracker->getTimeFrameGPU()->hasBogusClusters()) {
+  //   LOG(warning) << fmt::format(" - The processed timeframe had {} clusters with wild z coordinates, check the dictionaries", mTracker->getTimeFrameGPU()->hasBogusClusters());
   // }
 
   for (unsigned int iROF{0}; iROF < rofs.size(); ++iROF) {
 
     auto& rof{rofs[iROF]};
-    // tracks = timeFrameGPU.getTracks(iROF);
-    // trackLabels = timeFrameGPU.getTracksLabel(iROF);
+    // tracks = mTracker->getTimeFrameGPU()->getTracks(iROF);
+    // trackLabels = mTracker->getTimeFrameGPU()->getTracksLabel(iROF);
     auto number{tracks.size()};
     auto first{allTracks.size()};
     int offset = -rof.getFirstEntry(); // cluster entry!!!

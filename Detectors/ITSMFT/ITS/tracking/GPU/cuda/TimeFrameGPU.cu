@@ -22,7 +22,6 @@ template <int NLayers>
 TimeFrameGPU<NLayers>::TimeFrameGPU()
 {
   for (auto iLayer{0}; iLayer < NLayers; ++iLayer) {
-    std::cout << "Built for layer: " << iLayer << std::endl;
     mClustersGPU[iLayer] = Vector<Cluster>{(int)5e5, (int)5e5};
     mTrackingFrameInfoGPU[iLayer] = Vector<TrackingFrameInfo>{(int)5e5, (int)5e5};
     mClusterExternalIndicesGPU[iLayer] = Vector<int>{(int)5e5, (int)5e5};
@@ -39,7 +38,6 @@ template <int NLayers>
 void TimeFrameGPU<NLayers>::loadToDevice()
 {
   for (auto iLayer{0}; iLayer < NLayers; ++iLayer) {
-    std::cout << "Loading layer: " << iLayer << std::endl;
     mClustersGPU[iLayer].reset(mClusters[iLayer].data(), mClusters[iLayer].size());
     mTrackingFrameInfoGPU[iLayer].reset(mTrackingFrameInfo[iLayer].data(), mTrackingFrameInfo[iLayer].size());
     mClusterExternalIndicesGPU[iLayer].reset(mClusterExternalIndices[iLayer].data(), mClusterExternalIndices[iLayer].size());
