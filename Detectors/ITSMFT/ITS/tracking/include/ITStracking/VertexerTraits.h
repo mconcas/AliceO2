@@ -48,9 +48,6 @@ using constants::its::LayersNumberVertexer;
 
 struct lightVertex {
   lightVertex(float x, float y, float z, std::array<float, 6> rms2, int cont, float avgdis2, int stamp);
-#ifdef _ALLOW_DEBUG_TREES_ITS_
-  lightVertex(float x, float y, float z, std::array<float, 6> rms2, int cont, float avgdis2, int stamp, int eId, float pur);
-#endif
   float mX;
   float mY;
   float mZ;
@@ -58,10 +55,6 @@ struct lightVertex {
   float mAvgDistance2;
   int mContributors;
   int mTimeStamp;
-#ifdef _ALLOW_DEBUG_TREES_ITS_
-  float mPurity;
-  int mEventId;
-#endif
 };
 
 struct ClusterMCLabelInfo {
@@ -82,22 +75,12 @@ enum class VertexerDebug : unsigned int {
 inline lightVertex::lightVertex(float x, float y, float z, std::array<float, 6> rms2, int cont, float avgdis2, int stamp) : mX{x}, mY{y}, mZ{z}, mRMS2{rms2}, mAvgDistance2{avgdis2}, mContributors{cont}, mTimeStamp{stamp}
 {
 }
-#ifdef _ALLOW_DEBUG_TREES_ITS_
-inline lightVertex::lightVertex(float x, float y, float z, std::array<float, 6> rms2, int cont, float avgdis2, int stamp, int eId, float pur) : mX{x}, mY{y}, mZ{z}, mRMS2{rms2}, mAvgDistance2{avgdis2}, mContributors{cont}, mTimeStamp{stamp}, mEventId{eId}, mPurity{pur}
-{
-}
-#endif
 
 class VertexerTraits
 {
  public:
-#ifdef _ALLOW_DEBUG_TREES_ITS_
-  VertexerTraits();
-  virtual ~VertexerTraits();
-#else
   VertexerTraits();
   ~VertexerTraits() = default;
-#endif
 
   GPUhd() static constexpr int4 getEmptyBinsRect()
   {
@@ -114,14 +97,6 @@ class VertexerTraits
   virtual void initialise(ROframe*);
   virtual void computeTracklets();
   virtual void computeTrackletMatching();
-#ifdef _ALLOW_DEBUG_TREES_ITS_
-  virtual void computeMCFiltering();
-  virtual void filterTrackletsWithMC(std::vector<Tracklet>&,
-                                     std::vector<Tracklet>&,
-                                     std::vector<int>&,
-                                     std::vector<int>&,
-                                     const int);
-#endif
   virtual void computeTrackletsPureMontecarlo();
   virtual void computeVertices();
   virtual void computeHistVertices();
@@ -155,11 +130,6 @@ class VertexerTraits
   std::array<std::vector<Cluster>, constants::its::LayersNumberVertexer> mClusters;
 
   unsigned int mDBGFlags = 0;
-
-#ifdef _ALLOW_DEBUG_TREES_ITS_
-  StandaloneDebugger* mDebugger;
-  std::vector<std::array<int, 2>> mAllowedTrackletPairs;
-#endif
 
   VertexingParameters mVrtParams;
   IndexTableUtils mIndexTableUtils;
