@@ -30,6 +30,9 @@
 #include "GPUCommonMath.h"
 #include "GPUCommonDef.h"
 
+class TFile;
+class TTree;
+
 namespace o2
 {
 class MCCompLabel;
@@ -80,7 +83,7 @@ class VertexerTraits
 {
  public:
   VertexerTraits();
-  ~VertexerTraits() = default;
+  ~VertexerTraits();
 
   GPUhd() static constexpr int4 getEmptyBinsRect()
   {
@@ -100,7 +103,7 @@ class VertexerTraits
   virtual void computeTrackletsPureMontecarlo();
   virtual void computeVertices();
   virtual void computeHistVertices();
-
+  virtual void finalize();
   void updateVertexingParameters(const VertexingParameters& vrtPar);
   VertexingParameters getVertexingParameters() const { return mVrtParams; }
   static const std::vector<std::pair<int, int>> selectClusters(const int* indexTable,
@@ -145,6 +148,11 @@ class VertexerTraits
   float mDeltaRadii10, mDeltaRadii21;
   float mMaxDirectorCosine3;
   std::vector<ClusterLines> mTrackletClusters;
+
+  // Debug
+  TFile* mFile;
+  TTree* mTree;
+  TTree* mTree_lines;
 };
 
 inline void VertexerTraits::initialise(ROframe* event)

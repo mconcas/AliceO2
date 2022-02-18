@@ -75,6 +75,8 @@ class Vertexer
   template <typename... T>
   void initialiseVertexer(T&&... args);
 
+  void finalizeVertexer();
+
   // Utils
   void dumpTraits();
   template <typename... T>
@@ -104,6 +106,11 @@ template <typename... T>
 void Vertexer::initialiseVertexer(T&&... args)
 {
   mTraits->initialise(std::forward<T>(args)...);
+}
+
+inline void Vertexer::finalizeVertexer()
+{
+  mTraits->finalize();
 }
 
 template <typename... T>

@@ -281,7 +281,7 @@ void TrackerDPL::run(ProcessingContext& pc)
     savedROF.push_back(roFrame);
     roFrame++;
   }
-
+  mVertexer->finalizeVertexer();
   LOG(info) << fmt::format(" - In total, multiplicity selection rejected {}/{} ROFs", cutTotalMult, rofspan.size());
   LOG(info) << fmt::format("\t - Cluster multiplicity selection rejected {}/{} ROFs", cutClusterMult, rofspan.size());
   LOG(info) << fmt::format("\t - Vertex multiplicity selection rejected {}/{} ROFs", cutVertexMult, rofspan.size());

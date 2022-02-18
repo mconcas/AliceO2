@@ -22,6 +22,11 @@
 #include "ITStracking/ROframe.h"
 #include "ITStracking/ClusterLines.h"
 #include "ITStracking/Tracklet.h"
+#include "Framework/Logger.h"
+
+// Debug
+#include "TFile.h"
+#include "TTree.h"
 
 #define LAYER0_TO_LAYER1 0
 #define LAYER1_TO_LAYER2 1
@@ -106,7 +111,6 @@ void trackletSelectionKernelSerial(
         const float deltaTanLambda{o2::gpu::GPUCommonMath::Abs(tracklets01[iTracklet01].tanLambda - tracklets12[iTracklet12].tanLambda)};
         const float deltaPhi{o2::gpu::GPUCommonMath::Abs(tracklets01[iTracklet01].phi - tracklets12[iTracklet12].phi)};
         if (deltaTanLambda < tanLambdaCut && deltaPhi < phiCut && validTracklets != maxTracklets) {
-          assert(tracklets01[iTracklet01].secondClusterIndex == tracklets12[iTracklet12].firstClusterIndex);
           destTracklets.emplace_back(tracklets01[iTracklet01], clustersNextLayer.data(), clustersCurrentLayer.data());
           ++validTracklets;
         }
@@ -119,6 +123,21 @@ void trackletSelectionKernelSerial(
 
 VertexerTraits::VertexerTraits() : mAverageClustersRadii{std::array<float, 3>{0.f, 0.f, 0.f}},
                                    mMaxDirectorCosine3{0.f}
+{
+  mFile = TFile::Open("artefacts_old.root", "recreate");
+  mTree = new TTree("tracklets", "old");
+  mTree_lines = new TTree("lines", "old");
+  mTree->Branch("clusters0", &mClusters[0]);
+  mTree->Branch("clusters1", &mClusters[1]);
+  mTree->Branch("clusters2", &mClusters[2]);
+  mTree->Branch("Tracklets0", &mComb01);
+  mTree->Branch("Tracklets1", &mComb12);
+  mTree_lines->Branch("Lines", &mTracklets);
+  mTree_lines->Branch("NTrackletCluster01", &mFoundTracklets01);
+  mTree_lines->Branch("NTrackletCluster12", &mFoundTracklets12);
+}
+
+VertexerTraits::~VertexerTraits()
 {
 }
 
@@ -264,6 +283,17 @@ void VertexerTraits::computeTracklets()
     mComb12,
     mFoundTracklets12,
     mIndexTableUtils);
+
+  // Dump on file
+  mTree->Fill();
+}
+
+void VertexerTraits::finalize()
+{
+  mFile->cd();
+  mTree->Write();
+  mTree_lines->Write();
+  mFile->Close();
 }
 
 void VertexerTraits::computeTrackletMatching()
@@ -278,6 +308,7 @@ void VertexerTraits::computeTrackletMatching()
     mTracklets,
     mVrtParams.tanLambdaCut,
     mVrtParams.phiCut);
+  mTree_lines->Fill();
 }
 
 void VertexerTraits::computeVertices()
