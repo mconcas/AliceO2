@@ -210,9 +210,6 @@ void TrackerDPL::run(ProcessingContext& pc)
   bool continuous = mGRP->isDetContinuousReadOut("ITS");
   LOG(info) << "ITSTracker RO: continuous=" << continuous;
 
-  // const auto& multEstConf = FastMultEstConfig::Instance(); // parameters for mult estimation and cuts
-  // FastMultEst multEst;                                     // mult estimator
-
   TimeFrame mTimeFrame;
   mTracker->adoptTimeFrame(mTimeFrame);
   mTracker->setBz(mBz);
@@ -227,8 +224,6 @@ void TrackerDPL::run(ProcessingContext& pc)
   auto logger = [&](std::string s) { LOG(info) << s; };
   int nclUsed = 0;
 
-  // std::vector<bool> processingMask;
-  // int cutClusterMult{0}, cutVertexMult{0}, cutTotalMult{0};
   float vertexerElapsedTime = mVertexer->clustersToVertices(false, logger);
   for (auto iRof{0}; iRof < rofspan.size(); ++iRof) {
     auto vtcs = mTimeFrame.getPrimaryVertices(iRof);
@@ -239,57 +234,6 @@ void TrackerDPL::run(ProcessingContext& pc)
       vertices.push_back(v);
     }
   }
-  // for (auto& rof : rofspan) {
-  //   // prepare in advance output ROFRecords, even if this ROF to be rejected
-  //   // int first = allTracks.size();
-
-  //   // for vertices output
-  //   auto& vtxROF = vertROFvec.emplace_back(rof); // register entry and number of vertices in the
-  //   vtxROF.setFirstEntry(vertices.size());       // dedicated ROFRecord
-  //   vtxROF.setNEntries(0);
-
-  //   // bool multCut = (multEstConf.cutMultClusLow <= 0 && multEstConf.cutMultClusHigh <= 0); // cut was requested
-  //   // if (!multCut) {
-  //   //   float mult = multEst.process(rof.getROFData(compClusters));
-  //   //   multCut = mult >= multEstConf.cutMultClusLow && mult <= multEstConf.cutMultClusHigh;
-  //   //   LOG(debug) << fmt::format("ROF {} rejected by the cluster multiplicity selection [{},{}]", processingMask.size(), multEstConf.cutMultClusLow, multEstConf.cutMultClusHigh);
-  //   //   cutClusterMult += !multCut;
-  //   // }
-
-  //   //   std::vector<Vertex> vtxVecLoc;
-  //   //   if (multCut) {
-  //   //     if (mRunVertexer) {
-  //   //       vertexerElapsedTime += mVertexer->clustersToVertices(false, logger);
-  //   //       auto allVerts = mVertexer->exportVertices();
-  //   //       multCut = allVerts.size() == 0;
-  //   //       for (const auto& vtx : allVerts) {
-  //   //         if (vtx.getNContributors() < multEstConf.cutMultVtxLow || (multEstConf.cutMultVtxHigh > 0 && vtx.getNContributors() > multEstConf.cutMultVtxHigh)) {
-  //   //           continue; // skip vertex of unwanted multiplicity
-  //   //         }
-  //   //         multCut = true; // At least one passes the selection
-  //   //         vtxVecLoc.push_back(vtx);
-  //   //       }
-  //   //     } else {
-  //   //       vtxVecLoc.emplace_back(Vertex());
-  //   //       vtxVecLoc.back().setNContributors(1);
-  //   //     }
-
-  //   //     if (!multCut) {
-  //   //       LOG(debug) << fmt::format("ROF {} rejected by the vertex multiplicity selection [{},{}]", processingMask.size(), multEstConf.cutMultVtxLow, multEstConf.cutMultVtxHigh);
-  //   //       cutVertexMult++;
-  //   //     }
-  //   //   }
-  //   // cutTotalMult += !multCut;
-  //   // processingMask.push_back(multCut);
-  //   // mTimeFrame.addPrimaryVertices(vtxVecLoc);
-
-  //   // vtxROF.setNEntries(vtxVecLoc.size());
-  //   // for (const auto& vtx : vtxVecLoc) {
-  //   //   vertices.push_back(vtx);
-  //   // }
-  //   // savedROF.push_back(roFrame);
-  //   // roFrame++;
-  // }
 
   LOG(info) << fmt::format(" - In total, multiplicity selection rejected {}/{} ROFs", mTimeFrame.getROfCutAllMult(), rofspan.size());
   LOG(info) << fmt::format("\t - Cluster multiplicity selection rejected {}/{} ROFs", mTimeFrame.getROfCutClusterMult(), rofspan.size());
@@ -297,7 +241,6 @@ void TrackerDPL::run(ProcessingContext& pc)
   LOG(info) << fmt::format(" - Vertex seeding total elapsed time: {} ms for {} clusters in {} ROFs", vertexerElapsedTime, nclUsed, rofspan.size());
   LOG(info) << fmt::format(" - Beam position computed for the TF: {}, {}", mTimeFrame.getBeamX(), mTimeFrame.getBeamY());
 
-  // mTimeFrame.setMultiplicityCutMask(processingMask);
   mTracker->clustersToTracks(logger);
   if (mTimeFrame.hasBogusClusters()) {
     LOG(warning) << fmt::format(" - The processed timeframe had {} clusters with wild z coordinates, check the dictionaries", mTimeFrame.hasBogusClusters());
