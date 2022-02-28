@@ -37,8 +37,8 @@
 #include "CommonDataFormat/IRFrame.h"
 #include "DetectorsCommonDataFormats/DetectorNameConf.h"
 
-// #include "ITSReconstruction/FastMultEstConfig.h"
-// #include "ITSReconstruction/FastMultEst.h"
+#include "ITSReconstruction/FastMultEstConfig.h"
+#include "ITSReconstruction/FastMultEst.h"
 #include <fmt/format.h>
 
 namespace o2
@@ -210,6 +210,9 @@ void TrackerDPL::run(ProcessingContext& pc)
   bool continuous = mGRP->isDetContinuousReadOut("ITS");
   LOG(info) << "ITSTracker RO: continuous=" << continuous;
 
+  const auto& multEstConf = FastMultEstConfig::Instance(); // parameters for mult estimation and cuts
+  FastMultEst multEst;                                     // mult estimator
+
   TimeFrame mTimeFrame;
   mTracker->adoptTimeFrame(mTimeFrame);
   mTracker->setBz(mBz);
@@ -224,20 +227,57 @@ void TrackerDPL::run(ProcessingContext& pc)
   auto logger = [&](std::string s) { LOG(info) << s; };
   int nclUsed = 0;
 
-  float vertexerElapsedTime = mVertexer->clustersToVertices(false, logger);
+  std::vector<bool> processingMask;
+  int cutClusterMult{0}, cutVertexMult{0}, cutTotalMult{0};
+  for (size_t iRof{0}; iRof < rofspan.size(); ++iRof) {
+    auto& rof = rofspan[iRof];
+    bool multCut = (multEstConf.cutMultClusLow <= 0 && multEstConf.cutMultClusHigh <= 0); // cut was requested
+    if (!multCut) {
+      float mult = multEst.process(rof.getROFData(compClusters));
+      multCut = mult >= multEstConf.cutMultClusLow && mult <= multEstConf.cutMultClusHigh;
+      LOG(info) << fmt::format("ROF {} rejected by the cluster multiplicity selection [{},{}]", processingMask.size(), multEstConf.cutMultClusLow, multEstConf.cutMultClusHigh);
+      cutClusterMult += !multCut;
+      processingMask.push_back(multCut);
+    }
+  }
+  mTimeFrame.setMultiplicityCutMask(processingMask);
+
+  float vertexerElapsedTime{0.f};
+  if (mRunVertexer) {
+    // Run seeding vertexer
+    vertexerElapsedTime = mVertexer->clustersToVertices(false, logger);
+  }
+
   for (auto iRof{0}; iRof < rofspan.size(); ++iRof) {
-    auto vtcs = mTimeFrame.getPrimaryVertices(iRof);
+    std::vector<Vertex> vtxVecLoc;
     auto& vtxROF = vertROFvec.emplace_back(rofspan[iRof]);
     vtxROF.setFirstEntry(vertices.size());
-    vtxROF.setNEntries(vtcs.size());
-    for (auto& v : vtcs) {
-      vertices.push_back(v);
+    if (mRunVertexer) {
+      auto vtxSpan = mTimeFrame.getPrimaryVertices(iRof);
+      vtxROF.setNEntries(vtxSpan.size());
+      for (auto& v : vtxSpan) {
+        vertices.push_back(v);
+      }
+      if (processingMask[iRof] && !vtxSpan.size()) { // passed selection in clusters and not in vertex multiplicity
+        LOG(info) << fmt::format("ROF {} rejected by the vertex multiplicity selection [{},{}]",
+                                 processingMask.size(),
+                                 mVertexer->getVertParameters().cutMultVtxLow,
+                                 mVertexer->getVertParameters().cutMultVtxHigh);
+        cutVertexMult++;
+      }
+    } else { // cosmics
+      vtxVecLoc.emplace_back(Vertex());
+      vtxVecLoc.back().setNContributors(1);
+      vtxROF.setNEntries(vtxVecLoc.size());
+      for (auto& v : vtxVecLoc) {
+        vertices.push_back(v);
+      }
     }
   }
 
-  LOG(info) << fmt::format(" - In total, multiplicity selection rejected {}/{} ROFs", mTimeFrame.getROfCutAllMult(), rofspan.size());
-  LOG(info) << fmt::format("\t - Cluster multiplicity selection rejected {}/{} ROFs", mTimeFrame.getROfCutClusterMult(), rofspan.size());
-  LOG(info) << fmt::format("\t - Vertex multiplicity selection rejected {}/{} ROFs", mTimeFrame.getROfCutVertexMult(), rofspan.size());
+  LOG(info) << fmt::format(" - In total, multiplicity selection rejected {}/{} ROFs", cutTotalMult, rofspan.size());
+  LOG(info) << fmt::format("\t - Cluster multiplicity selection rejected {}/{} ROFs", cutClusterMult, rofspan.size());
+  LOG(info) << fmt::format("\t - Vertex multiplicity selection rejected {}/{} ROFs", cutVertexMult, rofspan.size());
   LOG(info) << fmt::format(" - Vertex seeding total elapsed time: {} ms for {} clusters in {} ROFs", vertexerElapsedTime, nclUsed, rofspan.size());
   LOG(info) << fmt::format(" - Beam position computed for the TF: {}, {}", mTimeFrame.getBeamX(), mTimeFrame.getBeamY());
 

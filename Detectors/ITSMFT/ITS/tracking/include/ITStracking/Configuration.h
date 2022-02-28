@@ -98,8 +98,8 @@ struct VertexingParameters {
   int ZBins{256};
   int PhiBins{128};
 
-  float zCut = 0.002f;   //0.002f
-  float phiCut = 0.005f; //0.005f
+  float zCut = 0.002f;   // 0.002f
+  float phiCut = 0.005f; // 0.005f
   float pairCut = 0.04f;
   float clusterCut = 0.8f;
   float histPairCut = 0.04f;
@@ -107,6 +107,10 @@ struct VertexingParameters {
   int clusterContributorsCut = 16;
   int phiSpan = -1;
   int zSpan = -1;
+
+  // Former FastMultEstConfig
+  float cutMultVtxLow = -1;  /// reject seed vertex if its multiplicity below this value (no cut if <0)
+  float cutMultVtxHigh = -1; /// reject seed vertex if its multiplicity above this value (no cut if <0)
 };
 
 struct VertexerHistogramsConfiguration {
