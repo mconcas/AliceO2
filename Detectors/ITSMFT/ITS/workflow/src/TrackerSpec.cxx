@@ -209,7 +209,6 @@ void TrackerDPL::run(ProcessingContext& pc)
 
   bool continuous = mGRP->isDetContinuousReadOut("ITS");
   LOG(info) << "ITSTracker RO: continuous=" << continuous;
-
   const auto& multEstConf = FastMultEstConfig::Instance(); // parameters for mult estimation and cuts
   FastMultEst multEst;                                     // mult estimator
 
@@ -237,8 +236,8 @@ void TrackerDPL::run(ProcessingContext& pc)
       multCut = mult >= multEstConf.cutMultClusLow && mult <= multEstConf.cutMultClusHigh;
       LOG(info) << fmt::format("ROF {} rejected by the cluster multiplicity selection [{},{}]", processingMask.size(), multEstConf.cutMultClusLow, multEstConf.cutMultClusHigh);
       cutClusterMult += !multCut;
-      processingMask.push_back(multCut);
     }
+    processingMask.push_back(multCut);
   }
   mTimeFrame.setMultiplicityCutMask(processingMask);
 
@@ -249,20 +248,26 @@ void TrackerDPL::run(ProcessingContext& pc)
   }
 
   for (auto iRof{0}; iRof < rofspan.size(); ++iRof) {
+    bool multCut;
     std::vector<Vertex> vtxVecLoc;
     auto& vtxROF = vertROFvec.emplace_back(rofspan[iRof]);
     vtxROF.setFirstEntry(vertices.size());
     if (mRunVertexer) {
       auto vtxSpan = mTimeFrame.getPrimaryVertices(iRof);
       vtxROF.setNEntries(vtxSpan.size());
+      multCut = vtxSpan.size() == 0;
       for (auto& v : vtxSpan) {
+        if (v.getNContributors() < multEstConf.cutMultVtxLow || (multEstConf.cutMultVtxHigh > 0 && v.getNContributors() > multEstConf.cutMultVtxHigh)) {
+          continue; // skip vertex of unwanted multiplicity
+        }
+        multCut = true;
         vertices.push_back(v);
       }
-      if (processingMask[iRof] && !vtxSpan.size()) { // passed selection in clusters and not in vertex multiplicity
+      if (processingMask[iRof] && !multCut) { // passed selection in clusters and not in vertex multiplicity
         LOG(info) << fmt::format("ROF {} rejected by the vertex multiplicity selection [{},{}]",
                                  processingMask.size(),
-                                 mVertexer->getVertParameters().cutMultVtxLow,
-                                 mVertexer->getVertParameters().cutMultVtxHigh);
+                                 multEstConf.cutMultVtxLow,
+                                 multEstConf.cutMultVtxHigh);
         cutVertexMult++;
       }
     } else { // cosmics

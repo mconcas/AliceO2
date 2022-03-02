@@ -107,10 +107,6 @@ struct VertexingParameters {
   int clusterContributorsCut = 16;
   int phiSpan = -1;
   int zSpan = -1;
-
-  // Former FastMultEstConfig
-  float cutMultVtxLow = -1;  /// reject seed vertex if its multiplicity below this value (no cut if <0)
-  float cutMultVtxHigh = -1; /// reject seed vertex if its multiplicity above this value (no cut if <0)
 };
 
 struct VertexerHistogramsConfiguration {

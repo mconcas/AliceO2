@@ -380,9 +380,6 @@ void VertexerTraits::computeVertices()
     }
     std::vector<Vertex> vertices;
     for (auto& vertex : mVertices) {
-      if (vertex.mContributors < mVrtParams.cutMultVtxLow || (mVrtParams.cutMultVtxHigh > 0 && vertex.mContributors > mVrtParams.cutMultVtxHigh)) {
-        continue; // skip vertex of unwanted multiplicity
-      }
       vertices.emplace_back(o2::math_utils::Point3D<float>(vertex.mX, vertex.mY, vertex.mZ), vertex.mRMS2, vertex.mContributors, vertex.mAvgDistance2);
       vertices.back().setTimeStamp(vertex.mTimeStamp);
     }

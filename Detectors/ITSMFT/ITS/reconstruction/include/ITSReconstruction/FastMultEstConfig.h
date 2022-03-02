@@ -36,6 +36,8 @@ struct FastMultEstConfig : public o2::conf::ConfigurableParamHelper<FastMultEstC
   // cuts to reject to low or too high mult events
   float cutMultClusLow = 0;   /// reject ROF with estimated cluster mult. below this value (no cut if <0)
   float cutMultClusHigh = -1; /// reject ROF with estimated cluster mult. above this value (no cut if <0)
+  float cutMultVtxLow = -1;   /// reject seed vertex if its multiplicity below this value (no cut if <0)
+  float cutMultVtxHigh = -1;  /// reject seed vertex if its multiplicity above this value (no cut if <0)
 
   O2ParamDef(FastMultEstConfig, "fastMultConfig");
 };
