@@ -17,179 +17,179 @@ void printClusters(o2::its::Cluster&, o2::its::Cluster&);
 
 void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::string file2 = "artefacts_tf.root")
 {
-  TFile* old_data = TFile::Open(file1.data(), "read");
-  TFile* new_data = TFile::Open(file2.data(), "read");
-  TTree* old_Tree_tracklets = (TTree*)old_data->Get("tracklets");
-  TTree* new_Tree_tracklets = (TTree*)new_data->Get("tracklets");
-  TTree* old_Tree_lines = (TTree*)old_data->Get("lines");
-  TTree* new_Tree_lines = (TTree*)new_data->Get("lines");
+  TFile* file1_data = TFile::Open(file1.data(), "read");
+  TFile* file2_data = TFile::Open(file2.data(), "read");
+  TTree* file1_Tree_tracklets = (TTree*)file1_data->Get("tracklets");
+  TTree* file2_Tree_tracklets = (TTree*)file2_data->Get("tracklets");
+  TTree* file1_Tree_lines = (TTree*)file1_data->Get("lines");
+  TTree* file2_Tree_lines = (TTree*)file2_data->Get("lines");
 
-  // Old  data Trees
-  std::vector<o2::its::Tracklet>* old_tracklets01 = nullptr;
-  old_Tree_tracklets->SetBranchAddress("Tracklets0", &old_tracklets01);
-  std::vector<o2::its::Tracklet>* old_tracklets12 = nullptr;
-  old_Tree_tracklets->SetBranchAddress("Tracklets1", &old_tracklets12);
-  std::vector<o2::its::Cluster>* old_Clusters0 = nullptr;
-  old_Tree_tracklets->SetBranchAddress("clusters0", &old_Clusters0);
-  std::vector<o2::its::Cluster>* old_Clusters1 = nullptr;
-  old_Tree_tracklets->SetBranchAddress("clusters1", &old_Clusters1);
-  std::vector<o2::its::Cluster>* old_Clusters2 = nullptr;
-  old_Tree_tracklets->SetBranchAddress("clusters2", &old_Clusters2);
-  std::vector<o2::its::Line>* old_lines = nullptr;
-  old_Tree_lines->SetBranchAddress("Lines", &old_lines);
-  std::vector<int>* old_N_tracklets01 = nullptr;
-  old_Tree_lines->SetBranchAddress("NTrackletCluster01", &old_N_tracklets01);
-  std::vector<int>* old_N_tracklets12 = nullptr;
-  old_Tree_lines->SetBranchAddress("NTrackletCluster12", &old_N_tracklets12);
+  // file 1  data Trees
+  std::vector<o2::its::Tracklet>* file1_tracklets01 = nullptr;
+  file1_Tree_tracklets->SetBranchAddress("Tracklets0", &file1_tracklets01);
+  std::vector<o2::its::Tracklet>* file1_tracklets12 = nullptr;
+  file1_Tree_tracklets->SetBranchAddress("Tracklets1", &file1_tracklets12);
+  std::vector<o2::its::Cluster>* file1_Clusters0 = nullptr;
+  file1_Tree_tracklets->SetBranchAddress("clusters0", &file1_Clusters0);
+  std::vector<o2::its::Cluster>* file1_Clusters1 = nullptr;
+  file1_Tree_tracklets->SetBranchAddress("clusters1", &file1_Clusters1);
+  std::vector<o2::its::Cluster>* file1_Clusters2 = nullptr;
+  file1_Tree_tracklets->SetBranchAddress("clusters2", &file1_Clusters2);
+  std::vector<o2::its::Line>* file1_lines = nullptr;
+  file1_Tree_lines->SetBranchAddress("Lines", &file1_lines);
+  std::vector<int>* file1_N_tracklets01 = nullptr;
+  file1_Tree_lines->SetBranchAddress("NTrackletCluster01", &file1_N_tracklets01);
+  std::vector<int>* file1_N_tracklets12 = nullptr;
+  file1_Tree_lines->SetBranchAddress("NTrackletCluster12", &file1_N_tracklets12);
 
-  // New data Trees
-  std::vector<o2::its::Tracklet>* tf_tracklets01 = nullptr;
-  new_Tree_tracklets->SetBranchAddress("Tracklets0", &tf_tracklets01);
-  std::vector<o2::its::Tracklet>* tf_tracklets12 = nullptr;
-  new_Tree_tracklets->SetBranchAddress("Tracklets1", &tf_tracklets12);
-  std::vector<o2::its::Cluster>* tf_Clusters0 = nullptr;
-  new_Tree_tracklets->SetBranchAddress("clusters0", &tf_Clusters0);
-  std::vector<o2::its::Cluster>* tf_Clusters1 = nullptr;
-  new_Tree_tracklets->SetBranchAddress("clusters1", &tf_Clusters1);
-  std::vector<o2::its::Cluster>* tf_Clusters2 = nullptr;
-  new_Tree_tracklets->SetBranchAddress("clusters2", &tf_Clusters2);
-  std::vector<o2::its::Line>* tf_lines = nullptr;
-  new_Tree_lines->SetBranchAddress("Lines", &tf_lines);
-  std::vector<int>* tf_N_tracklets01 = nullptr;
-  new_Tree_lines->SetBranchAddress("NTrackletCluster01", &tf_N_tracklets01);
-  std::vector<int>* tf_N_tracklets12 = nullptr;
-  new_Tree_lines->SetBranchAddress("NTrackletCluster12", &tf_N_tracklets12);
+  // file2 data Trees
+  std::vector<o2::its::Tracklet>* file2_tracklets01 = nullptr;
+  file2_Tree_tracklets->SetBranchAddress("Tracklets0", &file2_tracklets01);
+  std::vector<o2::its::Tracklet>* file2_tracklets12 = nullptr;
+  file2_Tree_tracklets->SetBranchAddress("Tracklets1", &file2_tracklets12);
+  std::vector<o2::its::Cluster>* file2_Clusters0 = nullptr;
+  file2_Tree_tracklets->SetBranchAddress("clusters0", &file2_Clusters0);
+  std::vector<o2::its::Cluster>* file2_Clusters1 = nullptr;
+  file2_Tree_tracklets->SetBranchAddress("clusters1", &file2_Clusters1);
+  std::vector<o2::its::Cluster>* file2_Clusters2 = nullptr;
+  file2_Tree_tracklets->SetBranchAddress("clusters2", &file2_Clusters2);
+  std::vector<o2::its::Line>* file2_lines = nullptr;
+  file2_Tree_lines->SetBranchAddress("Lines", &file2_lines);
+  std::vector<int>* file2_N_tracklets01 = nullptr;
+  file2_Tree_lines->SetBranchAddress("NTrackletCluster01", &file2_N_tracklets01);
+  std::vector<int>* file2_N_tracklets12 = nullptr;
+  file2_Tree_lines->SetBranchAddress("NTrackletCluster12", &file2_N_tracklets12);
 
-  int old_entries = old_Tree_tracklets->GetEntriesFast();
-  int new_entries = new_Tree_tracklets->GetEntriesFast();
-  // assert(old_entries == new_entries);
-  if (old_entries != new_entries) {
-    LOGP(fatal, "Old entries: {} New entries: {}", old_entries, new_entries);
+  int file1_entries = file1_Tree_tracklets->GetEntriesFast();
+  int file2_entries = file2_Tree_tracklets->GetEntriesFast();
+  // assert(file1_entries == file2_entries);
+  if (file1_entries != file2_entries) {
+    LOGP(fatal, "file 1 entries: {} file2 entries: {}", file1_entries, file2_entries);
   }
-  for (int iEntry = 0; iEntry < old_entries; iEntry++) {
-    old_Tree_tracklets->GetEntry(iEntry);
-    new_Tree_tracklets->GetEntry(iEntry);
-    LOGP(info, "Entry {}: clusters: {} <==> {} ", iEntry, old_Clusters0->size(), tf_Clusters0->size());
+  for (int iEntry = 0; iEntry < file1_entries; iEntry++) {
+    file1_Tree_tracklets->GetEntry(iEntry);
+    file2_Tree_tracklets->GetEntry(iEntry);
+    LOGP(info, "Entry {}: clusters: {} <==> {} ", iEntry, file1_Clusters0->size(), file2_Clusters0->size());
     // Clusters
-    if (old_Clusters0->size() != tf_Clusters0->size()) {
-      LOGP(fatal, "old: N Clusters L0={}, tf: N Clusters L0={}", old_Clusters0->size(), tf_Clusters0->size());
+    if (file1_Clusters0->size() != file2_Clusters0->size()) {
+      LOGP(fatal, "old: N Clusters L0={}, tf: N Clusters L0={}", file1_Clusters0->size(), file2_Clusters0->size());
     } else {
-      std::sort(old_Clusters0->begin(), old_Clusters0->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
-      std::sort(tf_Clusters0->begin(), tf_Clusters0->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
-      for (size_t iCl{0}; iCl < old_Clusters0->size(); ++iCl) {
-        if (!((*old_Clusters0)[iCl] == (*tf_Clusters0)[iCl])) {
+      // std::sort(file1_Clusters0->begin(), file1_Clusters0->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
+      // std::sort(file2_Clusters0->begin(), file2_Clusters0->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
+      for (size_t iCl{0}; iCl < file1_Clusters0->size(); ++iCl) {
+        if (!((*file1_Clusters0)[iCl] == (*file2_Clusters0)[iCl])) {
           LOGP(info, "\nPrevious data:");
-          old_Tree_tracklets->GetEntry(iEntry - 1);
-          new_Tree_tracklets->GetEntry(iEntry - 1);
-          printClusters((*old_Clusters0).back(), (*tf_Clusters0).back());
-          old_Tree_tracklets->GetEntry(iEntry);
-          new_Tree_tracklets->GetEntry(iEntry);
+          file1_Tree_tracklets->GetEntry(iEntry - 1);
+          file2_Tree_tracklets->GetEntry(iEntry - 1);
+          printClusters((*file1_Clusters0).back(), (*file2_Clusters0).back());
+          file1_Tree_tracklets->GetEntry(iEntry);
+          file2_Tree_tracklets->GetEntry(iEntry);
           LOGP(info, "\nCurrent data:");
-          printClusters((*old_Clusters0)[iCl], (*tf_Clusters0)[iCl]);
+          printClusters((*file1_Clusters0)[iCl], (*file2_Clusters0)[iCl]);
           LOGP(info, "\nNext data:");
-          printClusters((*old_Clusters0)[iCl + 1], (*tf_Clusters0)[iCl + 1]);
+          printClusters((*file1_Clusters0)[iCl + 1], (*file2_Clusters0)[iCl + 1]);
 
-          LOGP(fatal, "Clusters L0 mismatch at position {}/{}", iCl, old_Clusters0->size());
+          LOGP(fatal, "Clusters L0 mismatch at position {}/{}", iCl, file1_Clusters0->size());
         }
       }
     };
-    if (old_Clusters1->size() != tf_Clusters1->size()) {
-      LOGP(fatal, "old: N Clusters L1={}, tf: N Clusters L1={}", old_Clusters1->size(), tf_Clusters1->size());
+    if (file1_Clusters1->size() != file2_Clusters1->size()) {
+      LOGP(fatal, "old: N Clusters L1={}, tf: N Clusters L1={}", file1_Clusters1->size(), file2_Clusters1->size());
     } else {
-      std::sort(old_Clusters1->begin(), old_Clusters1->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
-      std::sort(tf_Clusters1->begin(), tf_Clusters1->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
-      for (size_t iCl{0}; iCl < old_Clusters1->size(); ++iCl) {
-        if (!((*old_Clusters1)[iCl] == (*tf_Clusters1)[iCl])) {
-          printCluster((*old_Clusters1)[iCl]);
-          printCluster((*tf_Clusters1)[iCl]);
+      // std::sort(file1_Clusters1->begin(), file1_Clusters1->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
+      // std::sort(file2_Clusters1->begin(), file2_Clusters1->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
+      for (size_t iCl{0}; iCl < file1_Clusters1->size(); ++iCl) {
+        if (!((*file1_Clusters1)[iCl] == (*file2_Clusters1)[iCl])) {
+          printCluster((*file1_Clusters1)[iCl]);
+          printCluster((*file2_Clusters1)[iCl]);
           LOGP(fatal, "Clusters L1 mismatch");
         }
       }
     };
-    if (old_Clusters2->size() != tf_Clusters2->size()) {
-      LOGP(fatal, "old: N Clusters L2={}, tf: N Clusters L2={}", old_Clusters2->size(), tf_Clusters2->size());
+    if (file1_Clusters2->size() != file2_Clusters2->size()) {
+      LOGP(fatal, "old: N Clusters L2={}, tf: N Clusters L2={}", file1_Clusters2->size(), file2_Clusters2->size());
     } else {
-      std::sort(old_Clusters2->begin(), old_Clusters2->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
-      std::sort(tf_Clusters2->begin(), tf_Clusters2->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
-      for (size_t iCl{0}; iCl < old_Clusters2->size(); ++iCl) {
-        if (!((*old_Clusters2)[iCl] == (*tf_Clusters2)[iCl])) {
-          printCluster((*old_Clusters2)[iCl]);
-          printCluster((*tf_Clusters2)[iCl]);
+      // std::sort(file1_Clusters2->begin(), file1_Clusters2->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
+      // std::sort(file2_Clusters2->begin(), file2_Clusters2->end(), [](o2::its::Cluster& c1, o2::its::Cluster& c2) { return c1.xCoordinate < c2.xCoordinate; });
+      for (size_t iCl{0}; iCl < file1_Clusters2->size(); ++iCl) {
+        if (!((*file1_Clusters2)[iCl] == (*file2_Clusters2)[iCl])) {
+          printCluster((*file1_Clusters2)[iCl]);
+          printCluster((*file2_Clusters2)[iCl]);
           LOGP(fatal, "Clusters L2 mismatch");
         }
       }
     };
     // Tracklets
-    if (old_tracklets01->size() != tf_tracklets01->size()) {
-      auto max_range = std::max(old_tracklets01->size(), tf_tracklets01->size());
-      auto min_range = std::min(old_tracklets01->size(), tf_tracklets01->size());
+    if (file1_tracklets01->size() != file2_tracklets01->size()) {
+      auto max_range = std::max(file1_tracklets01->size(), file2_tracklets01->size());
+      auto min_range = std::min(file1_tracklets01->size(), file2_tracklets01->size());
       for (size_t iTracklet{0}; iTracklet < max_range; ++iTracklet) {
         if (iTracklet < min_range) {
-          LOGP(fatal, "[Tracklets]: old_idxs: {} {}, new_idxs: {} {}", (*old_tracklets01)[iTracklet].firstClusterIndex, (*old_tracklets01)[iTracklet].secondClusterIndex, (*tf_tracklets01)[iTracklet].firstClusterIndex, (*tf_tracklets01)[iTracklet].secondClusterIndex);
+          LOGP(fatal, "[Tracklets]: old_idxs: {} {}, new_idxs: {} {}", (*file1_tracklets01)[iTracklet].firstClusterIndex, (*file1_tracklets01)[iTracklet].secondClusterIndex, (*file2_tracklets01)[iTracklet].firstClusterIndex, (*file2_tracklets01)[iTracklet].secondClusterIndex);
         } else {
-          LOGP(fatal, "[Tracklets]: old_idxs: {} {}, new_idxs: - -", (*old_tracklets01)[iTracklet].firstClusterIndex, (*old_tracklets01)[iTracklet].secondClusterIndex);
+          LOGP(fatal, "[Tracklets]: old_idxs: {} {}, new_idxs: - -", (*file1_tracklets01)[iTracklet].firstClusterIndex, (*file1_tracklets01)[iTracklet].secondClusterIndex);
         }
       }
       continue;
     }
-    if (old_tracklets12->size() != tf_tracklets12->size()) {
-      LOGP(fatal, "[Tracklets]: old Tracklets1 size: {} new Tracklets1 size: {}", old_tracklets12->size(), tf_tracklets12->size());
+    if (file1_tracklets12->size() != file2_tracklets12->size()) {
+      LOGP(fatal, "[Tracklets]: file 1 Tracklets1 size: {} file2 Tracklets1 size: {}", file1_tracklets12->size(), file2_tracklets12->size());
       continue;
     }
-    std::sort(old_tracklets01->begin(), old_tracklets01->end(), [](o2::its::Tracklet& c1, o2::its::Tracklet& c2) { return c1.tanLambda < c2.tanLambda; });
-    std::sort(tf_tracklets01->begin(), tf_tracklets01->end(), [](o2::its::Tracklet& c1, o2::its::Tracklet& c2) { return c1.tanLambda < c2.tanLambda; });
-    for (size_t iTracklet{0}; iTracklet < old_tracklets01->size(); ++iTracklet) {
-      if ((*old_tracklets01)[iTracklet] != (*tf_tracklets01)[iTracklet]) {
-        printTracklet((*old_tracklets01)[iTracklet]);
-        printTracklet((*tf_tracklets01)[iTracklet]);
+    // std::sort(file1_tracklets01->begin(), file1_tracklets01->end(), [](o2::its::Tracklet& c1, o2::its::Tracklet& c2) { return c1.tanLambda < c2.tanLambda; });
+    // std::sort(file2_tracklets01->begin(), file2_tracklets01->end(), [](o2::its::Tracklet& c1, o2::its::Tracklet& c2) { return c1.tanLambda < c2.tanLambda; });
+    for (size_t iTracklet{0}; iTracklet < file1_tracklets01->size(); ++iTracklet) {
+      if ((*file1_tracklets01)[iTracklet] != (*file2_tracklets01)[iTracklet]) {
+        printTracklet((*file1_tracklets01)[iTracklet]);
+        printTracklet((*file2_tracklets01)[iTracklet]);
         LOGP(fatal, "[Tracklets 01]: Tracklets0 mismatch at index {}", iTracklet);
       }
     }
-    for (size_t iTracklet{0}; iTracklet < old_tracklets12->size(); ++iTracklet) {
-      std::sort(old_tracklets12->begin(), old_tracklets12->end(), [](o2::its::Tracklet& c1, o2::its::Tracklet& c2) { return c1.tanLambda < c2.tanLambda; });
-      std::sort(tf_tracklets12->begin(), tf_tracklets12->end(), [](o2::its::Tracklet& c1, o2::its::Tracklet& c2) { return c1.tanLambda < c2.tanLambda; });
-      if ((*old_tracklets12)[iTracklet] != (*tf_tracklets12)[iTracklet]) {
-        printTracklet((*old_tracklets12)[iTracklet]);
-        printTracklet((*tf_tracklets12)[iTracklet]);
+    for (size_t iTracklet{0}; iTracklet < file1_tracklets12->size(); ++iTracklet) {
+      // std::sort(file1_tracklets12->begin(), file1_tracklets12->end(), [](o2::its::Tracklet& c1, o2::its::Tracklet& c2) { return c1.tanLambda < c2.tanLambda; });
+      // std::sort(file2_tracklets12->begin(), file2_tracklets12->end(), [](o2::its::Tracklet& c1, o2::its::Tracklet& c2) { return c1.tanLambda < c2.tanLambda; });
+      if ((*file1_tracklets12)[iTracklet] != (*file2_tracklets12)[iTracklet]) {
+        printTracklet((*file1_tracklets12)[iTracklet]);
+        printTracklet((*file2_tracklets12)[iTracklet]);
         LOGP(fatal, "[Tracklets 12]: Tracklets1 mismatch at index {}", iTracklet);
       }
     }
 
     // Lines
-    old_Tree_lines->GetEntry(iEntry);
-    new_Tree_lines->GetEntry(iEntry);
-    if (old_lines->size() != tf_lines->size()) {
-      LOGP(fatal, "[Lines]: Mismatch: {} {}", old_lines->size(), tf_lines->size());
+    file1_Tree_lines->GetEntry(iEntry);
+    file2_Tree_lines->GetEntry(iEntry);
+    if (file1_lines->size() != file2_lines->size()) {
+      LOGP(fatal, "[Lines]: Mismatch: {} {}", file1_lines->size(), file2_lines->size());
     }
-    sort(old_lines->begin(), old_lines->end(), [](o2::its::Line& l1, o2::its::Line& l2) { return l1.originPoint[0] < l2.originPoint[0]; });
-    sort(tf_lines->begin(), tf_lines->end(), [](o2::its::Line& l1, o2::its::Line& l2) { return l1.originPoint[0] < l2.originPoint[0]; });
-    for (size_t iLine{0}; iLine < old_lines->size(); ++iLine) {
-      if (!((*old_lines)[iLine] == (*tf_lines)[iLine])) {
-        LOGP(error, "[Lines]: mismatch at index {}/{}", iLine, old_lines->size());
-        LOGP(error, "\told: x={}, y={}, z={}", (*old_lines)[iLine].originPoint[0], (*old_lines)[iLine].originPoint[1], (*old_lines)[iLine].originPoint[2]);
-        LOGP(error, "\t     cx={}, cy={}, cz={}", (*old_lines)[iLine].cosinesDirector[0], (*old_lines)[iLine].cosinesDirector[1], (*old_lines)[iLine].cosinesDirector[2]);
+    sort(file1_lines->begin(), file1_lines->end(), [](o2::its::Line& l1, o2::its::Line& l2) { return l1.originPoint[0] < l2.originPoint[0]; });
+    sort(file2_lines->begin(), file2_lines->end(), [](o2::its::Line& l1, o2::its::Line& l2) { return l1.originPoint[0] < l2.originPoint[0]; });
+    for (size_t iLine{0}; iLine < file1_lines->size(); ++iLine) {
+      if (!((*file1_lines)[iLine] == (*file2_lines)[iLine])) {
+        LOGP(error, "[Lines]: mismatch at index {}/{}", iLine, file1_lines->size());
+        LOGP(error, "\told: x={}, y={}, z={}", (*file1_lines)[iLine].originPoint[0], (*file1_lines)[iLine].originPoint[1], (*file1_lines)[iLine].originPoint[2]);
+        LOGP(error, "\t     cx={}, cy={}, cz={}", (*file1_lines)[iLine].cosinesDirector[0], (*file1_lines)[iLine].cosinesDirector[1], (*file1_lines)[iLine].cosinesDirector[2]);
 
-        LOGP(error, "\tnew: x={}, y={}, z={}", (*tf_lines)[iLine].originPoint[0], (*tf_lines)[iLine].originPoint[1], (*tf_lines)[iLine].originPoint[2]);
-        LOGP(error, "\t     cx={}, cy={}, cz={}", (*tf_lines)[iLine].cosinesDirector[0], (*tf_lines)[iLine].cosinesDirector[1], (*tf_lines)[iLine].cosinesDirector[2]);
+        LOGP(error, "\tnew: x={}, y={}, z={}", (*file2_lines)[iLine].originPoint[0], (*file2_lines)[iLine].originPoint[1], (*file2_lines)[iLine].originPoint[2]);
+        LOGP(error, "\t     cx={}, cy={}, cz={}", (*file2_lines)[iLine].cosinesDirector[0], (*file2_lines)[iLine].cosinesDirector[1], (*file2_lines)[iLine].cosinesDirector[2]);
       }
     }
 
     // NTracklets
-    if (old_N_tracklets01->size() != tf_N_tracklets01->size()) {
-      LOGP(fatal, "[NTracklets 01]: Mismatch: {} {}", old_N_tracklets01->size(), tf_N_tracklets01->size());
+    if (file1_N_tracklets01->size() != file2_N_tracklets01->size()) {
+      LOGP(fatal, "[NTracklets 01]: Mismatch: {} {}", file1_N_tracklets01->size(), file2_N_tracklets01->size());
     }
-    for (size_t iNtrac{0}; iNtrac < old_N_tracklets01->size(); ++iNtrac) {
-      if ((*old_N_tracklets01)[iNtrac] != (*tf_N_tracklets01)[iNtrac]) {
-        LOGP(fatal, "[NTracklets 01] {} <-> {}", (*old_N_tracklets01)[iNtrac], (*tf_N_tracklets01)[iNtrac]);
+    for (size_t iNtrac{0}; iNtrac < file1_N_tracklets01->size(); ++iNtrac) {
+      if ((*file1_N_tracklets01)[iNtrac] != (*file2_N_tracklets01)[iNtrac]) {
+        LOGP(fatal, "[NTracklets 01] {} <-> {}", (*file1_N_tracklets01)[iNtrac], (*file2_N_tracklets01)[iNtrac]);
       }
     }
 
-    if (old_N_tracklets12->size() != tf_N_tracklets12->size()) {
-      LOGP(fatal, "[NTracklets 12]: Mismatch: {} {}", old_N_tracklets12->size(), tf_N_tracklets12->size());
+    if (file1_N_tracklets12->size() != file2_N_tracklets12->size()) {
+      LOGP(fatal, "[NTracklets 12]: Mismatch: {} {}", file1_N_tracklets12->size(), file2_N_tracklets12->size());
     }
-    for (size_t iNtrac{0}; iNtrac < old_N_tracklets12->size(); ++iNtrac) {
-      if ((*old_N_tracklets12)[iNtrac] != (*tf_N_tracklets12)[iNtrac]) {
-        LOGP(fatal, "[NTracklets 12] {} <-> {}", (*old_N_tracklets12)[iNtrac], (*tf_N_tracklets12)[iNtrac]);
+    for (size_t iNtrac{0}; iNtrac < file1_N_tracklets12->size(); ++iNtrac) {
+      if ((*file1_N_tracklets12)[iNtrac] != (*file2_N_tracklets12)[iNtrac]) {
+        LOGP(fatal, "[NTracklets 12] {} <-> {}", (*file1_N_tracklets12)[iNtrac], (*file2_N_tracklets12)[iNtrac]);
       }
     }
   }
