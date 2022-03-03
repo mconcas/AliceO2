@@ -23,6 +23,8 @@ void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::strin
   TTree* file2_Tree_tracklets = (TTree*)file2_data->Get("tracklets");
   TTree* file1_Tree_lines = (TTree*)file1_data->Get("lines");
   TTree* file2_Tree_lines = (TTree*)file2_data->Get("lines");
+  TTree* file1_Tree_Clulines = (TTree*)file1_data->Get("clusterlines");
+  TTree* file2_Tree_Clulines = (TTree*)file2_data->Get("clusterlines");
 
   // file 1  data Trees
   std::vector<o2::its::Tracklet>* file1_tracklets01 = nullptr;
@@ -41,6 +43,10 @@ void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::strin
   file1_Tree_lines->SetBranchAddress("NTrackletCluster01", &file1_N_tracklets01);
   std::vector<int>* file1_N_tracklets12 = nullptr;
   file1_Tree_lines->SetBranchAddress("NTrackletCluster12", &file1_N_tracklets12);
+  std::vector<o2::its::ClusterLines>* file1_ClusterLines_post = nullptr;
+  file1_Tree_Clulines->SetBranchAddress("cllines_post", &file1_ClusterLines_post);
+  std::vector<o2::its::ClusterLines>* file1_ClusterLines_pre = nullptr;
+  file1_Tree_Clulines->SetBranchAddress("cllines_pre", &file1_ClusterLines_pre);
 
   // file2 data Trees
   std::vector<o2::its::Tracklet>* file2_tracklets01 = nullptr;
@@ -59,6 +65,10 @@ void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::strin
   file2_Tree_lines->SetBranchAddress("NTrackletCluster01", &file2_N_tracklets01);
   std::vector<int>* file2_N_tracklets12 = nullptr;
   file2_Tree_lines->SetBranchAddress("NTrackletCluster12", &file2_N_tracklets12);
+  std::vector<o2::its::ClusterLines>* file2_ClusterLines_post = nullptr;
+  file2_Tree_Clulines->SetBranchAddress("cllines_post", &file2_ClusterLines_post);
+  std::vector<o2::its::ClusterLines>* file2_ClusterLines_pre = nullptr;
+  file2_Tree_Clulines->SetBranchAddress("cllines_pre", &file2_ClusterLines_pre);
 
   int file1_entries = file1_Tree_tracklets->GetEntriesFast();
   int file2_entries = file2_Tree_tracklets->GetEntriesFast();
@@ -66,11 +76,14 @@ void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::strin
   if (file1_entries != file2_entries) {
     LOGP(fatal, "file 1 entries: {} file2 entries: {}", file1_entries, file2_entries);
   }
+  LOGP(info, "Processing {} entries...", file1_entries);
   for (int iEntry = 0; iEntry < file1_entries; iEntry++) {
     file1_Tree_tracklets->GetEntry(iEntry);
     file2_Tree_tracklets->GetEntry(iEntry);
-    LOGP(info, "Entry {}: clusters: {} <==> {} ", iEntry, file1_Clusters0->size(), file2_Clusters0->size());
-    // Clusters
+    // LOGP(info, "Entry {}: clusters: {} <==> {} ", iEntry, file1_Clusters0->size(), file2_Clusters0->size());
+    //////////////
+    // Clusters //
+    //////////////
     if (file1_Clusters0->size() != file2_Clusters0->size()) {
       LOGP(fatal, "old: N Clusters L0={}, tf: N Clusters L0={}", file1_Clusters0->size(), file2_Clusters0->size());
     } else {
@@ -92,7 +105,7 @@ void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::strin
           LOGP(fatal, "Clusters L0 mismatch at position {}/{}", iCl, file1_Clusters0->size());
         }
       }
-    };
+    }
     if (file1_Clusters1->size() != file2_Clusters1->size()) {
       LOGP(fatal, "old: N Clusters L1={}, tf: N Clusters L1={}", file1_Clusters1->size(), file2_Clusters1->size());
     } else {
@@ -119,7 +132,9 @@ void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::strin
         }
       }
     };
-    // Tracklets
+    ///////////////
+    // Tracklets //
+    ///////////////
     if (file1_tracklets01->size() != file2_tracklets01->size()) {
       auto max_range = std::max(file1_tracklets01->size(), file2_tracklets01->size());
       auto min_range = std::min(file1_tracklets01->size(), file2_tracklets01->size());
@@ -154,15 +169,16 @@ void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::strin
         LOGP(fatal, "[Tracklets 12]: Tracklets1 mismatch at index {}", iTracklet);
       }
     }
-
-    // Lines
+    ///////////
+    // Lines //
+    ///////////
     file1_Tree_lines->GetEntry(iEntry);
     file2_Tree_lines->GetEntry(iEntry);
     if (file1_lines->size() != file2_lines->size()) {
       LOGP(fatal, "[Lines]: Mismatch: {} {}", file1_lines->size(), file2_lines->size());
     }
-    sort(file1_lines->begin(), file1_lines->end(), [](o2::its::Line& l1, o2::its::Line& l2) { return l1.originPoint[0] < l2.originPoint[0]; });
-    sort(file2_lines->begin(), file2_lines->end(), [](o2::its::Line& l1, o2::its::Line& l2) { return l1.originPoint[0] < l2.originPoint[0]; });
+    // sort(file1_lines->begin(), file1_lines->end(), [](o2::its::Line& l1, o2::its::Line& l2) { return l1.originPoint[0] < l2.originPoint[0]; });
+    // sort(file2_lines->begin(), file2_lines->end(), [](o2::its::Line& l1, o2::its::Line& l2) { return l1.originPoint[0] < l2.originPoint[0]; });
     for (size_t iLine{0}; iLine < file1_lines->size(); ++iLine) {
       if (!((*file1_lines)[iLine] == (*file2_lines)[iLine])) {
         LOGP(error, "[Lines]: mismatch at index {}/{}", iLine, file1_lines->size());
@@ -174,7 +190,9 @@ void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::strin
       }
     }
 
-    // NTracklets
+    ////////////////
+    // NTracklets //
+    ////////////////
     if (file1_N_tracklets01->size() != file2_N_tracklets01->size()) {
       LOGP(fatal, "[NTracklets 01]: Mismatch: {} {}", file1_N_tracklets01->size(), file2_N_tracklets01->size());
     }
@@ -192,7 +210,45 @@ void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::strin
         LOGP(fatal, "[NTracklets 12] {} <-> {}", (*file1_N_tracklets12)[iNtrac], (*file2_N_tracklets12)[iNtrac]);
       }
     }
+    ///////////////////
+    // Cluster Lines //
+    ///////////////////
+    file1_Tree_Clulines->GetEntry(iEntry);
+    file2_Tree_Clulines->GetEntry(iEntry);
+    if (file1_ClusterLines_pre->size() != file2_ClusterLines_pre->size()) {
+      LOGP(fatal, "[Pre ClusterLines, rof: {}]: Mismatch {} {}", iEntry, file1_ClusterLines_pre->size(), file2_ClusterLines_pre->size());
+    }
+    // LOGP(info, "Rof {}: ClusterLines: {} <=> {}", iEntry, file1_ClusterLines_pre->size(), file2_ClusterLines_pre->size());
+    for (size_t iClusLine{0}; iClusLine < file2_ClusterLines_pre->size(); ++iClusLine) {
+      if (!((*file1_ClusterLines_pre)[iClusLine] == (*file2_ClusterLines_pre)[iClusLine])) {
+        // for (auto i{0}; i < 6; ++i) {
+        //   LOGP(info, "rms2: {} {}", (*file1_ClusterLines_pre)[iClusLine].getRMS2()[i], (*file2_ClusterLines_pre)[iClusLine].getRMS2()[i]);
+        // }
+        // for (auto i{0}; i < 3; ++i) {
+        //   LOGP(info, "vertex: {} {}", (*file1_ClusterLines_pre)[iClusLine].getVertex()[i], (*file2_ClusterLines_pre)[iClusLine].getVertex()[i]);
+        // }
+        // return retval && this->mAvgDistance2 == rhs.mAvgDistance2;
+        // LOGP(fatal, "[ClusterLines]: not equal!");
+      }
+    }
+    if (file1_ClusterLines_post->size() != file2_ClusterLines_post->size()) {
+      LOGP(fatal, "[Post ClusterLines, rof: {}]: Mismatch {} {}", iEntry, file1_ClusterLines_post->size(), file2_ClusterLines_post->size());
+    }
+    // LOGP(info, "Rof {}: ClusterLines: {} <=> {}", iEntry, file1_ClusterLines_post->size(), file2_ClusterLines_post->size());
+    for (size_t iClusLine{0}; iClusLine < file2_ClusterLines_post->size(); ++iClusLine) {
+      if (!((*file1_ClusterLines_post)[iClusLine] == (*file2_ClusterLines_post)[iClusLine])) {
+        // for (auto i{0}; i < 6; ++i) {
+        //   LOGP(info, "rms2: {} {}", (*file1_ClusterLines_post)[iClusLine].getRMS2()[i], (*file2_ClusterLines_post)[iClusLine].getRMS2()[i]);
+        // }
+        // for (auto i{0}; i < 3; ++i) {
+        //   LOGP(info, "vertex: {} {}", (*file1_ClusterLines_post)[iClusLine].getVertex()[i], (*file2_ClusterLines_post)[iClusLine].getVertex()[i]);
+        // }
+        // return retval && this->mAvgDistance2 == rhs.mAvgDistance2;
+        // LOGP(fatal, "[ClusterLines]: not equal!");
+      }
+    }
   }
+  LOG(info) << "done.";
 }
 
 void printTracklet(o2::its::Tracklet& tr)
