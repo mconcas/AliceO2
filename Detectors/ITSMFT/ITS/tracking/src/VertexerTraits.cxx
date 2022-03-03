@@ -27,6 +27,8 @@
 #include "TTree.h"
 #include "TFile.h"
 
+#define VTX_DEBUG
+
 namespace o2
 {
 namespace its
@@ -209,7 +211,7 @@ void VertexerTraits::computeTracklets()
   }
   mTimeFrame->computeTrackletsScans();
 
-#ifdef CA_DEBUG
+#ifdef VTX_DEBUG
   // Dump on file
   TFile* trackletFile = TFile::Open("artefacts_tf.root", "recreate");
   TTree* tr_tre = new TTree("tracklets", "tf");
@@ -267,7 +269,7 @@ void VertexerTraits::computeTrackletMatching()
       mVrtParams.phiCut);
   }
 
-#ifdef CA_DEBUG
+#ifdef VTX_DEBUG
   TFile* trackletFile = TFile::Open("artefacts_tf.root", "update");
   TTree* ln_tre = new TTree("lines", "tf");
   std::vector<o2::its::Line> lines_vec(0);

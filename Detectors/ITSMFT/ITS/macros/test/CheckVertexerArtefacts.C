@@ -15,10 +15,10 @@ void printTracklet(o2::its::Tracklet& tr);
 void printCluster(o2::its::Cluster& cl);
 void printClusters(o2::its::Cluster&, o2::its::Cluster&);
 
-void Xcheck()
+void CheckVertexerArtefacts(std::string file1 = "artefacts_old.root", std::string file2 = "artefacts_tf.root")
 {
-  TFile* old_data = TFile::Open("artefacts_old.root", "read");
-  TFile* new_data = TFile::Open("artefacts_tf.root", "read");
+  TFile* old_data = TFile::Open(file1.data(), "read");
+  TFile* new_data = TFile::Open(file2.data(), "read");
   TTree* old_Tree_tracklets = (TTree*)old_data->Get("tracklets");
   TTree* new_Tree_tracklets = (TTree*)new_data->Get("tracklets");
   TTree* old_Tree_lines = (TTree*)old_data->Get("lines");

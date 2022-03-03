@@ -43,7 +43,7 @@ o2_add_test_root_macro(CreateDictionaries.C
                                              O2::SimulationDataFormat
                        LABELS its)
 
-o2_add_test_root_macro(CheckROfVsTFVertexer.C
+o2_add_test_root_macro(CheckVertexerArtefacts.C
                        PUBLIC_LINK_LIBRARIES O2::MathUtils
                                              O2::ITSBase
                                              O2::ITSMFTReconstruction
