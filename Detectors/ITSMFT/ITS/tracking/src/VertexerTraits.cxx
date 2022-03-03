@@ -402,7 +402,7 @@ void VertexerTraits::computeVertices()
   }
 #ifdef VTX_DEBUG
   TFile* dbg_file = TFile::Open("artefacts_tf.root", "update");
-  TTree* ln_clus_lines_tree = new TTree("clusterlines","tf");
+  TTree* ln_clus_lines_tree = new TTree("clusterlines", "tf");
   std::vector<o2::its::ClusterLines> cl_lines_vec_pre(0);
   std::vector<o2::its::ClusterLines> cl_lines_vec_post(0);
   ln_clus_lines_tree->Branch("cllines_pre", &cl_lines_vec_pre);
