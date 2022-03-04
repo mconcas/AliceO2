@@ -265,9 +265,10 @@ void TrackerDPL::run(ProcessingContext& pc)
       }
       if (processingMask[iRof] && !multCut) { // passed selection in clusters and not in vertex multiplicity
         LOG(info) << fmt::format("ROF {} rejected by the vertex multiplicity selection [{},{}]",
-                                 processingMask.size(),
+                                 iRof,
                                  multEstConf.cutMultVtxLow,
                                  multEstConf.cutMultVtxHigh);
+        processingMask[iRof] = false;
         cutVertexMult++;
       }
     } else { // cosmics
@@ -286,6 +287,7 @@ void TrackerDPL::run(ProcessingContext& pc)
   LOG(info) << fmt::format(" - Vertex seeding total elapsed time: {} ms for {} clusters in {} ROFs", vertexerElapsedTime, nclUsed, rofspan.size());
   LOG(info) << fmt::format(" - Beam position computed for the TF: {}, {}", mTimeFrame.getBeamX(), mTimeFrame.getBeamY());
 
+  mTimeFrame.setMultiplicityCutMask(processingMask);
   mTracker->clustersToTracks(logger);
   if (mTimeFrame.hasBogusClusters()) {
     LOG(warning) << fmt::format(" - The processed timeframe had {} clusters with wild z coordinates, check the dictionaries", mTimeFrame.hasBogusClusters());
