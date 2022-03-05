@@ -205,7 +205,6 @@ void TrackerDPL::run(ProcessingContext& pc)
   auto& vertices = pc.outputs().make<std::vector<Vertex>>(Output{"ITS", "VERTICES", 0, Lifetime::Timeframe});
 
   std::uint32_t roFrame = 0;
-  ROframe event(0, 7);
 
   bool continuous = mGRP->isDetContinuousReadOut("ITS");
   LOG(info) << "ITSTracker RO: continuous=" << continuous;
@@ -224,8 +223,7 @@ void TrackerDPL::run(ProcessingContext& pc)
   pattIt = patterns.begin();
   std::vector<int> savedROF;
   auto logger = [&](std::string s) { LOG(info) << s; };
-  int nclUsed = 0;
-
+ 
   std::vector<bool> processingMask;
   int cutClusterMult{0}, cutVertexMult{0}, cutTotalMult{0};
   for (size_t iRof{0}; iRof < rofspan.size(); ++iRof) {
