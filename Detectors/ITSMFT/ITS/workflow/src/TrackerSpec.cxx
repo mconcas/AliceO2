@@ -223,7 +223,7 @@ void TrackerDPL::run(ProcessingContext& pc)
   pattIt = patterns.begin();
   std::vector<int> savedROF;
   auto logger = [&](std::string s) { LOG(info) << s; };
- 
+
   std::vector<bool> processingMask;
   int cutClusterMult{0}, cutVertexMult{0}, cutTotalMult{0};
   for (size_t iRof{0}; iRof < rofspan.size(); ++iRof) {
