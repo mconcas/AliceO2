@@ -47,7 +47,7 @@ void run_trac_its(std::string path = "./", std::string outputfile = "o2trac_its.
                   std::string inputClustersITS = "o2clus_its.root",
                   std::string inputGeom = "",
                   std::string inputGRP = "o2sim_grp.root",
-		  long timestamp = 0)
+                  long timestamp = 0)
 {
 
   FairLogger* logger = FairLogger::GetLogger();
