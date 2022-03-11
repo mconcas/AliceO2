@@ -187,8 +187,17 @@ void run_trac_its(std::string path = "./", std::string outputfile = "o2trac_its.
         verticesL.emplace_back();
       }
       tracker.setVertices(verticesL);
+<<<<<<< HEAD
       tracker.process(clSpan, it, dict, tracksITS, trackClIdx, rof);
       ++iRof;
+=======
+<<<<<<< HEAD
+      tracker.process(clSpan, it, &dict, tracksITS, trackClIdx, rof);
+=======
+      tracker.process(clSpan, it, dict, tracksITS, trackClIdx, rof);
+      ++iRof;
+>>>>>>> Fix cooked tracker macro
+>>>>>>> Fix cooked tracker macro
     }
     outTree.Fill();
     if (mcTruth) {
@@ -200,7 +209,6 @@ void run_trac_its(std::string path = "./", std::string outputfile = "o2trac_its.
     rofs->clear();
     verticesPtr->clear();
     vertROFvecPtr->clear();
-    ++iRof;
   }
   outFile.cd();
   outTree.Write();
