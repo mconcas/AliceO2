@@ -188,6 +188,7 @@ void run_trac_its(std::string path = "./", std::string outputfile = "o2trac_its.
       }
       tracker.setVertices(verticesL);
 <<<<<<< HEAD
+<<<<<<< HEAD
       tracker.process(clSpan, it, dict, tracksITS, trackClIdx, rof);
       ++iRof;
 =======
@@ -198,6 +199,10 @@ void run_trac_its(std::string path = "./", std::string outputfile = "o2trac_its.
       ++iRof;
 >>>>>>> Fix cooked tracker macro
 >>>>>>> Fix cooked tracker macro
+=======
+      tracker.process(clSpan, it, dict, tracksITS, trackClIdx, rof);
+      ++iRof;
+>>>>>>> Fix ITS cluster dictionary handling in macros
     }
     outTree.Fill();
     if (mcTruth) {
