@@ -108,6 +108,10 @@ void run_trac_ca_its(bool cosmics = false,
   mgr.setURL("http://alice-ccdb.cern.ch");
   mgr.setTimestamp(timestamp ? timestamp : o2::ccdb::getCurrentTimestamp());
   const o2::itsmft::TopologyDictionary* dict = mgr.get<o2::itsmft::TopologyDictionary>("ITS/Calib/ClusterDictionary");
+<<<<<<< HEAD
+=======
+
+>>>>>>> Fix ITS cluster dictionary handling in macros (#30)
   //>>>---------- attach input data --------------->>>
   TChain itsClusters("o2sim");
   itsClusters.AddFile((path + inputClustersITS).data());
