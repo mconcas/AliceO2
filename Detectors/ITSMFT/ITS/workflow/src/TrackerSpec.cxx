@@ -61,7 +61,7 @@ void TrackerDPL::init(InitContext& ic)
 
   mChainITS.reset(mRecChain->AddChain<o2::gpu::GPUChainITS>());
   mVertexer = std::make_unique<Vertexer>(mChainITS->GetITSVertexerTraits());
-  mTracker = std::make_unique<Tracker>(new TrackerTraitsCPU);
+  mTracker = std::make_unique<Tracker>(mChainITS->GetITSTrackerTraits());
 
   auto filename = ic.options().get<std::string>("grp-file");
   const auto grp = parameters::GRPObject::loadFrom(filename);
