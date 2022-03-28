@@ -202,9 +202,6 @@ void Vector<T>::reset(const T* const source, const int size, const int initialSi
 {
   if (size > mCapacity) {
     if (mArrayPointer != nullptr) {
-      std::cout << "Calling CUDAFREE\n"
-                << " size: " << size << "capacity: " << capacity << std::endl;
-      ;
       utils::host::gpuFree(mArrayPointer);
     }
     utils::host::gpuMalloc(reinterpret_cast<void**>(&mArrayPointer), size * sizeof(T));

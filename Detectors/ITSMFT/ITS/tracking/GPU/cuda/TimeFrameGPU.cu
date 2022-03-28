@@ -26,7 +26,7 @@ TimeFrameGPU<NLayers>::TimeFrameGPU()
 {
   LOGP(info, ">>> Building TimeFrameGPU for {} layers", NLayers);
   for (int iLayer{0}; iLayer < NLayers; ++iLayer) {
-    mClustersD[iLayer] = Vector<Cluster>{(int)5e5, (int)5e5};
+    mClustersD[iLayer] = Vector<Cluster>{(int)4e4, (int)4e4};
     mTrackingFrameInfoD[iLayer] = Vector<TrackingFrameInfo>{(int)5e5, (int)5e5};
     mClusterExternalIndicesD[iLayer] = Vector<int>{(int)5e5, (int)5e5};
     mROframesClustersD[iLayer] = Vector<int>{(int)5e5, (int)5e5};
@@ -37,17 +37,14 @@ template <int NLayers>
 void TimeFrameGPU<NLayers>::loadToDevice(const int maxLayers)
 {
   LOGP(info, ">>> Loading data on device");
-  std::vector<Cluster> v;
-  for (auto& c : mClusters[0]) {
-    v.emplace_back(c);
+
+  for (int iLayer{0}; iLayer < maxLayers; ++iLayer) {
+    LOGP(info, "Size: {}, {:f} MB, {} layers", mClusters[iLayer].size(), (float)mClusters[iLayer].size() * (float)sizeof(Cluster) / (float)(1024 * 1024), mClusters.size());
+    // mClustersD[iLayer].reset(v.data(), static_cast<int>(mClusters[iLayer].size()));
+    // mTrackingFrameInfoD[iLayer].reset(mTrackingFrameInfo[iLayer].data(), static_cast<int>(mTrackingFrameInfo[iLayer].size()));
+    // mClusterExternalIndicesD[iLayer].reset(mClusterExternalIndices[iLayer].data(), static_cast<int>(mClusterExternalIndices[iLayer].size()));
+    // mROframesClustersD[iLayer].reset(mROframesClusters[iLayer].data(), static_cast<int>(mROframesClusters[iLayer].size()));
   }
-  // for (int iLayer{0}; iLayer < NLayers; ++iLayer) {
-  LOGP(info, "Size: {}, {:f} MB", mClusters[0].size(), (float)mClusters[0].size() * (float)sizeof(Cluster) / (float)(1024 * 1024));
-  mClustersD[0].reset(v.data(), static_cast<int>(mClusters[0].size()));
-  // mTrackingFrameInfoD[iLayer].reset(mTrackingFrameInfo[iLayer].data(), static_cast<int>(mTrackingFrameInfo[iLayer].size()));
-  // mClusterExternalIndicesD[iLayer].reset(mClusterExternalIndices[iLayer].data(), static_cast<int>(mClusterExternalIndices[iLayer].size()));
-  // mROframesClustersD[iLayer].reset(mROframesClusters[iLayer].data(), static_cast<int>(mROframesClusters[iLayer].size()));
-  // }
 }
 
 template <int NLayers>
