@@ -98,7 +98,6 @@ void GPUReconstructionCUDA::GetITSTraits(std::unique_ptr<o2::its::TrackerTraits>
 
 void GPUReconstructionCUDA::GetITSTimeframe(std::unique_ptr<o2::its::TimeFrame>* timeFrame)
 {
-  GPUInfo("Called CUDA caller");
   timeFrame->reset(new o2::its::gpu::TimeFrameGPU);
 }
 

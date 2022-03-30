@@ -42,8 +42,8 @@ void TimeFrameGPU<NLayers>::loadToDevice(const int maxLayers)
     LOGP(info, "Size: {}, {:f} MB, {} layers", mClusters[iLayer].size(), (float)mClusters[iLayer].size() * (float)sizeof(Cluster) / (float)(1024 * 1024), mClusters.size());
     // mClustersD[iLayer].reset(v.data(), static_cast<int>(mClusters[iLayer].size()));
     // mTrackingFrameInfoD[iLayer].reset(mTrackingFrameInfo[iLayer].data(), static_cast<int>(mTrackingFrameInfo[iLayer].size()));
-    // mClusterExternalIndicesD[iLayer].reset(mClusterExternalIndices[iLayer].data(), static_cast<int>(mClusterExternalIndices[iLayer].size()));
-    // mROframesClustersD[iLayer].reset(mROframesClusters[iLayer].data(), static_cast<int>(mROframesClusters[iLayer].size()));
+    mClusterExternalIndicesD[iLayer].reset(mClusterExternalIndices[iLayer].data(), static_cast<int>(mClusterExternalIndices[iLayer].size()));
+    mROframesClustersD[iLayer].reset(mROframesClusters[iLayer].data(), static_cast<int>(mROframesClusters[iLayer].size()));
   }
 }
 
@@ -61,6 +61,7 @@ void TimeFrameGPU<NLayers>::initialise(const int iteration,
 template <int NLayers>
 TimeFrameGPU<NLayers>::~TimeFrameGPU()
 {
+  LOGP(info, "Destroying timeframegpu...");
 }
 template class TimeFrameGPU<7>;
 } // namespace gpu

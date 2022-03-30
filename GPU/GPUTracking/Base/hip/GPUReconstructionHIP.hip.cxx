@@ -222,7 +222,6 @@ void GPUReconstructionHIPBackend::GetITSTraits(std::unique_ptr<o2::its::TrackerT
 
 void GPUReconstructionHIPBackend::GetITSTimeframe(std::unique_ptr<o2::its::TimeFrame>* timeFrame)
 {
-  GPUInfo("Called HIP caller");
   timeFrame->reset(new o2::its::gpu::TimeFrameGPU);
 }
 
