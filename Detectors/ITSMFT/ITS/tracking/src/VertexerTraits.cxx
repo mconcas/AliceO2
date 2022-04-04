@@ -95,8 +95,7 @@ void trackletSelectionKernelSerial(
   const float phiCut = 0.005f,
   const int maxTracklets = static_cast<int>(1e2))
 {
-  int offset01{0};
-  int offset12{0};
+  int offset01{0}, offset12{0};
   std::vector<bool> usedTracklets(tracklets01.size(), false);
   for (unsigned int iCurrentLayerClusterIndex{0}; iCurrentLayerClusterIndex < clustersCurrentLayer.size(); ++iCurrentLayerClusterIndex) {
     int validTracklets{0};
@@ -194,6 +193,7 @@ void VertexerTraits::computeTracklets()
 
     mTimeFrame->getNTrackletsROf(0, rofId) = std::accumulate(mTimeFrame->getNTrackletsCluster(rofId, 0).begin(), mTimeFrame->getNTrackletsCluster(rofId, 0).end(), 0);
     mTimeFrame->getNTrackletsROf(1, rofId) = std::accumulate(mTimeFrame->getNTrackletsCluster(rofId, 1).begin(), mTimeFrame->getNTrackletsCluster(rofId, 1).end(), 0);
+    LOGP(info, "found {} {}", mTimeFrame->getNTrackletsROf(0, rofId), mTimeFrame->getNTrackletsROf(1, rofId));
   }
   mTimeFrame->computeTrackletsScans();
 
@@ -238,6 +238,16 @@ void VertexerTraits::computeTracklets()
   tr_tre->Write();
   trackletFile->Close();
 #endif
+
+  std::ofstream out01("NTC01_cpu.txt"), out12("NTC12_cpu.txt");
+  for (int iRof{0}; iRof < mTimeFrame->getNrof(); ++iRof) {
+    std::copy(mTimeFrame->getNTrackletsCluster(iRof, 0).begin(), mTimeFrame->getNTrackletsCluster(iRof, 0).end(), std::ostream_iterator<double>(out01, "\t"));
+    std::copy(mTimeFrame->getNTrackletsCluster(iRof, 1).begin(), mTimeFrame->getNTrackletsCluster(iRof, 1).end(), std::ostream_iterator<double>(out12, "\t"));
+    out01 << std::endl;
+    out12 << std::endl;
+  }
+  out01.close();
+  out12.close();
 }
 
 void VertexerTraits::computeTrackletMatching()
