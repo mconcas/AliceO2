@@ -124,7 +124,6 @@ int TimeFrame::loadROFrameData(gsl::span<o2::itsmft::ROFRecord> rofs,
                                const itsmft::TopologyDictionary* dict,
                                const dataformats::MCTruthContainer<MCCompLabel>* mcLabels)
 {
-  LOGP(info, ">>> Loading data into TimeFrame");
   GeometryTGeo* geom = GeometryTGeo::Instance();
   geom->fillMatrixCache(o2::math_utils::bit2Mask(o2::math_utils::TransformType::T2L, o2::math_utils::TransformType::L2G));
 
