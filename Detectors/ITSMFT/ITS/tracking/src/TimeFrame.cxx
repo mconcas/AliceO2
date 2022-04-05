@@ -60,7 +60,7 @@ TimeFrame::TimeFrame(int nLayers)
 {
   mMinR.resize(nLayers, 10000.);
   mMaxR.resize(nLayers, -1.);
-  // mClusters.resize(nLayers);
+  mClusters.resize(nLayers);
   mUnsortedClusters.resize(nLayers);
   mTrackingFrameInfo.resize(nLayers);
   mClusterExternalIndices.resize(nLayers);

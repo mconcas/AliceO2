@@ -51,6 +51,7 @@ void trackleterKernelSerial(
     int storedTracklets{0};
     const Cluster& currentCluster{clustersCurrentLayer[iCurrentLayerClusterIndex]};
     const int4 selectedBinsRect{VertexerTraits::getBinsRect(currentCluster, (int)Mode, 0.f, 50.f, phiCut / 2, utils)};
+    currentCluster.print();
     LOGP(info, "selectedBinsRect: {} {} {} {}", selectedBinsRect.x, selectedBinsRect.y, selectedBinsRect.z, selectedBinsRect.w);
     if (selectedBinsRect.x != 0 || selectedBinsRect.y != 0 || selectedBinsRect.z != 0 || selectedBinsRect.w != 0) {
       int phiBinsNum{selectedBinsRect.w - selectedBinsRect.y + 1};
@@ -179,6 +180,9 @@ void VertexerTraits::computeTracklets()
     LOGP(info, "processing: {} {} {} clusters", mTimeFrame->getClustersOnLayer(rofId, 0).size(),
          mTimeFrame->getClustersOnLayer(rofId, 1).size(),
          mTimeFrame->getClustersOnLayer(rofId, 2).size());
+    for (auto c : mTimeFrame->getClustersOnLayer(rofId, 0)) {
+      c.print();
+    }
     trackleterKernelSerial<TrackletMode::Layer0Layer1>(
       mTimeFrame->getClustersOnLayer(rofId, 0),
       mTimeFrame->getClustersOnLayer(rofId, 1),
