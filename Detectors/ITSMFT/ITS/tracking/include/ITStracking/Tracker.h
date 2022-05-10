@@ -132,12 +132,6 @@ inline float Tracker::getBz() const
 }
 
 template <typename... T>
-void Tracker::initialiseTimeFrame(T&&... args)
-{
-  mTimeFrame->initialise(std::forward<T>(args)...);
-}
-
-template <typename... T>
 float Tracker::evaluateTask(void (Tracker::*task)(T...), const char* taskName, std::function<void(std::string s)> logger,
                             T&&... args)
 {
