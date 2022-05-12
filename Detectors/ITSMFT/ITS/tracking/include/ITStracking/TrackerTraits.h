@@ -67,10 +67,11 @@ class TrackerTraits
   virtual void computeLayerCells();
   virtual void refitTracks(const std::vector<std::vector<TrackingFrameInfo>>&, std::vector<TrackITSExt>&);
   virtual bool trackFollowing(TrackITSExt* track, int rof, bool outward);
+  virtual void adoptTimeFrame(TimeFrame* tf);
 
   void UpdateTrackingParameters(const TrackingParameters& trkPar);
   TimeFrame* getTimeFrame() { return mTimeFrame; }
-  void adoptTimeFrame(TimeFrame* tf) { mTimeFrame = tf; }
+
   void setIsGPU(const unsigned char isgpu) { mIsGPU = isgpu; };
 
  protected:
@@ -104,6 +105,8 @@ inline void TrackerTraits::initialiseTimeFrame(const int iteration, const Memory
   mTimeFrame->initialise(iteration, memParams, trackingParams, 7);
   setIsGPU(false);
 }
+
+inline void TrackerTraits::adoptTimeFrame(TimeFrame* tf) { mTimeFrame = tf; }
 
 inline const int4 TrackerTraits::getBinsRect(const Cluster& currentCluster, const int layerIndex,
                                              const float z1, const float z2, float maxdeltaz, float maxdeltaphi)
