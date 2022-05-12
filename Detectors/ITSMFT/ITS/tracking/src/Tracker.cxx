@@ -139,7 +139,6 @@ void Tracker::findCellsNeighbours(int& iteration)
         if (currentCellLevel >= nextCell.getLevel()) {
           nextCell.setLevel(currentCellLevel + 1);
         }
-        // }
       }
     }
   }
