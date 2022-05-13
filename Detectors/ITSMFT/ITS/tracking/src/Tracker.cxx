@@ -58,15 +58,15 @@ void Tracker::clustersToTracks(std::function<void(std::string s)> logger, std::f
       error("Too much memory used during trackleting, check the detector status and/or the selections.");
       break;
     }
-    total += evaluateTask(&Tracker::computeCells, "Cell finding", logger);
+    // total += evaluateTask(&Tracker::computeCells, "Cell finding", logger);
     if (!mTimeFrame->checkMemory(mTrkParams[iteration].MaxMemory)) {
       error("Too much memory used during cell finding, check the detector status and/or the selections.");
       break;
     }
-    total += evaluateTask(&Tracker::findCellsNeighbours, "Neighbour finding", logger, iteration);
-    total += evaluateTask(&Tracker::findRoads, "Road finding", logger, iteration);
-    total += evaluateTask(&Tracker::findTracks, "Track finding", logger);
-    total += evaluateTask(&Tracker::extendTracks, "Extending tracks", logger);
+    // total += evaluateTask(&Tracker::findCellsNeighbours, "Neighbour finding", logger, iteration);
+    // total += evaluateTask(&Tracker::findRoads, "Road finding", logger, iteration);
+    // total += evaluateTask(&Tracker::findTracks, "Track finding", logger);
+    // total += evaluateTask(&Tracker::extendTracks, "Extending tracks", logger);
   }
 
   std::stringstream sstream;
