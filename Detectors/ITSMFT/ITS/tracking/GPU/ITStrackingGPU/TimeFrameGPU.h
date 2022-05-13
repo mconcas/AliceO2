@@ -55,6 +55,7 @@ class TimeFrameGPU : public TimeFrame
   /// Getters
   float getDeviceMemory();
   Cluster* getDeviceClustersOnLayer(const int rofId, const int layerId) const;
+  unsigned char* getDeviceUsedClustersOnLayer(const int rofId, const int layerId);
   int getNClustersLayer(const int rofId, const int layerId) const;
   TimeFrameGPUConfig& getConfig() { return mConfig; }
 
@@ -86,6 +87,7 @@ class TimeFrameGPU : public TimeFrame
 
   // Per-layer information, do not expand at runtime
   std::array<Vector<Cluster>, NLayers> mClustersD;
+  std::array<Vector<unsigned char>, NLayers> mUsedClustersD;
   std::array<Vector<TrackingFrameInfo>, NLayers> mTrackingFrameInfoD;
   std::array<Vector<int>, NLayers - 1> mIndexTablesD;
   std::array<Vector<int>, NLayers> mClusterExternalIndicesD;
@@ -120,6 +122,16 @@ inline Cluster* TimeFrameGPU<NLayers>::getDeviceClustersOnLayer(const int rofId,
     return nullptr;
   }
   return mClustersD[layerId].get() + mROframesClusters[layerId][rofId];
+}
+
+template <int NLayers>
+inline unsigned char* TimeFrameGPU<NLayers>::getDeviceUsedClustersOnLayer(const int rofId, const int layerId)
+{
+    if (rofId < 0 || rofId >= mNrof) {
+    LOG(error) << "Invalid rofId: " << rofId << "/" << mNrof << ", returning nullptr";
+    return nullptr;
+  }
+  return mUsedClustersD[layerId].get() + mROframesClusters[layerId][rofId];
 }
 
 template <int NLayers>
