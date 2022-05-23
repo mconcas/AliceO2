@@ -57,7 +57,7 @@ void TrackerTraits::computeLayerTracklets()
 
   const Vertex diamondVert({mTrkParams.Diamond[0], mTrkParams.Diamond[1], mTrkParams.Diamond[2]}, {25.e-6f, 0.f, 0.f, 25.e-6f, 0.f, 36.f}, 1, 1.f);
   gsl::span<const Vertex> diamondSpan(&diamondVert, 1);
-  for (int rof0{0}; rof0 < tf->getNrof(); ++rof0) {
+  for (int rof0{1}; rof0 < /*tf->getNrof()*/ 2; ++rof0) {
     gsl::span<const Vertex> primaryVertices = mTrkParams.UseDiamond ? diamondSpan : tf->getPrimaryVertices(rof0);
     int minRof = (rof0 >= mTrkParams.DeltaROF) ? rof0 - mTrkParams.DeltaROF : 0;
     int maxRof = (rof0 == tf->getNrof() - mTrkParams.DeltaROF) ? rof0 : rof0 + mTrkParams.DeltaROF;
@@ -79,6 +79,9 @@ void TrackerTraits::computeLayerTracklets()
         const float inverseR0{1.f / currentCluster.radius};
 
         for (auto& primaryVertex : primaryVertices) {
+          if (!iCluster) {
+            printf("rof0: %d x: %lf, y: %lf, z: %lf\n", rof0, primaryVertex.getX(), primaryVertex.getY(), primaryVertex.getZ());
+          }
           const float resolution = std::sqrt(Sq(mTrkParams.PVres) / primaryVertex.getNContributors() + Sq(tf->getPositionResolution(iLayer)));
 
           const float tanLambda{(currentCluster.zCoordinate - primaryVertex.getZ()) * inverseR0};
@@ -112,6 +115,7 @@ void TrackerTraits::computeLayerTracklets()
               int iPhiBin = (selectedBinsRect.y + iPhiCount) % mTrkParams.PhiBins;
               const int firstBinIndex{tf->mIndexTableUtils.getBinIndex(selectedBinsRect.x, iPhiBin)};
               const int maxBinIndex{firstBinIndex + selectedBinsRect.z - selectedBinsRect.x + 1};
+              printf("%d %d %d %d %d %d %d\n", maxBinIndex, firstBinIndex, iPhiBin, iPhiCount, phiBinsNum, rof1, rof0);
               if constexpr (debugLevel) {
                 if (firstBinIndex < 0 || firstBinIndex > tf->getIndexTable(rof1, iLayer + 1).size() ||
                     maxBinIndex < 0 || maxBinIndex > tf->getIndexTable(rof1, iLayer + 1).size()) {
