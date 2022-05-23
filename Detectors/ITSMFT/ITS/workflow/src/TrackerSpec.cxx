@@ -49,7 +49,7 @@ namespace its
 {
 using Vertex = o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>;
 
-TrackerDPL::TrackerDPL(bool isMC, const std::string& trModeS, o2::gpu::GPUDataTypes::DeviceType dType) : mIsMC{isMC}, mMode{trModeS}, mRecChain{o2::gpu::GPUReconstruction::CreateInstance(dType, true)}
+TrackerDPL::TrackerDPL(bool isMC, const std::string& trModeS, o2::gpu::GPUDataTypes::DeviceType dType) : mIsMC{isMC}, mMode{trModeS}, mRecChain{o2::gpu::GPUReconstruction::CreateInstance(dType, true)}, mRecChainCPU{o2::gpu::GPUReconstruction::CreateInstance(1, true)}
 {
   std::transform(mMode.begin(), mMode.end(), mMode.begin(), [](unsigned char c) { return std::tolower(c); });
 }
@@ -60,7 +60,8 @@ void TrackerDPL::init(InitContext& ic)
   mTimer.Reset();
 
   mChainITS.reset(mRecChain->AddChain<o2::gpu::GPUChainITS>());
-  mVertexer = std::make_unique<Vertexer>(mChainITS->GetITSVertexerTraits());
+  mChainITSCPU.reset(mRecChainCPU->AddChain<o2::gpu::GPUChainITS>());
+  mVertexer = std::make_unique<Vertexer>(mChainITSCPU->GetITSVertexerTraits());
   mTracker = std::make_unique<Tracker>(mChainITS->GetITSTrackerTraits());
 
   auto filename = ic.options().get<std::string>("grp-file");
