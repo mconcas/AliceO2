@@ -167,6 +167,7 @@ class TimeFrame
 
   IndexTableUtils mIndexTableUtils;
 
+  bool mIsGPU = false;
   std::vector<std::vector<Cluster>> mClusters;
   std::vector<std::vector<TrackingFrameInfo>> mTrackingFrameInfo;
   std::vector<std::vector<int>> mClusterExternalIndices;

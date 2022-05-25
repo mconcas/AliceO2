@@ -40,6 +40,7 @@ GPUh() void gpuThrowOnError()
 template <int NLayers>
 TimeFrameGPU<NLayers>::TimeFrameGPU()
 {
+  mIsGPU = true;
   getDeviceMemory();
 }
 
@@ -110,7 +111,7 @@ void TimeFrameGPU<NLayers>::initialiseDevice(const TrackingParameters& trkParam)
     // mROframesClustersD[iLayer] = Vector<int>{mConfig.nMaxROFs, mConfig.nMaxROFs};
     if (iLayer < NLayers - 1) {
       mTrackletsD[iLayer] = Vector<Tracklet>{mConfig.trackletsCapacity, mConfig.trackletsCapacity};
-      mIndexTablesD[iLayer] = Vector<int>{mConfig.nMaxROFs * (256 * 128 + 1), mConfig.nMaxROFs * (256 * 128 + 1)};
+      // mIndexTablesD[iLayer] = Vector<int>{mConfig.nMaxROFs * (256 * 128 + 1), mConfig.nMaxROFs * (256 * 128 + 1)};
     }
   }
 
@@ -150,6 +151,9 @@ void TimeFrameGPU<NLayers>::initialiseDevice(const TrackingParameters& trkParam)
       mTrackingFrameInfoD[iLayer].reset(mTrackingFrameInfo[iLayer].data(), static_cast<int>(mTrackingFrameInfo[iLayer].size()));
       mClusterExternalIndicesD[iLayer].reset(mClusterExternalIndices[iLayer].data(), static_cast<int>(mClusterExternalIndices[iLayer].size()));
       mROframesClustersD[iLayer].reset(mROframesClusters[iLayer].data(), static_cast<int>(mROframesClusters[iLayer].size()));
+      if (iLayer < NLayers - 1) {
+        mIndexTablesD[iLayer].reset(mFlatIndexTables[iLayer].data(), static_cast<int>(mFlatIndexTables[iLayer].size()));
+      }
     }
   } else {
     mIndexTablesLayer0D.reset(getIndexTableWhole(0).data(), static_cast<int>(getIndexTableWhole(0).size()));

@@ -115,7 +115,6 @@ void TrackerTraits::computeLayerTracklets()
               int iPhiBin = (selectedBinsRect.y + iPhiCount) % mTrkParams.PhiBins;
               const int firstBinIndex{tf->mIndexTableUtils.getBinIndex(selectedBinsRect.x, iPhiBin)};
               const int maxBinIndex{firstBinIndex + selectedBinsRect.z - selectedBinsRect.x + 1};
-              printf("%d %d %d %d %d %d %d\n", maxBinIndex, firstBinIndex, iPhiBin, iPhiCount, phiBinsNum, rof1, rof0);
               if constexpr (debugLevel) {
                 if (firstBinIndex < 0 || firstBinIndex > tf->getIndexTable(rof1, iLayer + 1).size() ||
                     maxBinIndex < 0 || maxBinIndex > tf->getIndexTable(rof1, iLayer + 1).size()) {
@@ -134,7 +133,7 @@ void TrackerTraits::computeLayerTracklets()
                   break;
                 }
                 const Cluster& nextCluster{layer1[iNextCluster]};
-
+                printf("%d %d %d %d %d %d %d %d %d %d\n", maxBinIndex, firstBinIndex, iPhiBin, iPhiCount, phiBinsNum, rof1, rof0, firstRowClusterIndex, maxRowClusterIndex, iNextCluster);
                 if (tf->isClusterUsed(iLayer + 1, nextCluster.clusterId)) {
                   continue;
                 }
