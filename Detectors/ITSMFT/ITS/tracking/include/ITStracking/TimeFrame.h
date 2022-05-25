@@ -172,6 +172,7 @@ class TimeFrame
   std::vector<std::vector<int>> mClusterExternalIndices;
   std::vector<std::vector<int>> mROframesClusters;
   std::vector<std::vector<int>> mIndexTables;
+  std::vector<std::vector<unsigned char>> mUsedClusters;
   int mNrof = 0;
 
  private:
@@ -193,7 +194,6 @@ class TimeFrame
   std::vector<int> mROframesPV = {0};
   std::vector<Vertex> mPrimaryVertices;
   std::vector<std::vector<Cluster>> mUnsortedClusters;
-  std::vector<std::vector<bool>> mUsedClusters;
   const dataformats::MCTruthContainer<MCCompLabel>* mClusterLabels = nullptr;
   std::vector<std::vector<MCCompLabel>> mTrackletLabels;
   std::vector<std::vector<MCCompLabel>> mCellLabels;
