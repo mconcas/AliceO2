@@ -57,7 +57,7 @@ void TrackerTraits::computeLayerTracklets()
 
   const Vertex diamondVert({mTrkParams.Diamond[0], mTrkParams.Diamond[1], mTrkParams.Diamond[2]}, {25.e-6f, 0.f, 0.f, 25.e-6f, 0.f, 36.f}, 1, 1.f);
   gsl::span<const Vertex> diamondSpan(&diamondVert, 1);
-  for (int rof0{1}; rof0 < /*tf->getNrof()*/ 2; ++rof0) {
+  for (int rof0{476}; rof0 < 477/*tf->getNrof()*/; ++rof0) {
     gsl::span<const Vertex> primaryVertices = mTrkParams.UseDiamond ? diamondSpan : tf->getPrimaryVertices(rof0);
     int minRof = (rof0 >= mTrkParams.DeltaROF) ? rof0 - mTrkParams.DeltaROF : 0;
     int maxRof = (rof0 == tf->getNrof() - mTrkParams.DeltaROF) ? rof0 : rof0 + mTrkParams.DeltaROF;
@@ -133,7 +133,6 @@ void TrackerTraits::computeLayerTracklets()
                   break;
                 }
                 const Cluster& nextCluster{layer1[iNextCluster]};
-                printf("%d %d %d %d %d %d %d %d %d %d\n", maxBinIndex, firstBinIndex, iPhiBin, iPhiCount, phiBinsNum, rof1, rof0, firstRowClusterIndex, maxRowClusterIndex, iNextCluster);
                 if (tf->isClusterUsed(iLayer + 1, nextCluster.clusterId)) {
                   continue;
                 }
@@ -170,7 +169,9 @@ void TrackerTraits::computeLayerTracklets()
                                                                 currentCluster.xCoordinate - nextCluster.xCoordinate)};
                   const float tanL{(currentCluster.zCoordinate - nextCluster.zCoordinate) /
                                    (currentCluster.radius - nextCluster.radius)};
+                  // printf("%d %d %d %d %d %d %d %d %d %d %f %f %f\n", maxBinIndex, firstBinIndex, iPhiBin, iPhiCount, phiBinsNum, rof1, rof0, firstRowClusterIndex, maxRowClusterIndex, iNextCluster, nextCluster.xCoordinate, nextCluster.yCoordinate, nextCluster.zCoordinate);
                   tf->getTracklets()[iLayer].emplace_back(currentSortedIndex, tf->getSortedIndex(rof1, iLayer + 1, iNextCluster), tanL, phi, rof0, rof1);
+                  printf("%d %d %lf %lf %hu %hu\n", tf->getTracklets()[iLayer].back().firstClusterIndex, tf->getTracklets()[iLayer].back().secondClusterIndex, tf->getTracklets()[iLayer].back().tanLambda, tf->getTracklets()[iLayer].back().phi, tf->getTracklets()[iLayer].back().rof[0], tf->getTracklets()[iLayer].back().rof[0]);
                 }
               }
             }

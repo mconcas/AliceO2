@@ -104,22 +104,17 @@ void TimeFrameGPU<NLayers>::initialiseDevice(const TrackingParameters& trkParam)
 {
 
   for (int iLayer{0}; iLayer < NLayers; ++iLayer) { // Tracker and vertexer
-    // mClustersD[iLayer] = Vector<Cluster>{mConfig.clustersPerLayerCapacity, mConfig.clustersPerLayerCapacity};
-    // mUsedClustersD[iLayer] = Vector<unsigned char>{mConfig.clustersPerLayerCapacity, mConfig.clustersPerLayerCapacity};
-    // mTrackingFrameInfoD[iLayer] = Vector<TrackingFrameInfo>{mConfig.clustersPerLayerCapacity, mConfig.clustersPerLayerCapacity};
-    // mClusterExternalIndicesD[iLayer] = Vector<int>{mConfig.clustersPerLayerCapacity, mConfig.clustersPerLayerCapacity};
-    // mROframesClustersD[iLayer] = Vector<int>{mConfig.nMaxROFs, mConfig.nMaxROFs};
     if (iLayer < NLayers - 1) {
       mTrackletsD[iLayer] = Vector<Tracklet>{mConfig.trackletsCapacity, mConfig.trackletsCapacity};
-      // mIndexTablesD[iLayer] = Vector<int>{mConfig.nMaxROFs * (256 * 128 + 1), mConfig.nMaxROFs * (256 * 128 + 1)};
+    }
+    if (iLayer < NLayers - 2) {
+      mTrackletsLookupTablesD[iLayer].reset(mTrackletsLookupTable[iLayer].data(), static_cast<int>(mTrackletsLookupTable[iLayer].size()));
     }
   }
 
   for (auto iComb{0}; iComb < 2; ++iComb) { // Vertexer only
     mNTrackletsPerClusterD[iComb] = Vector<int>{mConfig.clustersPerLayerCapacity, mConfig.clustersPerLayerCapacity};
   }
-  // mIndexTablesLayer0D = Vector<int>{mConfig.nMaxROFs * (ZBins * PhiBins + 1), mConfig.nMaxROFs * (ZBins * PhiBins + 1)};
-  // mIndexTablesLayer2D = Vector<int>{mConfig.nMaxROFs * (ZBins * PhiBins + 1), mConfig.nMaxROFs * (ZBins * PhiBins + 1)};
   mLines = Vector<Line>{mConfig.trackletsCapacity, mConfig.trackletsCapacity};
   mNFoundLines = Vector<int>{mConfig.clustersPerLayerCapacity, mConfig.clustersPerLayerCapacity};
   mNExclusiveFoundLines = Vector<int>{mConfig.clustersPerLayerCapacity, mConfig.clustersPerLayerCapacity};
