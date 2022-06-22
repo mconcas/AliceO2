@@ -209,7 +209,6 @@ void TrackerTraits::computeLayerTracklets()
   for (int iLayer{0}; iLayer < mTrkParams.CellsPerRoad(); ++iLayer) {
     /// Sort tracklets
     auto& trkl{tf->getTracklets()[iLayer + 1]};
-    // printf("size: %zu\n", trkl.size());
     std::sort(trkl.begin(), trkl.end(), [](const Tracklet& a, const Tracklet& b) {
       return a.firstClusterIndex < b.firstClusterIndex || (a.firstClusterIndex == b.firstClusterIndex && a.secondClusterIndex < b.secondClusterIndex);
     });
