@@ -79,9 +79,6 @@ void TrackerTraits::computeLayerTracklets()
         const float inverseR0{1.f / currentCluster.radius};
         int iPrimaryVertex{0};
         for (auto& primaryVertex : primaryVertices) {
-          // if (!iCluster) {
-          //   printf("rof0 %d: Nv: %d -> x: %lf, y: %lf, z: %lf\n", rof0, iPrimaryVertex, primaryVertex.getX(), primaryVertex.getY(), primaryVertex.getZ());
-          // }
           iPrimaryVertex++;
           const float resolution = std::sqrt(Sq(mTrkParams.PVres) / primaryVertex.getNContributors() + Sq(tf->getPositionResolution(iLayer)));
 
@@ -187,52 +184,31 @@ void TrackerTraits::computeLayerTracklets()
       }
     }
   }
-  // for (int i{0}; i < 1; ++i) {
-  //   std::cout << " === " << std::endl;
-  //   for (auto j : tf->getTrackletsLookupTable()[i]) {
-  //     std::cout << j << "\n";
-  //   }
-  //   std::cout << std::endl;
-  // }
-  // std::vector<std::vector<int>> tables(5);
-  // for (int i{0}; i < 1; ++i) {
-  //   tables[i] = tf->getTrackletsLookupTable()[i];
-  //   std::exclusive_scan(tables[i].begin(), tables[i].end(), tables[i].begin(), 0);
-  //   std::cout << " === table " << i << " ===" << std::endl;
-  //   for (auto j : tables[i]) {
-  //     std::cout << j << "\n";
-  //   }
-  //   std::cout << std::endl;
-  // }
-  /// Cold code, fixups
 
+  /// Cold code, fixups
   for (int iLayer{0}; iLayer < mTrkParams.CellsPerRoad(); ++iLayer) {
     /// Sort tracklets
     auto& trkl{tf->getTracklets()[iLayer + 1]};
     std::sort(trkl.begin(), trkl.end(), [](const Tracklet& a, const Tracklet& b) {
       return a.firstClusterIndex < b.firstClusterIndex || (a.firstClusterIndex == b.firstClusterIndex && a.secondClusterIndex < b.secondClusterIndex);
     });
-    for (auto& t : tf->getTracklets()[iLayer + 1]) {
-      if (t.isEmpty()) {
-        break;
-      }
-      std::cout << "layer: " << iLayer + 1 << ":\t";
-      t.dump();
-    }
 
     /// Remove duplicates
     auto& lut{tf->getTrackletsLookupTable()[iLayer]};
     int id0{-1}, id1{-1};
     std::vector<Tracklet> newTrk;
     newTrk.reserve(trkl.size());
+    int count{0};
     for (auto& trk : trkl) {
       if (trk.firstClusterIndex == id0 && trk.secondClusterIndex == id1) {
+        printf("layer %d: tracklet: %d/%d, decreasing index %d\n", iLayer + 1, count, trkl.size(), id0);
         lut[id0]--;
       } else {
         id0 = trk.firstClusterIndex;
         id1 = trk.secondClusterIndex;
         newTrk.push_back(trk);
       }
+      count++;
     }
     trkl.swap(newTrk);
 
@@ -241,25 +217,22 @@ void TrackerTraits::computeLayerTracklets()
     lut.push_back(trkl.size());
   }
   /// Layer 0 is done outside the loop
-  for (auto& t : tf->getTracklets()[0]) {
-    if (t.isEmpty()) {
-      break;
-    }
-    std::cout << "layer: " << 0 << ":\t";
-    t.dump();
-  }
   std::sort(tf->getTracklets()[0].begin(), tf->getTracklets()[0].end(), [](const Tracklet& a, const Tracklet& b) {
     return a.firstClusterIndex < b.firstClusterIndex || (a.firstClusterIndex == b.firstClusterIndex && a.secondClusterIndex < b.secondClusterIndex);
   });
   int id0{-1}, id1{-1};
   std::vector<Tracklet> newTrk;
   newTrk.reserve(tf->getTracklets()[0].size());
+  int count{0};
   for (auto& trk : tf->getTracklets()[0]) {
     if (trk.firstClusterIndex != id0 || trk.secondClusterIndex != id1) {
       id0 = trk.firstClusterIndex;
       id1 = trk.secondClusterIndex;
       newTrk.push_back(trk);
+    } else {
+      printf("layer 0: tracklet: %d/%lu, decreasing index %d\n", count, tf->getTracklets()[0].size(), id0);
     }
+    count++;
   }
   tf->getTracklets()[0].swap(newTrk);
 
