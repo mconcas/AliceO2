@@ -21,6 +21,7 @@
 #include "ITStracking/Configuration.h"
 
 #include "ITStrackingGPU/ClusterLinesGPU.h"
+#include "ITStrackingGPU/Stream.h"
 
 #include "Array.h"
 #include "Vector.h"
@@ -116,6 +117,8 @@ class TimeFrameGPU : public TimeFrame
   int* getDeviceROframesClustersOnLayer(const int layerId) const { return mROframesClustersD[layerId].get(); }
   int getNClustersLayer(const int rofId, const int layerId) const;
   TimeFrameGPUConfig& getConfig() { return mConfig; }
+  gpu::Stream& getStream(const int iLayer) { return mStreamArray[iLayer]; }
+  std::vector<int>& getTrackletSizeHost() { return mTrackletSizeHost; }
 
   // Vertexer only
   int* getDeviceNTrackletsCluster(int rofId, int combId);
@@ -148,6 +151,8 @@ class TimeFrameGPU : public TimeFrame
 
  private:
   TimeFrameGPUConfig mConfig;
+  std::array<gpu::Stream, NLayers> mStreamArray;
+  std::vector<int> mTrackletSizeHost;
 
   // Per-layer information, do not expand at runtime
   std::array<Vector<Cluster>, NLayers> mClustersD;
