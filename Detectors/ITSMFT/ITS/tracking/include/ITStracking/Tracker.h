@@ -73,7 +73,7 @@ class Tracker
   std::vector<TrackITSExt>& getTracks();
 
   void setCorrType(const o2::base::PropagatorImpl<float>::MatCorrType& type) { mCorrType = type; }
-  void setParameters(const std::vector<MemoryParameters>&, const std::vector<TrackingParameters>&);
+  void setParameters(const std::vector<TrackingParameters>&);
   void getGlobalConfiguration();
   bool isMatLUT() const { return o2::base::Propagator::Instance()->getMatLUT() && (mCorrType == o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT); }
   // GPU-specific interfaces
@@ -106,7 +106,6 @@ class Tracker
   TrackerTraits* mTraits = nullptr; /// Observer pointer, not owned by this class
   TimeFrame* mTimeFrame = nullptr;  /// Observer pointer, not owned by this class
 
-  std::vector<MemoryParameters> mMemParams;
   std::vector<TrackingParameters> mTrkParams;
 
   int mNThreads = 1;
@@ -120,9 +119,8 @@ class Tracker
   unsigned int mNumberOfRuns{0};
 };
 
-inline void Tracker::setParameters(const std::vector<MemoryParameters>& memPars, const std::vector<TrackingParameters>& trkPars)
+inline void Tracker::setParameters(const std::vector<TrackingParameters>& trkPars)
 {
-  mMemParams = memPars;
   mTrkParams = trkPars;
 }
 
