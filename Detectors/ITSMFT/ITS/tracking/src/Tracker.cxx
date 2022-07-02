@@ -40,7 +40,6 @@ Tracker::Tracker(o2::its::TrackerTraits* traits)
 {
   /// Initialise standard configuration with 1 iteration
   mTrkParams.resize(1);
-  mMemParams.resize(1);
   mTraits = traits;
 }
 
@@ -52,7 +51,7 @@ void Tracker::clustersToTracks(std::function<void(std::string s)> logger, std::f
   for (int iteration = 0; iteration < (int)mTrkParams.size(); ++iteration) {
     mTraits->UpdateTrackingParameters(mTrkParams[iteration]);
     total += evaluateTask(&Tracker::initialiseTimeFrame, "Timeframe initialisation",
-                          logger, iteration, mMemParams[iteration], mTrkParams[iteration]);
+                          logger, iteration, mTrkParams[iteration]);
     total += evaluateTask(&Tracker::computeTracklets, "Tracklet finding", logger);
     if (!mTimeFrame->checkMemory(mTrkParams[iteration].MaxMemory)) {
       error("Too much memory used during trackleting, check the detector status and/or the selections.");

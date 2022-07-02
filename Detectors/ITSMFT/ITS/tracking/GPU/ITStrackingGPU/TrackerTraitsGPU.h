@@ -31,7 +31,7 @@ class TrackerTraitsGPU : public TrackerTraits
   ~TrackerTraitsGPU() override = default;
 
   void adoptTimeFrame(TimeFrame* tf) override;
-  void initialiseTimeFrame(const int iteration, const MemoryParameters& memParams, const TrackingParameters& trackingParams) override;
+  void initialiseTimeFrame(const int iteration, const TrackingParameters& trackingParams) override;
   void computeLayerTracklets() override;
   void computeLayerCells() override;
   // void refitTracks(const std::vector<std::vector<TrackingFrameInfo>>& tf, std::vector<TrackITSExt>& tracks) override;
