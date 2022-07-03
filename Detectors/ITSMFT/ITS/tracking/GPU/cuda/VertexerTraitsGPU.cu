@@ -89,7 +89,7 @@ VertexerTraitsGPU::~VertexerTraitsGPU()
   gpu::utils::host::gpuFree(mDeviceIndexTableUtils);
 }
 
-void VertexerTraitsGPU::initialise( const TrackingParameters& trackingParams)
+void VertexerTraitsGPU::initialise(const TrackingParameters& trackingParams)
 {
   if (!mIndexTableUtils.getNzBins()) {
     updateVertexingParameters(mVrtParams);
