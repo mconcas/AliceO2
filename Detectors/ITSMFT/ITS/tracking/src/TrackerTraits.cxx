@@ -263,7 +263,6 @@ void TrackerTraits::computeLayerCells()
 
   TimeFrame* tf = mTimeFrame;
   for (int iLayer{0}; iLayer < mTrkParams.CellsPerRoad(); ++iLayer) {
-    std::cout << "LAYER " << iLayer << std::endl;
     if (tf->getTracklets()[iLayer + 1].empty() ||
         tf->getTracklets()[iLayer].empty()) {
       continue;
@@ -280,7 +279,6 @@ void TrackerTraits::computeLayerCells()
       const int nextLayerClusterIndex{currentTracklet.secondClusterIndex};
       const int nextLayerFirstTrackletIndex{tf->getTrackletsLookupTable()[iLayer][nextLayerClusterIndex]};
       const int nextLayerLastTrackletIndex{tf->getTrackletsLookupTable()[iLayer][nextLayerClusterIndex + 1]};
-      printf("%d, %d, %d\n", nextLayerClusterIndex, nextLayerFirstTrackletIndex, nextLayerLastTrackletIndex);
 
       if (nextLayerFirstTrackletIndex == nextLayerLastTrackletIndex) {
         continue;
@@ -322,15 +320,13 @@ void TrackerTraits::computeLayerCells()
 
   /// Create cells labels
   if (tf->hasMCinformation()) {
-    for (int iLayer{0}; iLayer < mTrkParams.TrackletsPerRoad(); ++iLayer) {
-      LOGP(info, "layer: {} tracklets found: {}", iLayer, tf->getTracklets()[iLayer].size());
-    }
     for (int iLayer{0}; iLayer < mTrkParams.CellsPerRoad(); ++iLayer) {
-      LOGP(info, "layer {}: cells found: {}", iLayer, tf->getCells()[iLayer].size());
+      std::cout << "layer " << iLayer << "found cells: " << tf->getCells()[iLayer].size() << std::endl;
       for (auto& cell : tf->getCells()[iLayer]) {
         MCCompLabel currentLab{tf->getTrackletsLabel(iLayer)[cell.getFirstTrackletIndex()]};
         MCCompLabel nextLab{tf->getTrackletsLabel(iLayer + 1)[cell.getSecondTrackletIndex()]};
         tf->getCellsLabel(iLayer).emplace_back(currentLab == nextLab ? currentLab : MCCompLabel());
+        std::cout << tf->getCellsLabel(iLayer).back() << std::endl;
       }
     }
   }
