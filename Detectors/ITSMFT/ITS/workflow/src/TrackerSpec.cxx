@@ -188,7 +188,6 @@ void TrackerDPL::run(ProcessingContext& pc)
   std::vector<int> savedROF;
   auto logger = [&](std::string s) { LOG(info) << s; };
   auto errorLogger = [&](std::string s) { LOG(error) << s; };
-  int nclUsed = 0;
 
   std::vector<bool> processingMask;
   int cutRandomMult{0}, cutClusterMult{0}, cutVertexMult{0};
@@ -208,7 +207,6 @@ void TrackerDPL::run(ProcessingContext& pc)
     processingMask.push_back(selROF);
   }
   timeFrame->setMultiplicityCutMask(processingMask);
-
   float vertexerElapsedTime{0.f};
   if (mRunVertexer) {
     // Run seeding vertexer
@@ -248,52 +246,52 @@ void TrackerDPL::run(ProcessingContext& pc)
       timeFrame->addPrimaryVertices(vtxVecLoc);
     }
   }
+
   LOG(info) << fmt::format(" - rejected {}/{} ROFs: random:{}, mult.sel:{}, vtx.sel:{}", cutRandomMult + cutClusterMult + cutVertexMult, rofspan.size(), cutRandomMult, cutClusterMult, cutVertexMult);
-  LOG(info) << fmt::format(" - Vertex seeding total elapsed time: {} ms for {} clusters in {} ROFs", vertexerElapsedTime, nclUsed, rofspan.size());
+  LOG(info) << fmt::format(" - Vertex seeding total elapsed time: {} ms for {} clusters in {} ROFs", vertexerElapsedTime, compClusters.size(), rofspan.size());
   LOG(info) << fmt::format(" - Beam position computed for the TF: {}, {}", timeFrame->getBeamX(), timeFrame->getBeamY());
 
-  if (mCosmicsProcessing && nclUsed > 1500 * rofspan.size()) {
+  if (mCosmicsProcessing && compClusters.size() > 1500 * rofspan.size()) {
     LOG(error) << "Cosmics processing was requested with an average detector occupancy exceeding 1.e-7, skipping TF processing.";
   } else {
 
     timeFrame->setMultiplicityCutMask(processingMask);
-    mTracker->clustersToTracks(logger, errorLogger);
+    // mTracker->clustersToTracks(logger, errorLogger);
     if (timeFrame->hasBogusClusters()) {
       LOG(warning) << fmt::format(" - The processed timeframe had {} clusters with wild z coordinates, check the dictionaries", timeFrame->hasBogusClusters());
     }
 
-    for (unsigned int iROF{0}; iROF < rofs.size(); ++iROF) {
+    // for (unsigned int iROF{0}; iROF < rofs.size(); ++iROF) {
+    //   auto& rof{rofs[iROF]};
+    //   tracks = timeFrame->getTracks(iROF);
+    //   trackLabels = timeFrame->getTracksLabel(iROF);
+    //   auto number{tracks.size()};
+    //   auto first{allTracks.size()};
+    //   int offset = -rof.getFirstEntry(); // cluster entry!!!
+    //   rof.setFirstEntry(first);
+    //   rof.setNEntries(number);
 
-      auto& rof{rofs[iROF]};
-      tracks = timeFrame->getTracks(iROF);
-      trackLabels = timeFrame->getTracksLabel(iROF);
-      auto number{tracks.size()};
-      auto first{allTracks.size()};
-      int offset = -rof.getFirstEntry(); // cluster entry!!!
-      rof.setFirstEntry(first);
-      rof.setNEntries(number);
+    //   if (processingMask[iROF]) {
+    //     irFrames.emplace_back(rof.getBCData(), rof.getBCData() + nBCPerTF - 1).info = tracks.size();
+    //   }
 
-      if (processingMask[iROF]) {
-        irFrames.emplace_back(rof.getBCData(), rof.getBCData() + nBCPerTF - 1).info = tracks.size();
-      }
-
-      std::copy(trackLabels.begin(), trackLabels.end(), std::back_inserter(allTrackLabels));
-      // Some conversions that needs to be moved in the tracker internals
-      for (unsigned int iTrk{0}; iTrk < tracks.size(); ++iTrk) {
-        auto& trc{tracks[iTrk]};
-        trc.setFirstClusterEntry(allClusIdx.size()); // before adding tracks, create final cluster indices
-        int ncl = trc.getNumberOfClusters(), nclf = 0;
-        for (int ic = TrackITSExt::MaxClusters; ic--;) { // track internally keeps in->out cluster indices, but we want to store the references as out->in!!!
-          auto clid = trc.getClusterIndex(ic);
-          if (clid >= 0) {
-            allClusIdx.push_back(clid);
-            nclf++;
-          }
-        }
-        assert(ncl == nclf);
-        allTracks.emplace_back(trc);
-      }
-    }
+    //   std::copy(trackLabels.begin(), trackLabels.end(), std::back_inserter(allTrackLabels));
+    //   // Some conversions that needs to be moved in the tracker internals
+    //   for (unsigned int iTrk{0}; iTrk < tracks.size(); ++iTrk) {
+    //     auto& trc{tracks[iTrk]};
+    //     trc.setFirstClusterEntry(allClusIdx.size()); // before adding tracks, create final cluster indices
+    //     int ncl = trc.getNumberOfClusters(), nclf = 0;
+    //     for (int ic = TrackITSExt::MaxClusters; ic--;) { // track internally keeps in->out cluster indices, but we want to store the references as out->in!!!
+    //       auto clid = trc.getClusterIndex(ic);
+    //       if (clid >= 0) {
+    //         allClusIdx.push_back(clid);
+    //         nclf++;
+    //       }
+    //     }
+    //     assert(ncl == nclf);
+    //     allTracks.emplace_back(trc);
+    //   }
+    // }
     LOGP(info, "ITSTracker pushed {} tracks and {} vertices", allTracks.size(), vertices.size());
     if (mIsMC) {
       LOGP(info, "ITSTracker pushed {} track labels", allTrackLabels.size());
