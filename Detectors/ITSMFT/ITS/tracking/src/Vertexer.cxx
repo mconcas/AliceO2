@@ -40,10 +40,10 @@ float Vertexer::clustersToVertices(std::function<void(std::string s)> logger)
 {
   float total{0.f};
   TrackingParameters trkPars;
-  total += evaluateTask(&Vertexer::initialiseVertexer,  "Vertexer initialisation", logger, trkPars);
-  total += evaluateTask(&Vertexer::findTracklets,  "Tracklet finding", logger);
-  total += evaluateTask(&Vertexer::validateTracklets,  "Adjacent tracklets validation", logger);
-  total += evaluateTask(&Vertexer::findVertices,  "Vertex finding", logger);
+  total += evaluateTask(&Vertexer::initialiseVertexer, "Vertexer initialisation", logger, trkPars);
+  total += evaluateTask(&Vertexer::findTracklets, "Tracklet finding", logger);
+  total += evaluateTask(&Vertexer::validateTracklets, "Adjacent tracklets validation", logger);
+  total += evaluateTask(&Vertexer::findVertices, "Vertex finding", logger);
 
   return total;
 }
