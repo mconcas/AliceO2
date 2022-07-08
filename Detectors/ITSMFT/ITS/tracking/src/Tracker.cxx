@@ -54,8 +54,7 @@ void Tracker::clustersToTracks(std::function<void(std::string s)> logger, std::f
   double total{0};
   for (int iteration = 0; iteration < (int)mTrkParams.size(); ++iteration) {
     mTraits->UpdateTrackingParameters(mTrkParams[iteration]);
-    total += evaluateTask(&Tracker::initialiseTimeFrame, "Timeframe initialisation",
-                          logger, iteration, mTrkParams[iteration]);
+    total += evaluateTask(&Tracker::initialiseTimeFrame, "Timeframe initialisation", logger, iteration, mTrkParams[iteration]);
     total += evaluateTask(&Tracker::computeTracklets, "Tracklet finding", logger);
     logger(fmt::format("\t- Number of tracklets: {}", mTimeFrame->getNumberOfTracklets()));
     if (!mTimeFrame->checkMemory(mTrkParams[iteration].MaxMemory)) {
