@@ -66,7 +66,6 @@ void TrackerDPL::init(InitContext& ic)
   mRunVertexer = true;
   mCosmicsProcessing = false;
   std::vector<TrackingParameters> trackParams;
-  std::vector<MemoryParameters> memParams;
 
   if (mMode == "async") {
 
@@ -76,7 +75,6 @@ void TrackerDPL::init(InitContext& ic)
     trackParams[2].TrackletMinPt = 0.1f;
     trackParams[2].CellDeltaTanLambdaSigma *= 4.;
     trackParams[2].MinTrackLength = 4;
-    memParams.resize(3);
     LOG(info) << "Initializing tracker in async. phase reconstruction with " << trackParams.size() << " passes";
 
   } else if (mMode == "sync_misaligned") {
@@ -102,14 +100,12 @@ void TrackerDPL::init(InitContext& ic)
     LOG(info) << "Initializing tracker in misaligned sync. phase reconstruction with " << trackParams.size() << " passes";
 
   } else if (mMode == "sync") {
-    memParams.resize(1);
     trackParams.resize(1);
     LOG(info) << "Initializing tracker in sync. phase reconstruction with " << trackParams.size() << " passes";
   } else if (mMode == "cosmics") {
     mCosmicsProcessing = true;
     mRunVertexer = false;
     trackParams.resize(1);
-    memParams.resize(1);
     trackParams[0].MinTrackLength = 4;
     trackParams[0].CellDeltaTanLambdaSigma *= 10;
     trackParams[0].PhiBins = 4;
@@ -135,7 +131,7 @@ void TrackerDPL::init(InitContext& ic)
   for (auto& params : trackParams) {
     params.CorrType = o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT;
   }
-  mTracker->setParameters(memParams, trackParams);
+  mTracker->setParameters(trackParams);
 }
 
 void TrackerDPL::run(ProcessingContext& pc)
@@ -262,42 +258,42 @@ void TrackerDPL::run(ProcessingContext& pc)
   } else {
 
     timeFrame->setMultiplicityCutMask(processingMask);
-    // mTracker->clustersToTracks(logger, errorLogger);
+    mTracker->clustersToTracks(logger, errorLogger);
     if (timeFrame->hasBogusClusters()) {
       LOG(warning) << fmt::format(" - The processed timeframe had {} clusters with wild z coordinates, check the dictionaries", timeFrame->hasBogusClusters());
     }
 
-    // for (unsigned int iROF{0}; iROF < rofs.size(); ++iROF) {
-    //   auto& rof{rofs[iROF]};
-    //   tracks = timeFrame->getTracks(iROF);
-    //   trackLabels = timeFrame->getTracksLabel(iROF);
-    //   auto number{tracks.size()};
-    //   auto first{allTracks.size()};
-    //   int offset = -rof.getFirstEntry(); // cluster entry!!!
-    //   rof.setFirstEntry(first);
-    //   rof.setNEntries(number);
+    for (unsigned int iROF{0}; iROF < rofs.size(); ++iROF) {
+      auto& rof{rofs[iROF]};
+      tracks = timeFrame->getTracks(iROF);
+      trackLabels = timeFrame->getTracksLabel(iROF);
+      auto number{tracks.size()};
+      auto first{allTracks.size()};
+      int offset = -rof.getFirstEntry(); // cluster entry!!!
+      rof.setFirstEntry(first);
+      rof.setNEntries(number);
 
-    //   if (processingMask[iROF]) {
-    //     irFrames.emplace_back(rof.getBCData(), rof.getBCData() + nBCPerTF - 1).info = tracks.size();
-    //   }
+      if (processingMask[iROF]) {
+        irFrames.emplace_back(rof.getBCData(), rof.getBCData() + nBCPerTF - 1).info = tracks.size();
+      }
 
-    //   std::copy(trackLabels.begin(), trackLabels.end(), std::back_inserter(allTrackLabels));
-    //   // Some conversions that needs to be moved in the tracker internals
-    //   for (unsigned int iTrk{0}; iTrk < tracks.size(); ++iTrk) {
-    //     auto& trc{tracks[iTrk]};
-    //     trc.setFirstClusterEntry(allClusIdx.size()); // before adding tracks, create final cluster indices
-    //     int ncl = trc.getNumberOfClusters(), nclf = 0;
-    //     for (int ic = TrackITSExt::MaxClusters; ic--;) { // track internally keeps in->out cluster indices, but we want to store the references as out->in!!!
-    //       auto clid = trc.getClusterIndex(ic);
-    //       if (clid >= 0) {
-    //         allClusIdx.push_back(clid);
-    //         nclf++;
-    //       }
-    //     }
-    //     assert(ncl == nclf);
-    //     allTracks.emplace_back(trc);
-    //   }
-    // }
+      std::copy(trackLabels.begin(), trackLabels.end(), std::back_inserter(allTrackLabels));
+      // Some conversions that needs to be moved in the tracker internals
+      for (unsigned int iTrk{0}; iTrk < tracks.size(); ++iTrk) {
+        auto& trc{tracks[iTrk]};
+        trc.setFirstClusterEntry(allClusIdx.size()); // before adding tracks, create final cluster indices
+        int ncl = trc.getNumberOfClusters(), nclf = 0;
+        for (int ic = TrackITSExt::MaxClusters; ic--;) { // track internally keeps in->out cluster indices, but we want to store the references as out->in!!!
+          auto clid = trc.getClusterIndex(ic);
+          if (clid >= 0) {
+            allClusIdx.push_back(clid);
+            nclf++;
+          }
+        }
+        assert(ncl == nclf);
+        allTracks.emplace_back(trc);
+      }
+    }
     LOGP(info, "ITSTracker pushed {} tracks and {} vertices", allTracks.size(), vertices.size());
     if (mIsMC) {
       LOGP(info, "ITSTracker pushed {} track labels", allTrackLabels.size());
