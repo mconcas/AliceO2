@@ -205,7 +205,7 @@ void TrackerDPL::run(ProcessingContext& pc)
   float vertexerElapsedTime{0.f};
   if (mRunVertexer) {
     // Run seeding vertexer
-    vertexerElapsedTime = mVertexer->clustersToVertices(false, logger);
+    vertexerElapsedTime = mVertexer->clustersToVertices(logger);
   }
 
   for (auto iRof{0}; iRof < rofspan.size(); ++iRof) {
@@ -251,6 +251,7 @@ void TrackerDPL::run(ProcessingContext& pc)
   } else {
 
     timeFrame->setMultiplicityCutMask(processingMask);
+    // Run CA tracker
     mTracker->clustersToTracks(logger, errorLogger);
     if (timeFrame->hasBogusClusters()) {
       LOG(warning) << fmt::format(" - The processed timeframe had {} clusters with wild z coordinates, check the dictionaries", timeFrame->hasBogusClusters());
