@@ -96,7 +96,6 @@ void TrackerDPL::init(InitContext& ic)
     trackParams[2] = trackParams[0];
     trackParams[1].MinTrackLength = 6;
     trackParams[2].MinTrackLength = 4;
-    memParams.resize(3);
     LOG(info) << "Initializing tracker in misaligned sync. phase reconstruction with " << trackParams.size() << " passes";
 
   } else if (mMode == "sync") {

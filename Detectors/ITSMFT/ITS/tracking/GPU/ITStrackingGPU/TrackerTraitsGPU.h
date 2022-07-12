@@ -36,6 +36,11 @@ class TrackerTraitsGPU : public TrackerTraits
   void computeLayerCells() override;
   // void refitTracks(const std::vector<std::vector<TrackingFrameInfo>>& tf, std::vector<TrackITSExt>& tracks) override;
 
+  // TimeFrameGPU information forwarding
+  int getTFNumberOfClusters() const override;
+  int getTFNumberOfTracklets() const override;
+  int getTFNumberOfCells() const override;
+
  private:
   gpu::TimeFrameGPU<7>* mTimeFrameGPU;
   gpu::StaticTrackingParameters<NLayers>* mStaticTrkPars;
