@@ -354,7 +354,8 @@ void Tracker::setCorrType(const o2::base::PropagatorImpl<float>::MatCorrType& ty
   mTraits->setCorrType(type);
 }
 
-bool Tracker::isMatLUT() const {
+bool Tracker::isMatLUT() const
+{
   mTraits->isMatLUT();
 }
 
