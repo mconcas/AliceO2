@@ -465,5 +465,26 @@ bool TrackerTraits::trackFollowing(TrackITSExt* track, int rof, bool outward)
   *track = *bestHypo;
   return swapped;
 }
+
+int TrackerTraits::getTFNumberOfClusters() const
+{
+  return mTimeFrame->getNumberOfClusters();
+}
+
+int TrackerTraits::getTFNumberOfTracklets() const
+{
+  return mTimeFrame->getNumberOfTracklets();
+}
+
+int TrackerTraits::getTFNumberOfCells() const
+{
+  return mTimeFrame->getNumberOfCells();
+}
+
+// bool TrackerTraits::checkTFMemory(const int iteration)
+// {
+//   return mTimeFrame->checkMemory(mTrkParams[iteration].MaxMemory);
+// }
+
 } // namespace its
 } // namespace o2

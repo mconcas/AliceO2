@@ -74,6 +74,12 @@ class TrackerTraits
 
   void setIsGPU(const unsigned char isgpu) { mIsGPU = isgpu; };
 
+  // TimeFrame information forwarding
+  virtual int getTFNumberOfClusters() const;
+  virtual int getTFNumberOfTracklets() const;
+  virtual int getTFNumberOfCells() const;
+  // virtual bool checkTFMemory(const int iteration);
+
  protected:
   TimeFrame* mTimeFrame;
   TrackingParameters mTrkParams;
