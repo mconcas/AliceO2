@@ -29,7 +29,6 @@
 #include "ITStracking/Tracklet.h"
 #include "ReconstructionDataFormats/Track.h"
 
-
 #ifdef WITH_OPENMP
 #include <omp.h>
 #endif
