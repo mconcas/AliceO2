@@ -82,12 +82,15 @@ class TrackerTraits
   }
   void setSmoothing(bool v) { mApplySmoothing = v; }
   bool getSmoothing() const { return mApplySmoothing; }
+  void setNThreads(int n);
+  int getNThreads() const { return mNThreads; }
 
  private:
   void traverseCellsTree(const int, const int);
   track::TrackParCov buildTrackSeed(const Cluster& cluster1, const Cluster& cluster2, const Cluster& cluster3, const TrackingFrameInfo& tf3, float resolution);
   bool fitTrack(TrackITSExt& track, int start, int end, int step, const float chi2cut = o2::constants::math::VeryBig, const float maxQoverPt = o2::constants::math::VeryBig);
 
+  int mNThreads = 1;
   bool mApplySmoothing = false;
   o2::base::PropagatorImpl<float>::MatCorrType mCorrType = o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrNONE;
   float mBz = 5.f;

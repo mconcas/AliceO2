@@ -31,10 +31,6 @@
 #include <string>
 #include <climits>
 
-#ifdef WITH_OPENMP
-#include <omp.h>
-#endif
-
 namespace o2
 {
 namespace its
@@ -92,7 +88,7 @@ void Tracker::clustersToTracks(std::function<void(std::string s)> logger, std::f
   std::stringstream sstream;
   if (constants::DoTimeBenchmarks) {
     sstream << std::setw(2) << " - "
-            << "Timeframe " << mTimeFrameCounter++ << " processing completed in: " << total << "ms using " << mNThreads << " threads.";
+            << "Timeframe " << mTimeFrameCounter++ << " processing completed in: " << total << "ms using " << mTraits->getNThreads() << " threads.";
   }
   logger(sstream.str());
 
@@ -382,12 +378,12 @@ bool Tracker::isMatLUT() const
 
 void Tracker::setNThreads(int n)
 {
-#ifdef WITH_OPENMP
-  mNThreads = n > 0 ? n : 1;
-#else
-  mNThreads = 1;
-#endif
+  mTraits->setNThreads(n);
 }
 
+int Tracker::getNThreads() const
+{
+  return mTraits->getNThreads();
+}
 } // namespace its
 } // namespace o2

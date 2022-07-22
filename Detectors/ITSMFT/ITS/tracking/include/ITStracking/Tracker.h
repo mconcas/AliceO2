@@ -70,7 +70,7 @@ class Tracker
   void setCorrType(const o2::base::PropagatorImpl<float>::MatCorrType& type);
   bool isMatLUT() const;
   void setNThreads(int n);
-  int getNThreads() const { return mNThreads; }
+  int getNThreads() const;
 
  private:
   void initialiseTimeFrame(int& iteration);
