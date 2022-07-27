@@ -96,7 +96,6 @@ void CompareArtefacts(const string cpu_file = "artefacts_tf.root", const string 
   hist_cpu_tracklets0_firstClusterIndex_clone->Add(hist_gpu_tracklets0_firstClusterIndex, -1);
   hist_cpu_tracklets0_firstClusterIndex_clone->SetLineColor(kBlack);
 
-
   hist_gpu_tracklets0_firstClusterIndex->Draw();
   hist_cpu_tracklets0_firstClusterIndex->Draw("same");
   hist_cpu_tracklets0_firstClusterIndex_clone->Draw("same");
