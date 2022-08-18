@@ -35,6 +35,7 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
     nThreads = 1;
   }
   auto autoDecode = reader.getDecodeNextAuto();
+  int nBytes{0};
   do {
     if (autoDecode) {
       reader.setDecodeNextAuto(false); // internally do not autodecode
@@ -52,6 +53,24 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
     while ((curChipData = reader.getNextChipData(mChips))) {
       mFiredChipsPtr.push_back(curChipData);
       nPix += curChipData->getData().size();
+    }
+
+    // Get a view on the processed rofs so far
+    gsl::span<const o2::itsmft::ROFRecord> pastROFs{vecROFRec->data(), static_cast<gsl::span<o2::itsmft::ROFRecord>::size_type>(vecROFRec->size())};
+
+    if (vecROFRec->size()) {
+      // loop over clusters found in previous ROF and fill clusters info
+      auto pGroupedTopologiesBookmark = patterns->cbegin() += nBytes; // keep track of the grouped topologies starting point across ROFs
+      for (auto& cluster : vecROFRec->back().getROFData(*compClus)) {
+        auto patternID = cluster.getPatternID();
+        o2::itsmft::ClusterPattern patt;
+        if (patternID == o2::itsmft::CompCluster::InvalidPatternID || mPattIdConverter.getDictionary().isGroup(patternID)) {
+          nBytes += (2 + patt.acquirePattern(pGroupedTopologiesBookmark)); // 2 Bytes are always shifted inside pattern acquisition
+        } else {
+          patt = mPattIdConverter.getDictionary().getPattern(patternID);
+        }
+        mClustersInfo.emplace_back(patt, cluster.getCol(), cluster.getRow());
+      }
     }
 
     auto& rof = vecROFRec->emplace_back(reader.getInteractionRecord(), 0, compClus->size(), 0); // create new ROF
@@ -88,14 +107,14 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
                                &mThreads[ith]->compClusters,
                                patterns ? &mThreads[ith]->patterns : nullptr,
                                labelsCl ? reader.getDigitsMCTruth() : nullptr,
-                               labelsCl ? &mThreads[ith]->labels : nullptr, rof);
+                               labelsCl ? &mThreads[ith]->labels : nullptr, rof, pastROFs);
       } else { // put directly to the destination
-        mThreads[0]->process(0, nFired, compClus, patterns, labelsCl ? reader.getDigitsMCTruth() : nullptr, labelsCl, rof);
+        mThreads[0]->process(0, nFired, compClus, patterns, labelsCl ? reader.getDigitsMCTruth() : nullptr, labelsCl, rof, pastROFs);
       }
     }
     //<< end of MT region
 #else
-    mThreads[0]->process(0, nFired, compClus, patterns, labelsCl ? reader.getDigitsMCTruth() : nullptr, labelsCl, rof);
+    mThreads[0]->process(0, nFired, compClus, patterns, labelsCl ? reader.getDigitsMCTruth() : nullptr, labelsCl, rof, pastROFs);
 #endif
     // copy data of all threads but the 1st one to final destination
     if (nThreads > 1) {
@@ -157,7 +176,8 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
 
 //__________________________________________________
 void Clusterer::ClustererThread::process(uint16_t chip, uint16_t nChips, CompClusCont* compClusPtr, PatternCont* patternsPtr,
-                                         const ConstMCTruth* labelsDigPtr, MCTruth* labelsClPtr, const ROFRecord& rofPtr)
+                                         const ConstMCTruth* labelsDigPtr, MCTruth* labelsClPtr, const ROFRecord& rofPtr,
+                                         gsl::span<const o2::itsmft::ROFRecord>& prevROFs)
 {
   if (stats.empty() || stats.back().firstChip + stats.back().nChips < chip) { // there is a jump, register new block
     stats.emplace_back(ThreadStat{chip, 0, uint32_t(compClusPtr->size()), patternsPtr ? uint32_t(patternsPtr->size()) : 0, 0, 0});
@@ -177,7 +197,7 @@ void Clusterer::ClustererThread::process(uint16_t chip, uint16_t nChips, CompClu
     if (validPixID < npix) { // chip data may have all of its pixels masked!
       auto valp = validPixID++;
       if (validPixID == npix) { // special case of a single pixel fired on the chip
-        finishChipSingleHitFast(valp, curChipData, compClusPtr, patternsPtr, labelsDigPtr, labelsClPtr);
+        finishChipSingleHitFast(valp, curChipData, compClusPtr, patternsPtr, labelsDigPtr, labelsClPtr, prevROFs);
       } else {
         initChip(curChipData, valp);
         for (; validPixID < npix; validPixID++) {
@@ -185,7 +205,7 @@ void Clusterer::ClustererThread::process(uint16_t chip, uint16_t nChips, CompClu
             updateChip(curChipData, validPixID);
           }
         }
-        finishChip(curChipData, compClusPtr, patternsPtr, labelsDigPtr, labelsClPtr);
+        finishChip(curChipData, compClusPtr, patternsPtr, labelsDigPtr, labelsClPtr, prevROFs);
       }
     }
     if (parent->mMaxBCSeparationToMask > 0) { // current chip data will be used in the next ROF to mask overflow pixels
@@ -200,7 +220,8 @@ void Clusterer::ClustererThread::process(uint16_t chip, uint16_t nChips, CompClu
 
 //__________________________________________________
 void Clusterer::ClustererThread::finishChip(ChipPixelData* curChipData, CompClusCont* compClusPtr,
-                                            PatternCont* patternsPtr, const ConstMCTruth* labelsDigPtr, MCTruth* labelsClusPtr)
+                                            PatternCont* patternsPtr, const ConstMCTruth* labelsDigPtr, MCTruth* labelsClusPtr,
+                                            gsl::span<const o2::itsmft::ROFRecord>& prevROFs)
 {
   auto clustersCount = compClusPtr->size();
   const auto& pixData = curChipData->getData();
@@ -242,6 +263,28 @@ void Clusterer::ClustererThread::finishChip(ChipPixelData* curChipData, CompClus
       preClusterIndices[i2] = -1;
     }
     if (bbox.isAcceptableSize()) {
+      // // Here we've computed the BBox and can do overlap comparison
+      // const gsl::span<const CompClusterExt> oldClusSpan{compClusPtr->data(), static_cast<gsl::span<CompClusterExt>::size_type>(compClusPtr->size())};
+      // for (size_t iRof{std::max(0UL, prevROFs.size() - 2UL)}; iRof < prevROFs.size(); ++iRof) {
+      //   auto& pRof = prevROFs[iRof];
+      //   // Cached iterator refers to first grouped topology for given Rof
+      //   auto pattIt = parent->getFirstGroupedPatternROF()[iRof];
+      //   LOGP(info, "Processing ROF: {}, starting pointer to grouped topologies is {}", iRof, static_cast<void*>(&(*pattIt)));
+      //   for (auto& clus : pRof.getROFData(oldClusSpan)) {
+      //     auto pattID = clus.getPatternID();
+      //     o2::itsmft::ClusterPattern patt;
+      //     if (pattID == o2::itsmft::CompCluster::InvalidPatternID || parent->mPattIdConverter.getDictionary().isGroup(pattID)) {
+      //       patt.acquirePattern(pattIt);
+      //     } else {
+      //       patt = parent->mPattIdConverter.getDictionary().getPattern(pattID);
+      //     }
+      //     // Check if we have overlaps in BBoxes
+      //     if (bbox.hasBBoxOverlap(clus.getCol(), clus.getRow(), patt.getColumnSpan(), patt.getRowSpan())) {
+      //       // do the needed things
+      //       LOGP(info, "Found overlap!");
+      //     }
+      //   }
+      // }
       parent->streamCluster(pixArrBuff, &labelsBuff, bbox, parent->mPattIdConverter, compClusPtr, patternsPtr, labelsClusPtr, nlab);
     } else {
       auto warnLeft = MaxHugeClusWarn - parent->mNHugeClus;
@@ -281,7 +324,8 @@ void Clusterer::ClustererThread::finishChip(ChipPixelData* curChipData, CompClus
 
 //__________________________________________________
 void Clusterer::ClustererThread::finishChipSingleHitFast(uint32_t hit, ChipPixelData* curChipData, CompClusCont* compClusPtr,
-                                                         PatternCont* patternsPtr, const ConstMCTruth* labelsDigPtr, MCTruth* labelsClusPtr)
+                                                         PatternCont* patternsPtr, const ConstMCTruth* labelsDigPtr, MCTruth* labelsClusPtr,
+                                                         gsl::span<const o2::itsmft::ROFRecord>& prevROFs)
 {
   auto clustersCount = compClusPtr->size();
   auto pix = curChipData->getData()[hit];
