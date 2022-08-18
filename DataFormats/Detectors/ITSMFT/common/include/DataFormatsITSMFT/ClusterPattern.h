@@ -52,7 +52,7 @@ class ClusterPattern
   ClusterPattern(int nRow, int nCol, const unsigned char patt[MaxPatternBytes]);
 
   template <class iterator>
-  void acquirePattern(iterator& pattIt)
+  int acquirePattern(iterator& pattIt)
   {
     mBitmap[0] = *pattIt++;
     mBitmap[1] = *pattIt++;
@@ -63,6 +63,7 @@ class ClusterPattern
     }
     memcpy(&mBitmap[2], &(*pattIt), nBytes);
     pattIt += nBytes;
+    return nBytes;
   }
 
   template <class iterator>
