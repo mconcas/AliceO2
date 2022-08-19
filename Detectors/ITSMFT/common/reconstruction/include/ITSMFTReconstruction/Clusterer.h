@@ -256,6 +256,8 @@ class Clusterer
   TStopwatch& getTimer() { return mTimer; }           // cannot be const
   TStopwatch& getTimerMerge() { return mTimerMerge; } // cannot be const
 
+  gsl::span<const ClusterInfo> getClustersInfo() const { return gsl::span<const ClusterInfo>{mClustersInfo}; }
+
  private:
   void flushClusters(CompClusCont* compClus, MCTruth* labels);
 
@@ -274,7 +276,6 @@ class Clusterer
   std::vector<ClusterInfo> mClustersInfo;                 // cache used for X-ROF cluster comparisons
 
   LookUp mPattIdConverter; //! Convert the cluster topology to the corresponding entry in the dictionary.
-  TStopwatch mTimerBookeeper;
   TStopwatch mTimer;
   TStopwatch mTimerMerge;
 };

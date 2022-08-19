@@ -55,10 +55,8 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
       nPix += curChipData->getData().size();
     }
 
-    // Get a view on the processed rofs so far
-    gsl::span<const o2::itsmft::ROFRecord> pastROFs{vecROFRec->data(), static_cast<gsl::span<o2::itsmft::ROFRecord>::size_type>(vecROFRec->size())};
-
     if (vecROFRec->size()) {
+      // LOGP(info, "ROF: {}, starting cluster idx: {}, ending cluster idx: {}, nBytes: {}", prevROFs.size(), prevROFs.back().getFirstEntry(), prevROFs.back().getNEntries(), nBytes);
       // loop over clusters found in previous ROF and fill clusters info
       auto pGroupedTopologiesBookmark = patterns->cbegin() += nBytes; // keep track of the grouped topologies starting point across ROFs
       for (auto& cluster : vecROFRec->back().getROFData(*compClus)) {
@@ -73,7 +71,8 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
       }
     }
 
-    auto& rof = vecROFRec->emplace_back(reader.getInteractionRecord(), 0, compClus->size(), 0); // create new ROF
+    auto& rof = vecROFRec->emplace_back(reader.getInteractionRecord(), 0, compClus->size(), 0); // create new ROF                                                                                      // Get a view on the previous rofs so far
+    gsl::span<const o2::itsmft::ROFRecord> prevROFs{vecROFRec->data(), static_cast<gsl::span<o2::itsmft::ROFRecord>::size_type>(vecROFRec->size() - 1)};
 
     uint16_t nFired = mFiredChipsPtr.size();
     if (!nFired) {
@@ -107,14 +106,14 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
                                &mThreads[ith]->compClusters,
                                patterns ? &mThreads[ith]->patterns : nullptr,
                                labelsCl ? reader.getDigitsMCTruth() : nullptr,
-                               labelsCl ? &mThreads[ith]->labels : nullptr, rof, pastROFs);
+                               labelsCl ? &mThreads[ith]->labels : nullptr, rof, prevROFs);
       } else { // put directly to the destination
-        mThreads[0]->process(0, nFired, compClus, patterns, labelsCl ? reader.getDigitsMCTruth() : nullptr, labelsCl, rof, pastROFs);
+        mThreads[0]->process(0, nFired, compClus, patterns, labelsCl ? reader.getDigitsMCTruth() : nullptr, labelsCl, rof, prevROFs);
       }
     }
     //<< end of MT region
 #else
-    mThreads[0]->process(0, nFired, compClus, patterns, labelsCl ? reader.getDigitsMCTruth() : nullptr, labelsCl, rof, pastROFs);
+    mThreads[0]->process(0, nFired, compClus, patterns, labelsCl ? reader.getDigitsMCTruth() : nullptr, labelsCl, rof, prevROFs);
 #endif
     // copy data of all threads but the 1st one to final destination
     if (nThreads > 1) {
@@ -169,6 +168,7 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
     rof.setNEntries(compClus->size() - rof.getFirstEntry()); // update
   } while (autoDecode);
   reader.setDecodeNextAuto(autoDecode); // restore setting
+  mClustersInfo.clear();
 #ifdef _PERFORM_TIMING_
   mTimer.Stop();
 #endif
@@ -263,28 +263,24 @@ void Clusterer::ClustererThread::finishChip(ChipPixelData* curChipData, CompClus
       preClusterIndices[i2] = -1;
     }
     if (bbox.isAcceptableSize()) {
-      // // Here we've computed the BBox and can do overlap comparison
-      // const gsl::span<const CompClusterExt> oldClusSpan{compClusPtr->data(), static_cast<gsl::span<CompClusterExt>::size_type>(compClusPtr->size())};
-      // for (size_t iRof{std::max(0UL, prevROFs.size() - 2UL)}; iRof < prevROFs.size(); ++iRof) {
-      //   auto& pRof = prevROFs[iRof];
-      //   // Cached iterator refers to first grouped topology for given Rof
-      //   auto pattIt = parent->getFirstGroupedPatternROF()[iRof];
-      //   LOGP(info, "Processing ROF: {}, starting pointer to grouped topologies is {}", iRof, static_cast<void*>(&(*pattIt)));
-      //   for (auto& clus : pRof.getROFData(oldClusSpan)) {
-      //     auto pattID = clus.getPatternID();
-      //     o2::itsmft::ClusterPattern patt;
-      //     if (pattID == o2::itsmft::CompCluster::InvalidPatternID || parent->mPattIdConverter.getDictionary().isGroup(pattID)) {
-      //       patt.acquirePattern(pattIt);
-      //     } else {
-      //       patt = parent->mPattIdConverter.getDictionary().getPattern(pattID);
-      //     }
-      //     // Check if we have overlaps in BBoxes
-      //     if (bbox.hasBBoxOverlap(clus.getCol(), clus.getRow(), patt.getColumnSpan(), patt.getRowSpan())) {
-      //       // do the needed things
-      //       LOGP(info, "Found overlap!");
-      //     }
-      //   }
-      // }
+      // Here we've computed the BBox and can do overlap comparison
+      const gsl::span<const CompClusterExt> oldClusSpan{compClusPtr->data(), static_cast<gsl::span<CompClusterExt>::size_type>(compClusPtr->size())};
+      if (prevROFs.size()) {
+        for (size_t iRof{std::max(0UL, prevROFs.size() - 2UL)}; iRof < prevROFs.size(); ++iRof) {
+          auto& pRof = prevROFs[iRof];
+
+          for (auto iOldClus{pRof.getFirstEntry()}; iOldClus < pRof.getFirstEntry() + pRof.getNEntries(); ++iOldClus) {
+            // Check if we have overlaps in BBoxes
+            // LOGP(info, "\t\twilling to access position {} in rofId {}, prev rofsize {}", iOldClus, iRof, prevROFs.size());
+            auto& oldClusInfo = parent->getClustersInfo()[iOldClus];
+            // // LOGP(info, "clus info size: {}", parent->getClustersInfo().size());
+            if (bbox.hasBBoxOverlap(oldClusInfo.col, oldClusInfo.row, oldClusInfo.pattern.getColumnSpan(), oldClusInfo.pattern.getRowSpan())) {
+              // do the needed things
+              LOGP(info, "Found overlap!");
+            }
+          }
+        }
+      }
       parent->streamCluster(pixArrBuff, &labelsBuff, bbox, parent->mPattIdConverter, compClusPtr, patternsPtr, labelsClusPtr, nlab);
     } else {
       auto warnLeft = MaxHugeClusWarn - parent->mNHugeClus;
