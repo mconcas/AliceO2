@@ -56,7 +56,6 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
     }
 
     if (vecROFRec->size()) {
-      // LOGP(info, "ROF: {}, starting cluster idx: {}, ending cluster idx: {}, nBytes: {}", prevROFs.size(), prevROFs.back().getFirstEntry(), prevROFs.back().getNEntries(), nBytes);
       // loop over clusters found in previous ROF and fill clusters info
       auto pGroupedTopologiesBookmark = patterns->cbegin() += nBytes; // keep track of the grouped topologies starting point across ROFs
       for (auto& cluster : vecROFRec->back().getROFData(*compClus)) {
@@ -223,7 +222,6 @@ void Clusterer::ClustererThread::finishChip(ChipPixelData* curChipData, CompClus
                                             PatternCont* patternsPtr, const ConstMCTruth* labelsDigPtr, MCTruth* labelsClusPtr,
                                             gsl::span<const o2::itsmft::ROFRecord>& prevROFs)
 {
-  auto clustersCount = compClusPtr->size();
   const auto& pixData = curChipData->getData();
   for (int i1 = 0; i1 < preClusterHeads.size(); ++i1) {
     auto ci = preClusterIndices[i1];
@@ -262,58 +260,42 @@ void Clusterer::ClustererThread::finishChip(ChipPixelData* curChipData, CompClus
       }
       preClusterIndices[i2] = -1;
     }
-    if (bbox.isAcceptableSize()) {
-      // Here we've computed the BBox and can do overlap comparison
-      const gsl::span<const CompClusterExt> oldClusSpan{compClusPtr->data(), static_cast<gsl::span<CompClusterExt>::size_type>(compClusPtr->size())};
-      if (prevROFs.size()) {
-        for (size_t iRof{std::max(0UL, prevROFs.size() - 2UL)}; iRof < prevROFs.size(); ++iRof) {
-          auto& pRof = prevROFs[iRof];
-
-          for (auto iOldClus{pRof.getFirstEntry()}; iOldClus < pRof.getFirstEntry() + pRof.getNEntries(); ++iOldClus) {
-            // Check if we have overlaps in BBoxes
-            // LOGP(info, "\t\twilling to access position {} in rofId {}, prev rofsize {}", iOldClus, iRof, prevROFs.size());
-            auto& oldClusInfo = parent->getClustersInfo()[iOldClus];
-            // // LOGP(info, "clus info size: {}", parent->getClustersInfo().size());
-            if (bbox.hasBBoxOverlap(oldClusInfo.col, oldClusInfo.row, oldClusInfo.pattern.getColumnSpan(), oldClusInfo.pattern.getRowSpan())) {
-              // do the needed things
-              LOGP(info, "Found overlap!");
-            }
-          }
-        }
-      }
-      parent->streamCluster(pixArrBuff, &labelsBuff, bbox, parent->mPattIdConverter, compClusPtr, patternsPtr, labelsClusPtr, nlab);
-    } else {
-      auto warnLeft = MaxHugeClusWarn - parent->mNHugeClus;
-      if (warnLeft > 0) {
-        LOGP(warn, "Splitting a huge cluster: chipID {}, rows {}:{} cols {}:{}{}", bbox.chipID, bbox.rowMin, bbox.rowMax, bbox.colMin, bbox.colMax,
-             warnLeft == 1 ? " (Further warnings will be muted)" : "");
+    if (!findClusterBBoxOverlaps(bbox, compClusPtr, prevROFs)) {
+      if (bbox.isAcceptableSize()) {
+        parent->streamCluster(pixArrBuff, &labelsBuff, bbox, parent->mPattIdConverter, compClusPtr, patternsPtr, labelsClusPtr, nlab);
+      } else {
+        auto warnLeft = MaxHugeClusWarn - parent->mNHugeClus;
+        if (warnLeft > 0) {
+          LOGP(warn, "Splitting a huge cluster: chipID {}, rows {}:{} cols {}:{}{}", bbox.chipID, bbox.rowMin, bbox.rowMax, bbox.colMin, bbox.colMax,
+               warnLeft == 1 ? " (Further warnings will be muted)" : "");
 #ifdef WITH_OPENMP
 #pragma omp critical
 #endif
-        {
-          parent->mNHugeClus++;
+          {
+            parent->mNHugeClus++;
+          }
         }
-      }
-      BBox bboxT(bbox); // truncated box
-      std::vector<PixelData> pixbuf;
-      do {
-        bboxT.rowMin = bbox.rowMin;
-        bboxT.colMax = std::min(bbox.colMax, uint16_t(bboxT.colMin + o2::itsmft::ClusterPattern::MaxColSpan - 1));
-        do { // Select a subset of pixels fitting the reduced bounding box
-          bboxT.rowMax = std::min(bbox.rowMax, uint16_t(bboxT.rowMin + o2::itsmft::ClusterPattern::MaxRowSpan - 1));
-          for (const auto& pix : pixArrBuff) {
-            if (bboxT.isInside(pix.getRowDirect(), pix.getCol())) {
-              pixbuf.push_back(pix);
+        BBox bboxT(bbox); // truncated box
+        std::vector<PixelData> pixbuf;
+        do {
+          bboxT.rowMin = bbox.rowMin;
+          bboxT.colMax = std::min(bbox.colMax, uint16_t(bboxT.colMin + o2::itsmft::ClusterPattern::MaxColSpan - 1));
+          do { // Select a subset of pixels fitting the reduced bounding box
+            bboxT.rowMax = std::min(bbox.rowMax, uint16_t(bboxT.rowMin + o2::itsmft::ClusterPattern::MaxRowSpan - 1));
+            for (const auto& pix : pixArrBuff) {
+              if (bboxT.isInside(pix.getRowDirect(), pix.getCol())) {
+                pixbuf.push_back(pix);
+              }
             }
-          }
-          if (!pixbuf.empty()) { // Stream a piece of cluster only if the reduced bounding box is not empty
-            parent->streamCluster(pixbuf, &labelsBuff, bboxT, parent->mPattIdConverter, compClusPtr, patternsPtr, labelsClusPtr, nlab, true);
-            pixbuf.clear();
-          }
-          bboxT.rowMin = bboxT.rowMax + 1;
-        } while (bboxT.rowMin < bbox.rowMax);
-        bboxT.colMin = bboxT.colMax + 1;
-      } while (bboxT.colMin < bbox.colMax);
+            if (!pixbuf.empty()) { // Stream a piece of cluster only if the reduced bounding box is not empty
+              parent->streamCluster(pixbuf, &labelsBuff, bboxT, parent->mPattIdConverter, compClusPtr, patternsPtr, labelsClusPtr, nlab, true);
+              pixbuf.clear();
+            }
+            bboxT.rowMin = bboxT.rowMax + 1;
+          } while (bboxT.rowMin < bbox.rowMax);
+          bboxT.colMin = bboxT.colMax + 1;
+        } while (bboxT.colMin < bbox.colMax);
+      }
     }
   }
 }
@@ -323,28 +305,28 @@ void Clusterer::ClustererThread::finishChipSingleHitFast(uint32_t hit, ChipPixel
                                                          PatternCont* patternsPtr, const ConstMCTruth* labelsDigPtr, MCTruth* labelsClusPtr,
                                                          gsl::span<const o2::itsmft::ROFRecord>& prevROFs)
 {
-  auto clustersCount = compClusPtr->size();
   auto pix = curChipData->getData()[hit];
   uint16_t row = pix.getRowDirect(), col = pix.getCol();
-
-  if (labelsClusPtr) { // MC labels were requested
-    int nlab = 0;
-    fetchMCLabels(curChipData->getStartID() + hit, labelsDigPtr, nlab);
-    auto cnt = compClusPtr->size();
-    for (int i = nlab; i--;) {
-      labelsClusPtr->addElement(cnt, labelsBuff[i]);
+  if (!findChipSingleHitFastOverlaps(row, col, compClusPtr, prevROFs)) {
+    if (labelsClusPtr) { // MC labels were requested
+      int nlab = 0;
+      fetchMCLabels(curChipData->getStartID() + hit, labelsDigPtr, nlab);
+      auto cnt = compClusPtr->size();
+      for (int i = nlab; i--;) {
+        labelsClusPtr->addElement(cnt, labelsBuff[i]);
+      }
     }
-  }
 
-  // add to compact clusters, which must be always filled
-  unsigned char patt[ClusterPattern::MaxPatternBytes]{0x1 << (7 - (0 % 8))}; // unrolled 1 hit version of full loop in finishChip
-  uint16_t pattID = (parent->mPattIdConverter.size() == 0) ? CompCluster::InvalidPatternID : parent->mPattIdConverter.findGroupID(1, 1, patt);
-  if ((pattID == CompCluster::InvalidPatternID || parent->mPattIdConverter.isGroup(pattID)) && patternsPtr) {
-    patternsPtr->emplace_back(1); // rowspan
-    patternsPtr->emplace_back(1); // colspan
-    patternsPtr->insert(patternsPtr->end(), std::begin(patt), std::begin(patt) + 1);
+    // add to compact clusters, which must be always filled
+    unsigned char patt[ClusterPattern::MaxPatternBytes]{0x1 << (7 - (0 % 8))}; // unrolled 1 hit version of full loop in finishChip
+    uint16_t pattID = (parent->mPattIdConverter.size() == 0) ? CompCluster::InvalidPatternID : parent->mPattIdConverter.findGroupID(1, 1, patt);
+    if ((pattID == CompCluster::InvalidPatternID || parent->mPattIdConverter.isGroup(pattID)) && patternsPtr) {
+      patternsPtr->emplace_back(1); // rowspan
+      patternsPtr->emplace_back(1); // colspan
+      patternsPtr->insert(patternsPtr->end(), std::begin(patt), std::begin(patt) + 1);
+    }
+    compClusPtr->emplace_back(row, col, pattID, curChipData->getChipID());
   }
-  compClusPtr->emplace_back(row, col, pattID, curChipData->getChipID());
 }
 
 //__________________________________________________
@@ -455,6 +437,46 @@ void Clusterer::ClustererThread::fetchMCLabels(int digID, const ConstMCTruth* la
     }
   }
   //
+}
+
+//__________________________________________________
+bool Clusterer::ClustererThread::findClusterBBoxOverlaps(const BBox& bbox, const CompClusCont* compClusPtr, gsl::span<const o2::itsmft::ROFRecord>& prevROFs)
+{
+  // Here we've computed the BBox and can do overlap comparison
+  if (prevROFs.size()) {
+    const gsl::span<const CompClusterExt> oldClusSpan{compClusPtr->data(), static_cast<gsl::span<CompClusterExt>::size_type>(compClusPtr->size())};
+    for (size_t iRof{std::max(0UL, prevROFs.size() - 2UL)}; iRof < prevROFs.size(); ++iRof) {
+      auto& pRof = prevROFs[iRof];
+      for (auto iOldClus{pRof.getFirstEntry()}; iOldClus < pRof.getFirstEntry() + pRof.getNEntries(); ++iOldClus) {
+        // Check if we have overlaps in BBoxes
+        auto& oldClusInfo = parent->getClustersInfo()[iOldClus];
+        if (bbox.hasBBoxOverlap(oldClusInfo.row, oldClusInfo.col, oldClusInfo.pattern.getRowSpan(), oldClusInfo.pattern.getColumnSpan())) {
+          return true; // We return at first overlap occurrence, we just need to know wheteher to hijack the cluster in case of duplication
+        }
+      }
+    }
+  }
+  return false;
+}
+
+//__________________________________________________
+bool Clusterer::ClustererThread::findChipSingleHitFastOverlaps(const uint16_t row, const uint16_t col, const CompClusCont* compClusPtr, gsl::span<const o2::itsmft::ROFRecord>& prevROFs)
+{
+  if (prevROFs.size()) {
+    const gsl::span<const CompClusterExt> oldClusSpan{compClusPtr->data(), static_cast<gsl::span<CompClusterExt>::size_type>(compClusPtr->size())};
+    for (size_t iRof{std::max(0UL, prevROFs.size() - 2UL)}; iRof < prevROFs.size(); ++iRof) {
+      auto& pRof = prevROFs[iRof];
+      for (auto iOldClus{pRof.getFirstEntry()}; iOldClus < pRof.getFirstEntry() + pRof.getNEntries(); ++iOldClus) {
+        auto& oldClusInfo = parent->getClustersInfo()[iOldClus];
+        if (row >= oldClusInfo.row && row <= oldClusInfo.pattern.getRowSpan() && col >= oldClusInfo.col && col <= oldClusInfo.col + oldClusInfo.pattern.getColumnSpan()) {
+          // LOGP(info, "rof: {} - found single pixel in chip overlap: pix coord: {} {}, bbox coord {}-{} {}-{}",
+          //  prevROFs.size(), row, col, oldClusInfo.row, oldClusInfo.row + oldClusInfo.pattern.getRowSpan(), oldClusInfo.col, oldClusInfo.col + oldClusInfo.pattern.getColumnSpan());
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 //__________________________________________________

@@ -36,6 +36,8 @@ struct ClustererParam : public o2::conf::ConfigurableParamHelper<ClustererParam<
 
   int maxRowColDiffToMask = DEFRowColDiffToMask(); ///< pixel may be masked as overflow if such a neighbour in prev frame was fired
   int maxBCDiffToMaskBias = 10;                    ///< mask if 2 ROFs differ by <= StrobeLength + Bias BCs, use value <0 to disable masking
+  bool findPersistentClusters = false;             ///< enable the recognition clusters that persist across the ROFs
+  bool storePersistenClusters = false;             ///< enable storing duplicate/persistent clusters in dedicated output branches
 
   O2ParamDef(ClustererParam, getParamName().data());
 

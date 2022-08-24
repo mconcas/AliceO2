@@ -107,7 +107,7 @@ class Clusterer
         colMax = col;
       }
     }
-    bool hasBBoxOverlap(uint16_t row, uint16_t col, uint16_t w, uint16_t h) const
+    bool hasBBoxOverlap(uint16_t row, uint16_t col, uint16_t h, uint16_t w) const
     {
       // Compute bb overlap
       bool iResult, jResult;
@@ -203,6 +203,8 @@ class Clusterer
 
     void fetchMCLabels(int digID, const ConstMCTruth* labelsDig, int& nfilled);
     void initChip(const ChipPixelData* curChipData, uint32_t first);
+    bool findClusterBBoxOverlaps(const BBox& bbox, const CompClusCont* compClusPtr, gsl::span<const o2::itsmft::ROFRecord>& prevROFs);
+    bool findChipSingleHitFastOverlaps(const uint16_t row, const uint16_t col, const CompClusCont* compClusPtr, gsl::span<const o2::itsmft::ROFRecord>& prevROFs);
     void updateChip(const ChipPixelData* curChipData, uint32_t ip);
     void finishChip(ChipPixelData* curChipData, CompClusCont* compClus, PatternCont* patterns,
                     const ConstMCTruth* labelsDig, MCTruth* labelsClus, gsl::span<const o2::itsmft::ROFRecord>& prevROFs);

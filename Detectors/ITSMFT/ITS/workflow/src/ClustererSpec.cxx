@@ -132,6 +132,8 @@ void ClustererDPL::updateTimeDependentParams(ProcessingContext& pc)
     nbc += mClusterer->isContinuousReadOut() ? alpParams.roFrameLengthInBC : (alpParams.roFrameLengthTrig / o2::constants::lhc::LHCBunchSpacingNS);
     mClusterer->setMaxBCSeparationToMask(nbc);
     mClusterer->setMaxRowColDiffToMask(clParams.maxRowColDiffToMask);
+    mClusterer->setPersistenClusterDetection(clParams.findPersistentClusters);
+    mClusterer->setPersistenClusterSaving(clParams.storePersistenClusters);
     mClusterer->print();
   }
   // we may have other params which need to be queried regularly
