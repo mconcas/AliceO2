@@ -138,6 +138,11 @@ bool DigitPixelReader::getNextChipData(ChipPixelData& chipData)
         const auto* digitNext = &mDigits[firstDid + iDigitNext];
         auto drow = static_cast<int>(digitNext->getRow()) - static_cast<int>(pixel.getRowDirect());
         auto dcol = static_cast<int>(digitNext->getColumn()) - static_cast<int>(pixel.getCol());
+        if (dcol == 0 and drow == 0) {
+          // same pixel fired in two ROFs
+          mMaskSquashedDigits[firstDid + iDigitNext] = true;
+          continue;
+        }
         if (dcol > mMaxSquashDist || (dcol == mMaxSquashDist && drow > mMaxSquashDist)) {
           break; // all greater iDigitNexts will not match to this pixel too
         }
