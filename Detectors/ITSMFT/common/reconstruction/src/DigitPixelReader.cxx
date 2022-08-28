@@ -33,7 +33,7 @@ int DigitPixelReader::decodeNextTrigger()
   // prerare data of the next trigger, return number of digits
   while (++mIdROF < mROFRecVec.size()) {
     if (mROFRecVec[mIdROF].getNEntries() > 0) {
-      mIdDig = 0;                                   // jump to the 1st digit of the trigger
+      mIdDig = 0; // jump to the 1st digit of the trigger
       // mIdDigNext.resize(mSquashOverlflowsDepth, 0); // jump to the 1st digits in next triggers if squashing
       mInteractionRecord = mROFRecVec[mIdROF].getBCData();
       return mROFRecVec[mIdROF].getNEntries();
@@ -109,7 +109,7 @@ bool DigitPixelReader::getNextChipData(ChipPixelData& chipData)
     int nDigits{0};
     const o2::itsmft::Digit* digitNext;
     for (int iD{0}; iD < mROFRecVec[idNextROF].getNEntries(); ++iD) {
-            if (mDigits[iD + mROFRecVec[idNextROF].getFirstEntry()].getChipIndex() < chipData.getChipID()) {
+      if (mDigits[iD + mROFRecVec[idNextROF].getFirstEntry()].getChipIndex() < chipData.getChipID()) {
         ++firstDid; // shift index to the first possible good one, could be that we don't have that chipID at all
       }
       if (mDigits[iD + mROFRecVec[idNextROF].getFirstEntry()].getChipIndex() == chipData.getChipID()) {
