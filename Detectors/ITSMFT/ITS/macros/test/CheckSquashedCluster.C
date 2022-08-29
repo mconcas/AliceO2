@@ -11,6 +11,4 @@ void CheckSquashedCluster(const string noSquashFileName = "o2clus_its.root", con
 
   auto treeNoSq = (TTree*)fileNoSquashed->Get("o2sim");
   auto treeSq = (TTree*)fileSquashed->Get("o2sim");
-
-  
 }
