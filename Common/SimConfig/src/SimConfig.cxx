@@ -78,7 +78,7 @@ void SimConfig::determineActiveModules(std::vector<std::string> const& inputargs
     if (!mIsRun5) {
       for (int i = 0; i < activeModules.size(); ++i) {
         if (activeModules[i] == "TRK" || activeModules[i] == "FT3" || activeModules[i] == "FCT") {
-          LOGP(fatal,"List of active modules contains {}, which is not a run 3 module");
+          LOGP(fatal, "List of active modules contains {}, which is not a run 3 module");
         }
       }
     }
