@@ -47,10 +47,10 @@ struct DummyLogger {
     printf(string "\n");        \
   }
 
-#elif defined(GPUCA_STANDALONE) ||                    \
-  defined(GPUCA_ALIROOT_LIB) ||                       \
-  (!defined(__cplusplus) || __cplusplus < 201703L) 
-  // || \
+#elif defined(GPUCA_STANDALONE) || \
+  defined(GPUCA_ALIROOT_LIB) ||    \
+  (!defined(__cplusplus) || __cplusplus < 201703L)
+// || \
   (defined(__HIPCC__) && (!defined(_GLIBCXX_USE_CXX11_ABI) || _GLIBCXX_USE_CXX11_ABI == 0))
 #include <iostream>
 #include <cstdio>
