@@ -35,7 +35,7 @@ struct DummyLogger {
 #define LOGF(...)
 #define LOGP(...)
 
-#elif defined(GPUCA_GPUCODE_DEVICE) || defined(__HIPCC__)
+#elif defined(GPUCA_GPUCODE_DEVICE) // || defined(__HIPCC__)
 #define LOG(...) o2::gpu::detail::DummyLogger()
 //#define LOG(...) static_assert(false, "LOG(...) << ... unsupported in GPU code");
 #define LOGF(type, string, ...)         \
@@ -49,7 +49,8 @@ struct DummyLogger {
 
 #elif defined(GPUCA_STANDALONE) ||                    \
   defined(GPUCA_ALIROOT_LIB) ||                       \
-  (!defined(__cplusplus) || __cplusplus < 201703L) || \
+  (!defined(__cplusplus) || __cplusplus < 201703L) 
+  // || \
   (defined(__HIPCC__) && (!defined(_GLIBCXX_USE_CXX11_ABI) || _GLIBCXX_USE_CXX11_ABI == 0))
 #include <iostream>
 #include <cstdio>
