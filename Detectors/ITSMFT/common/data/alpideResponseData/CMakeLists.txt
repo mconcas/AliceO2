@@ -9,31 +9,19 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-# TO DO: use the path from CMAKE and put it as an argument of alpideResponse.C (where it will be an argument of initData() !!!)
+message(STATUS "sourcedir is: " ${CMAKE_CURRENT_SOURCE_DIR})
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/AlpideResponseData.root)
+# add_custom_command(
+#     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/AlpideResponseData.root
+#     COMMAND $ENV{ROOTSYS}/bin/root -b -q  ${CMAKE_CURRENT_SOURCE_DIR}/alpideResponse.C++
+#     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/alpideResponse.C O2::ITSMFTSimulation
+# )
+add_custom_target(NAME ALL
+                  COMMAND /usr/bin/env
+                          #$ENV{ROOTSYS}/bin/root -b -q  ${CMAKE_CURRENT_SOURCE_DIR}/alpideResponse.C++
+                  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/alpideResponse.C
+                          O2::ITSMFTSimulation
+                  COMMENT "Generating ROOT file for Alpide response"
+)
 
-#add_subdirectory(Vbb-0.0V)
-#add_subdirectory(Vbb-3.0V)
-
-o2_add_test_root_macro(alpideResponse.C
-    LABELS "its;mft")
-
-o2_add_test_root_macro(hello.C
-    LABELS "its;mft")
-
-#add_executable(myExe hello.C)
-#add_custom_command(
-#  TARGET myExe POST_BUILD
-#  COMMAND root -b -q "$<TARGET_FILE:myExe>"
-#  VERBATIM)
-
-
-#add_executable(alpide alpideResponse.C)
-#add_custom_command(TARGET alpide
-#    POST_BUILD
-#    COMMAND root -b -q alpideResponse.C+
-#    COMMENT "Storing AlpideResponseData for Vbb=0V and -3V in a .root file")
-
-#set(FILE "hello.txt")
-
-#add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${FILE}
-#    COMMAND ${CMAKE_COMMAND} echo "hello" > ${CMAKE_CURRENT_SOURCE_DIR}/${FILE})
+o2_add_test_root_macro(alpideResponse.C LABELS "its;mft")
