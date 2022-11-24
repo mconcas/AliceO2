@@ -9,19 +9,15 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-message(STATUS "sourcedir is: " ${CMAKE_CURRENT_SOURCE_DIR})
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/AlpideResponseData.root)
-# add_custom_command(
-#     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/AlpideResponseData.root
-#     COMMAND $ENV{ROOTSYS}/bin/root -b -q  ${CMAKE_CURRENT_SOURCE_DIR}/alpideResponse.C++
-#     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/alpideResponse.C O2::ITSMFTSimulation
-# )
-add_custom_target(NAME ALL
-                  COMMAND /usr/bin/env
-                          #$ENV{ROOTSYS}/bin/root -b -q  ${CMAKE_CURRENT_SOURCE_DIR}/alpideResponse.C++
-                  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/alpideResponse.C
-                          O2::ITSMFTSimulation
-                  COMMENT "Generating ROOT file for Alpide response"
-)
 
-o2_add_test_root_macro(alpideResponse.C LABELS "its;mft")
+o2_add_executable(alpide-response-generator
+                  SOURCES AlpideResponse.cxx                          
+                  PUBLIC_LINK_LIBRARIES O2::ITSMFTSimulation
+                                        ROOT::Core
+                  TARGETVARNAME targetName)
+
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/Detectors/ITSMFT/common/data/AlpideResponseData/AlpideResponse.cxx)
+add_custom_command(TARGET O2exe-alpide-response-generator POST_BUILD
+                   COMMAND ${CMAKE_BINARY_DIR}/stage/bin/o2-alpide-response-generator -i ${CMAKE_SOURCE_DIR}/Detectors/ITSMFT/common/data/AlpideResponseData/ -o ${CMAKE_SOURCE_DIR}/Detectors/ITSMFT/common/data/AlpideResponseData/
+                   DEPENDS ${CMAKE_SOURCE_DIR}/Detectors/ITSMFT/common/data/AlpideResponseData/AlpideResponse.cxx
+)
