@@ -69,7 +69,7 @@ class GpuTimeFramePartition
   size_t copyDeviceData(const size_t, const int, Stream&);
 
   /// Interface
-  int* getDeviceROframesClusters(const int);
+  int* getDeviceNClustersROF(const int);
   Cluster* getDeviceClusters(const int);
   unsigned char* getDeviceUsedClusters(const int);
   TrackingFrameInfo* getDeviceTrackingFrameInfo(const int);
@@ -83,7 +83,6 @@ class GpuTimeFramePartition
   int* getDeviceCUBTmpBuffers() { return mCUBTmpBufferDevice; }
   int* getDeviceFoundTracklets() { return mFoundTrackletsDevice; }
   int* getDeviceFoundCells() { return mFoundCellsDevice; }
-  IndexTableUtils* getDeviceIndexTableUtils() { return mIndexTableUtilsDevice; }
 
   /// Vertexer only
   int* getDeviceNTrackletCluster(const int combid) { return mNTrackletsPerClusterDevice[combid]; }
@@ -94,10 +93,13 @@ class GpuTimeFramePartition
 
   /// Host
   std::array<gsl::span<const Cluster>, nLayers> mHostClusters;
+  std::array<gsl::span<const int>, nLayers> mHostNClustersROF;
   std::array<gsl::span<const int>, nLayers> mHostROframesClusters;
+  std::array<gsl::span<const int>, nLayers> mHostIndexTables;
 
   /// Device
-  std::array<int*, nLayers> mROframesClustersDevice; // layers x roframes
+  std::array<int*, nLayers> mNClustersROFDevice; // layers x roframes
+  std::array<int*, nLayers> mROframesClustersDevice;
   std::array<Cluster*, nLayers> mClustersDevice;
 
  private:
@@ -113,7 +115,6 @@ class GpuTimeFramePartition
   int* mCUBTmpBufferDevice;
   int* mFoundTrackletsDevice;
   int* mFoundCellsDevice;
-  IndexTableUtils* mIndexTableUtilsDevice;
 
   /// Vertexer only
   Line* mLinesDevice;
@@ -150,6 +151,7 @@ class TimeFrameGPU : public TimeFrame
 
   /// interface
   int getNClustersInRofSpan(const int, const int, const int) const;
+  IndexTableUtils* getDeviceIndexTableUtils() { return mIndexTableUtilsDevice; }
 
  private:
   bool mDeviceInitialised = false;
@@ -159,11 +161,11 @@ class TimeFrameGPU : public TimeFrame
 
   // Device pointers
   StaticTrackingParameters<nLayers>* mTrackingParamsDevice;
-  IndexTableUtils* mDeviceIndexTableUtils;
+  IndexTableUtils* mIndexTableUtilsDevice;
 
   // State
   std::vector<Stream> mGpuStreams;
-  size_t mAvailMemGB; //
+  size_t mAvailMemGB;
 };
 
 template <int nLayers>
