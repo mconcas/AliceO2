@@ -271,6 +271,12 @@ size_t GpuTimeFrameChunk<nLayers>::copyDeviceData(const size_t startRof, const i
                                   mHostClusters[i].data(),
                                   (int)std::min(mHostClusters[i].size(), mTFGconf->clustersPerROfCapacity * mNRof) * sizeof(Cluster),
                                   cudaMemcpyHostToDevice, stream.get()));
+    if (mHostIndexTables[i].data()) {
+      checkGPUError(cudaMemcpyAsync(mIndexTablesDevice[i],
+                                    mHostIndexTables[i].data(),
+                                    mHostIndexTables[i].size() * sizeof(int),
+                                    cudaMemcpyHostToDevice, stream.get()));
+    }
   }
   return mHostNClustersROF[0].size(); // We want to return for how much ROFs we loaded the data.
 }
