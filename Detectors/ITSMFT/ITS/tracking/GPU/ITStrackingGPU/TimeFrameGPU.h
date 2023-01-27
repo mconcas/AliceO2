@@ -48,20 +48,20 @@ enum class Task {
 };
 
 template <int nLayers>
-class GpuTimeFramePartition
+class GpuTimeFrameChunk
 {
  public:
   static size_t computeScalingSizeBytes(const int, const TimeFrameGPUConfig&);
   static size_t computeFixedSizeBytes(const TimeFrameGPUConfig&);
-  static size_t computeRofPerPartition(const TimeFrameGPUConfig&, const size_t);
+  static size_t computeRofPerChunk(const TimeFrameGPUConfig&, const size_t);
 
-  GpuTimeFramePartition() = delete;
-  GpuTimeFramePartition(o2::its::TimeFrame* tf, TimeFrameGPUConfig& conf)
+  GpuTimeFrameChunk() = delete;
+  GpuTimeFrameChunk(o2::its::TimeFrame* tf, TimeFrameGPUConfig& conf)
   {
     mTimeFramePtr = tf;
     mTFGconf = &conf;
   }
-  ~GpuTimeFramePartition();
+  ~GpuTimeFrameChunk();
 
   /// Most relevant operations
   void allocate(const size_t, Stream&);
@@ -69,7 +69,6 @@ class GpuTimeFramePartition
   size_t copyDeviceData(const size_t, const int, Stream&);
 
   /// Interface
-  int* getDeviceNClustersROF(const int);
   Cluster* getDeviceClusters(const int);
   unsigned char* getDeviceUsedClusters(const int);
   TrackingFrameInfo* getDeviceTrackingFrameInfo(const int);
@@ -91,6 +90,7 @@ class GpuTimeFramePartition
   int* getDeviceNExclusiveFoundLines() { return mNExclusiveFoundLinesDevice; }
   unsigned char* getDeviceUsedTracklets() { return mUsedTrackletsDevice; }
 
+ private:
   /// Host
   std::array<gsl::span<const Cluster>, nLayers> mHostClusters;
   std::array<gsl::span<const int>, nLayers> mHostNClustersROF;
@@ -98,11 +98,7 @@ class GpuTimeFramePartition
   std::array<gsl::span<const int>, nLayers> mHostIndexTables;
 
   /// Device
-  std::array<int*, nLayers> mNClustersROFDevice; // layers x roframes
-  std::array<int*, nLayers> mROframesClustersDevice;
   std::array<Cluster*, nLayers> mClustersDevice;
-
- private:
   std::array<unsigned char*, nLayers> mUsedClustersDevice;
   std::array<TrackingFrameInfo*, nLayers> mTrackingFrameInfoDevice;
   std::array<int*, nLayers> mClusterExternalIndicesDevice;
@@ -142,26 +138,28 @@ class TimeFrameGPU : public TimeFrame
   void unregisterHostMemory(const int);
   void initialise(const int, const TrackingParameters&, const int, const IndexTableUtils* utils = nullptr);
   void initDevice(const int, const IndexTableUtils*, const int);
-  void initDevicePartitions(const int, const int);
+  void initDeviceChunks(const int, const int);
   template <Task task>
-  size_t loadPartitionData(const size_t, const size_t);
-  size_t getNPartions() const { return mMemPartitions.size(); }
-  GpuTimeFramePartition<nLayers>& getPartition(const int part) { return mMemPartitions[part]; }
+  size_t loadChunkData(const size_t, const size_t);
+  size_t getNPartions() const { return mMemChunks.size(); }
+  GpuTimeFrameChunk<nLayers>& getChunk(const int chunk) { return mMemChunks[chunk]; }
   Stream& getStream(const size_t stream) { return mGpuStreams[stream]; }
 
   /// interface
   int getNClustersInRofSpan(const int, const int, const int) const;
   IndexTableUtils* getDeviceIndexTableUtils() { return mIndexTableUtilsDevice; }
+  int* getDeviceROframesClusters(const int layer) { return mROframesClustersDevice[layer]; }
 
  private:
   bool mDeviceInitialised = false;
   bool mHostRegistered = false;
-  std::vector<GpuTimeFramePartition<nLayers>> mMemPartitions;
+  std::vector<GpuTimeFrameChunk<nLayers>> mMemChunks;
   TimeFrameGPUConfig mGpuConfig;
 
   // Device pointers
   StaticTrackingParameters<nLayers>* mTrackingParamsDevice;
   IndexTableUtils* mIndexTableUtilsDevice;
+  std::array<int*, nLayers> mROframesClustersDevice;
 
   // State
   std::vector<Stream> mGpuStreams;
@@ -170,19 +168,19 @@ class TimeFrameGPU : public TimeFrame
 
 template <int nLayers>
 template <Task task>
-size_t TimeFrameGPU<nLayers>::loadPartitionData(const size_t part, const size_t offset) // offset: readout frame to start from
+size_t TimeFrameGPU<nLayers>::loadChunkData(const size_t chunk, const size_t offset) // offset: readout frame to start from
 {
   size_t nRof{0};
 
-  mMemPartitions[part].reset(GpuTimeFramePartition<nLayers>::computeRofPerPartition(mGpuConfig, mAvailMemGB),
-                             task,
-                             mGpuStreams[part]); // Reset partitions memory
+  mMemChunks[chunk].reset(GpuTimeFrameChunk<nLayers>::computeRofPerChunk(mGpuConfig, mAvailMemGB),
+                          task,
+                          mGpuStreams[chunk]); // Reset chunks memory
   if constexpr ((bool)task) {
-    nRof = mMemPartitions[part].copyDeviceData(offset, 3, mGpuStreams[part]);
+    nRof = mMemChunks[chunk].copyDeviceData(offset, 3, mGpuStreams[chunk]);
   } else {
-    nRof = mMemPartitions[part].copyDeviceData(offset, nLayers, mGpuStreams[part]);
+    nRof = mMemChunks[chunk].copyDeviceData(offset, nLayers, mGpuStreams[chunk]);
   }
-  LOGP(info, "In partition {}: loaded {} readout frames starting from {}", part, nRof, offset);
+  LOGP(info, "In chunk {}: loaded {} readout frames starting from {}", chunk, nRof, offset);
   return nRof;
 }
 
@@ -191,7 +189,6 @@ inline int TimeFrameGPU<nLayers>::getNClustersInRofSpan(const int rofIdstart, co
 {
   return static_cast<int>(mROframesClusters[layerId][(rofIdstart + rofSpanSize) < mROframesClusters.size() ? rofIdstart + rofSpanSize : mROframesClusters.size() - 1] - mROframesClusters[layerId][rofIdstart]);
 }
-
 } // namespace gpu
 } // namespace its
 } // namespace o2
