@@ -241,7 +241,6 @@ GPUg() void trackleterKernelMultipleRof(
 {
   const int phiBins{utils->getNphiBins()};
   const int zBins{utils->getNzBins()};
-  printOnThread(0, "===> %d %d ", startRofId, rofSize);
   for (unsigned int iRof{blockIdx.x}; iRof < rofSize; iRof += gridDim.x) {
     auto rof = iRof + startRofId;
     auto* clustersInRofNextLayer = clustersNextLayer + (sizeNextLClusters[rof] - sizeNextLClusters[startRofId]);
@@ -251,6 +250,7 @@ GPUg() void trackleterKernelMultipleRof(
     auto* indexTableNext = nextIndexTables + rof * (phiBins * zBins + 1);
     auto* TrackletsRof = Tracklets + (sizeCurrentLClusters[rof] - sizeCurrentLClusters[startRofId]) * maxTrackletsPerCluster;
     auto* foundTrackletsRof = foundTracklets + (sizeCurrentLClusters[rof] - sizeCurrentLClusters[startRofId]);
+    printOnThread(0, "===> start: %d size: %d iRof: %d delta: %d nClCur: %d nClNex: %d\n", startRofId, rofSize, iRof, sizeCurrentLClusters[rof] - sizeCurrentLClusters[startRofId], nClustersCurrentLayer, nClustersNextLayer);
     // single rof loop on layer1 clusters
     for (int iCurrentLayerClusterIndex = threadIdx.x; iCurrentLayerClusterIndex < nClustersCurrentLayer; iCurrentLayerClusterIndex += blockDim.x) {
       unsigned int storedTracklets{0};
@@ -267,19 +267,21 @@ GPUg() void trackleterKernelMultipleRof(
           const int firstBinIndex{utils->getBinIndex(selectedBinsRect.x, iPhiBin)};
           const int firstRowClusterIndex{indexTableNext[firstBinIndex]};
           const int maxRowClusterIndex{indexTableNext[firstBinIndex + zBins]};
+          printOnThread(0, "\t\t => %d %d \n", firstRowClusterIndex, maxRowClusterIndex);
           // loop on clusters next layer
           for (int iNextLayerClusterIndex{firstRowClusterIndex}; iNextLayerClusterIndex < maxRowClusterIndex && iNextLayerClusterIndex < nClustersNextLayer; ++iNextLayerClusterIndex) {
             const Cluster& nextCluster = clustersInRofNextLayer[iNextLayerClusterIndex];
-            if (o2::gpu::GPUCommonMath::Abs(currentCluster.phi - nextCluster.phi) < phiCut) {
-              if (storedTracklets < maxTrackletsPerCluster) {
-                if constexpr (Mode == TrackletMode::Layer0Layer1) {
-                  new (TrackletsRof + stride + storedTracklets) Tracklet{iNextLayerClusterIndex, iCurrentLayerClusterIndex, nextCluster, currentCluster, static_cast<int>(rof), static_cast<int>(rof)};
-                } else {
-                  new (TrackletsRof + stride + storedTracklets) Tracklet{iCurrentLayerClusterIndex, iNextLayerClusterIndex, currentCluster, nextCluster, static_cast<int>(rof), static_cast<int>(rof)};
-                }
-                ++storedTracklets;
-              }
-            }
+            printOnThread(0, "\t\t => %f \n", nextCluster.phi);
+            //       if (o2::gpu::GPUCommonMath::Abs(currentCluster.phi - nextCluster.phi) < phiCut) {
+            //         if (storedTracklets < maxTrackletsPerCluster) {
+            //           if constexpr (Mode == TrackletMode::Layer0Layer1) {
+            //             new (TrackletsRof + stride + storedTracklets) Tracklet{iNextLayerClusterIndex, iCurrentLayerClusterIndex, nextCluster, currentCluster, static_cast<int>(rof), static_cast<int>(rof)};
+            //           } else {
+            //             new (TrackletsRof + stride + storedTracklets) Tracklet{iCurrentLayerClusterIndex, iNextLayerClusterIndex, currentCluster, nextCluster, static_cast<int>(rof), static_cast<int>(rof)};
+            //           }
+            //           ++storedTracklets;
+            //         }
+            //       }
           }
         }
       }
@@ -489,7 +491,7 @@ void VertexerTraitsGPU::computeTracklets()
   }
   size_t offset{0};
   do {
-    for (size_t part{0}; part < mTimeFrameGPU->getNPartions() && offset < mTimeFrameGPU->mNrof; ++part) {
+    for (size_t part{0}; part < mTimeFrameGPU->getNPartions() && offset < mTimeFrameGPU->mNrof - 1; ++part) {
       auto rofs = mTimeFrameGPU->loadChunkData<gpu::Task::Vertexer>(part, offset);
       gpu::trackleterKernelMultipleRof<TrackletMode::Layer0Layer1><<<1, 1, 0, mTimeFrameGPU->getStream(part).get()>>>(
         mTimeFrameGPU->getChunk(part).getDeviceClusters(0),         // const Cluster* clustersNextLayer,    // 0 2
@@ -518,10 +520,8 @@ void VertexerTraitsGPU::computeTracklets()
       //   mVrtParams.phiCut,                                              // const float phiCut,
       //   mVrtParams.maxTrackletsPerCluster);                             // const size_t maxTrackletsPerCluster = 1e2
       offset += rofs;
-      break;
     }
-    break;
-  } while (offset < mTimeFrameGPU->mNrof);
+  } while (offset < mTimeFrameGPU->mNrof - 1); // offset is referring to the ROF id
   mTimeFrameGPU->unregisterHostMemory(3);
   // for (int rofId{0}; rofId < mTimeFrameGPU->getNrof(); ++rofId) {
   // const dim3 threadsPerBlock{gpu::utils::getBlockSize(mTimeFrameGPU->getNClustersLayer(rofId, 1))};
