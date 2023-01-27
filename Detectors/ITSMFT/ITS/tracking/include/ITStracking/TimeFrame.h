@@ -121,6 +121,7 @@ class TimeFrame
   gsl::span<const Cluster> getClustersPerROFrange(int rofMin, int range, int layerId) const;
   gsl::span<const Cluster> getUnsortedClustersOnLayer(int rofId, int layerId) const;
   gsl::span<const int> getROframesClustersPerROFrange(int rofMin, int range, int layerId) const;
+  gsl::span<const int> getROframeClusters(int layerId) const;
   gsl::span<const int> getNClustersROFrange(int rofMin, int range, int layerId) const;
   gsl::span<const int> getIndexTablePerROFrange(int rofMin, int range, int layerId) const;
   gsl::span<int> getIndexTable(int rofId, int layerId);
@@ -210,7 +211,6 @@ class TimeFrame
   std::vector<std::vector<int>> mClusterExternalIndices;
   std::vector<std::vector<int>> mROframesClusters;
   std::vector<std::vector<int>> mNClustersPerROF;
-  std::vector<std::vector<int>> mROframesClustersParted; // stores the exclusive sum of ROF clusters for each partition GPU specific
   std::vector<std::vector<int>> mIndexTables;
   std::vector<std::vector<int>> mTrackletsLookupTable;
   std::vector<std::vector<unsigned char>> mUsedClusters;
@@ -321,6 +321,11 @@ inline float TimeFrame::getBeamX() const { return mBeamPos[0]; }
 
 inline float TimeFrame::getBeamY() const { return mBeamPos[1]; }
 
+inline gsl::span<const int> TimeFrame::getROframeClusters(int layerId) const
+{
+  return {&mROframesClusters[layerId][0], static_cast<gsl::span<const int>::size_type>(mROframesClusters[layerId].size())};
+}
+
 inline gsl::span<Cluster> TimeFrame::getClustersOnLayer(int rofId, int layerId)
 {
   if (rofId < 0 || rofId >= mNrof) {
@@ -362,14 +367,6 @@ inline gsl::span<const int> TimeFrame::getNClustersROFrange(int rofMin, int rang
   int endIdx{std::min(rofMin + range, mNrof) - 1};
   return {&mNClustersPerROF[layerId][startIdx], static_cast<gsl::span<int>::size_type>(endIdx - startIdx)};
 }
-
-// inline gsl::span<const int> TimeFrame::getComputedROframesClusters(int rofMin, int range, int layerId) const
-// {
-//   int startIdx{rofMin};
-//   int endIdx{std::min(rofMin + range, mNrof) - 1};
-
-// }
-
 
 inline gsl::span<const int> TimeFrame::getIndexTablePerROFrange(int rofMin, int range, int layerId) const
 {
