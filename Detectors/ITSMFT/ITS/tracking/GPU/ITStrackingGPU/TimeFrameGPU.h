@@ -93,8 +93,6 @@ class GpuTimeFrameChunk
  private:
   /// Host
   std::array<gsl::span<const Cluster>, nLayers> mHostClusters;
-  std::array<gsl::span<const int>, nLayers> mHostNClustersROF;
-  std::array<gsl::span<const int>, nLayers> mHostROframesClusters;
   std::array<gsl::span<const int>, nLayers> mHostIndexTables;
 
   /// Device
