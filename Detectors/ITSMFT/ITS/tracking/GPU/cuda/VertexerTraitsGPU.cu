@@ -343,7 +343,7 @@ GPUg() void trackletSelectionKernelMultipleRof(
   Tracklet* tracklets01,                  // Tracklets on layer 0-1
   Tracklet* tracklets12,                  // Tracklets on layer 1-2
   const int* nFoundTracklets01,           // Number of tracklets found on layers 0-1
-  const int* nFoundTracklet12,            // Number of tracklets found on layers 1-2
+  const int* nFoundTracklets12,           // Number of tracklets found on layers 1-2
   unsigned char* usedTracklets,           // Used tracklets
   Line* lines,                            // Lines
   int* nFoundLines,                       // Number of found lines
@@ -359,36 +359,40 @@ GPUg() void trackletSelectionKernelMultipleRof(
     auto* clustersL0Rof = clusters0 + (sizeClustersL0[rof] - sizeClustersL0[startRofId]);
     auto* clustersL1Rof = clusters1 + (sizeClustersL1[rof] - sizeClustersL1[startRofId]);
     auto nClustersL1Rof = sizeClustersL1[rof + 1] - sizeClustersL1[rof];
-    // auto* tracklets01Rof = tracklets01 + (sizeClustersL0[rof] - sizeClustersL0[startRofId]) * maxTrackletsPerCluster;
-    // auto* tracklets12Rof = tracklets12 + (sizeClustersL1[rof] - sizeClustersL1[startRofId]) * maxTrackletsPerCluster;
-    // auto* foundTracklets01Rof = nFoundTracklets01 + (sizeClustersL1[rof] - sizeClustersL1[startRofId]);
-    // auto* foundTracklets12Rof = nFoundTracklet12 + (sizeClustersL1[rof] - sizeClustersL1[startRofId]);
-    // auto* usedTrackletsRof = usedTracklets + (sizeClustersL1[rof] - sizeClustersL1[startRofId]) * maxTrackletsPerCluster;
-    // auto* nExclusiveFoundLinesRof = nExclusiveFoundLines + (sizeClustersL1[rof] - sizeClustersL1[startRofId]);
-    // auto* linesRof = lines + (sizeClustersL1[rof] - sizeClustersL1[startRofId]) * maxTrackletsPerCluster;
-    // for (int iClusterIndexLayer1 = threadIdx.x; iClusterIndexLayer1 < nClustersL1Rof; iClusterIndexLayer1 += blockDim.x) {
-      // const int stride{iClusterIndexLayer1 * maxTrackletsPerCluster};
-      // int validTracklets{0};
-      // for (int iTracklet12{0}; iTracklet12 < foundTracklets12Rof[iClusterIndexLayer1]; ++iTracklet12) {
-        // for (int iTracklet01{0}; iTracklet01 < foundTracklets01Rof[iClusterIndexLayer1] && validTracklets < maxTrackletsPerCluster; ++iTracklet01) {
+    auto* tracklets01Rof = tracklets01 + (sizeClustersL0[rof] - sizeClustersL0[startRofId]) * maxTrackletsPerCluster;
+    auto* tracklets12Rof = tracklets12 + (sizeClustersL1[rof] - sizeClustersL1[startRofId]) * maxTrackletsPerCluster;
+    auto* foundTracklets01Rof = nFoundTracklets01 + (sizeClustersL1[rof] - sizeClustersL1[startRofId]);
+    auto* foundTracklets12Rof = nFoundTracklets12 + (sizeClustersL1[rof] - sizeClustersL1[startRofId]);
+    auto* usedTrackletsRof = usedTracklets + (sizeClustersL1[rof] - sizeClustersL1[startRofId]) * maxTrackletsPerCluster;
+    auto* foundLinesRof = nFoundLines + iRof;
+    if constexpr (!initRun) {
+      auto* nExclusiveFoundLinesRof = nExclusiveFoundLines + iRof;
+      auto* linesRof = lines + iRof;
+    }
+    for (int iClusterIndexLayer1 = threadIdx.x; iClusterIndexLayer1 < nClustersL1Rof; iClusterIndexLayer1 += blockDim.x) {
+      // printOnThread(0, "rof %d nClustersL1Rof %d foundTracklets12Rof[iClusterIndexLayer1] %d  foundTracklets01Rof[iClusterIndexLayer1] %d \n", rof, nClustersL1Rof, foundTracklets12Rof[iClusterIndexLayer1], foundTracklets01Rof[iClusterIndexLayer1]);
+      const int stride{iClusterIndexLayer1 * maxTrackletsPerCluster};
+      int validTracklets{0};
+      for (int iTracklet12{0}; iTracklet12 < foundTracklets12Rof[iClusterIndexLayer1]; ++iTracklet12) {
+        for (int iTracklet01{0}; iTracklet01 < foundTracklets01Rof[iClusterIndexLayer1] && validTracklets < maxTrackletsPerCluster; ++iTracklet01) {
           // const float deltaTanLambda{o2::gpu::GPUCommonMath::Abs(tracklets01Rof[stride + iTracklet01].tanLambda - tracklets12Rof[stride + iTracklet12].tanLambda)};
           // const float deltaPhi{o2::gpu::GPUCommonMath::Abs(tracklets01Rof[stride + iTracklet01].phi - tracklets12Rof[stride + iTracklet12].phi)};
           // if (!usedTrackletsRof[stride + iTracklet01] && deltaTanLambda < tanLambdaCut && deltaPhi < phiCut && validTracklets != maxTrackletsPerCluster) {
-            // usedTrackletsRof[stride + iTracklet01] = true;
-            // if constexpr (!initRun) {
-              // new (lines + nExclusiveFoundLinesRof[iClusterIndexLayer1] + validTracklets) Line{tracklets01Rof[stride + iTracklet01], clustersL0Rof, clustersL1Rof};
-            // }
-            // ++validTracklets;
+          // usedTrackletsRof[stride + iTracklet01] = true;
+          // if constexpr (!initRun) {
+          // new (linesRof + nExclusiveFoundLinesRof[iClusterIndexLayer1] + validTracklets) Line{tracklets01Rof[stride + iTracklet01], clustersL0Rof, clustersL1Rof};
           // }
-        // }
-      // }
-      // if constexpr (initRun) {
-        // nFoundLines[iClusterIndexLayer1] = validTracklets;
+          ++validTracklets;
+          // }
+        }
+      }
+      if constexpr (initRun) {
+        foundLinesRof[iClusterIndexLayer1] = validTracklets;
         // if (validTracklets >= maxTrackletsPerCluster) {
-          // printf("gpu tracklet selection: some lines will be left behind for cluster %d. valid: %d max: %d\n", iClusterIndexLayer1, validTracklets, maxTrackletsPerCluster);
+        // printf("gpu tracklet selection: some lines will be left behind for cluster %d. valid: %d max: %d\n", iClusterIndexLayer1, validTracklets, maxTrackletsPerCluster);
         // }
-      // }
-    // }
+      }
+    }
   } // rof loop
 }
 
@@ -579,23 +583,25 @@ void VertexerTraitsGPU::computeTracklets()
 
       // Tracklet selection
       gpu::trackletSelectionKernelMultipleRof<true><<<1, 1, 0, mTimeFrameGPU->getStream(chunkId).get()>>>(
-        mTimeFrameGPU->getChunk(chunkId).getDeviceClusters(0),              // const Cluster* clusters0,               // Clusters on layer 0
-        mTimeFrameGPU->getChunk(chunkId).getDeviceClusters(1),              // const Cluster* clusters1,               // Clusters on layer 1
-        mTimeFrameGPU->getDeviceROframesClusters(0),                        // const int* sizeClustersL0,              // Number of clusters on layer 0 per ROF
-        mTimeFrameGPU->getDeviceROframesClusters(1),                        // const int* sizeClustersL1,              // Number of clusters on layer 1 per ROF
-        mTimeFrameGPU->getChunk(chunkId).getDeviceTracklets(0),             // Tracklet* tracklets01,                  // Tracklets on layer 0-1
-        mTimeFrameGPU->getChunk(chunkId).getDeviceTracklets(1),             // Tracklet* tracklets12,                  // Tracklets on layer 1-2
-        mTimeFrameGPU->getChunk(chunkId).getDeviceTrackletsLookupTables(0), // const int* nFoundTracklets01,           // Number of tracklets found on layers 0-1
-        mTimeFrameGPU->getChunk(chunkId).getDeviceTrackletsLookupTables(1), // const int* nFoundTracklet12,            // Number of tracklets found on layers 1-2
-        mTimeFrameGPU->getChunk(chunkId).getDeviceUsedTracklets(),          // unsigned char* usedTracklets,           // Used tracklets
-        mTimeFrameGPU->getChunk(chunkId).getDeviceLines(),                  // Line* lines,                            // Lines
-        mTimeFrameGPU->getChunk(chunkId).getDeviceNFoundLines(),            // int* nFoundLines,                       // Number of found lines
-        mTimeFrameGPU->getChunk(chunkId).getDeviceNExclusiveFoundLines(),   // int* nExclusiveFoundLines,              // Number of found lines exclusive scan
-        offset,                                                             // const unsigned int startRofId,          // Starting ROF ID
-        rofs,                                                               // const unsigned int rofSize,             // Number of ROFs to consider
-        mVrtParams.maxTrackletsPerCluster,                                  // const int maxTrackletsPerCluster = 1e2, // Maximum number of tracklets per cluster
-        mVrtParams.tanLambdaCut,                                            // const float tanLambdaCut = 0.025f,      // Cut on tan lambda
-        mVrtParams.phiCut);                                                 // const float phiCut = 0.002f)            // Cut on phi
+        mTimeFrameGPU->getChunk(chunkId).getDeviceClusters(0),            // const Cluster* clusters0,               // Clusters on layer 0
+        mTimeFrameGPU->getChunk(chunkId).getDeviceClusters(1),            // const Cluster* clusters1,               // Clusters on layer 1
+        mTimeFrameGPU->getDeviceROframesClusters(0),                      // const int* sizeClustersL0,              // Number of clusters on layer 0 per ROF
+        mTimeFrameGPU->getDeviceROframesClusters(1),                      // const int* sizeClustersL1,              // Number of clusters on layer 1 per ROF
+        mTimeFrameGPU->getChunk(chunkId).getDeviceTracklets(0),           // Tracklet* tracklets01,                  // Tracklets on layer 0-1
+        mTimeFrameGPU->getChunk(chunkId).getDeviceTracklets(1),           // Tracklet* tracklets12,                  // Tracklets on layer 1-2
+        mTimeFrameGPU->getChunk(chunkId).getDeviceNTrackletCluster(0),    // const int* nFoundTracklets01,           // Number of tracklets found on layers 0-1
+        mTimeFrameGPU->getChunk(chunkId).getDeviceNTrackletCluster(1),    // const int* nFoundTracklet12,            // Number of tracklets found on layers 1-2
+        mTimeFrameGPU->getChunk(chunkId).getDeviceUsedTracklets(),        // unsigned char* usedTracklets,           // Used tracklets
+        mTimeFrameGPU->getChunk(chunkId).getDeviceLines(),                // Line* lines,                            // Lines
+        mTimeFrameGPU->getChunk(chunkId).getDeviceNFoundLines(),          // int* nFoundLines,                       // Number of found lines
+        mTimeFrameGPU->getChunk(chunkId).getDeviceNExclusiveFoundLines(), // int* nExclusiveFoundLines,              // Number of found lines exclusive scan
+        offset,                                                           // const unsigned int startRofId,          // Starting ROF ID
+        rofs,                                                             // const unsigned int rofSize,             // Number of ROFs to consider
+        mVrtParams.maxTrackletsPerCluster,                                // const int maxTrackletsPerCluster = 1e2, // Maximum number of tracklets per cluster
+        mVrtParams.tanLambdaCut,                                          // const float tanLambdaCut = 0.025f,      // Cut on tan lambda
+        mVrtParams.phiCut);                                               // const float phiCut = 0.002f)            // Cut on phi
+
+      gpu::printBufferOnThread<<<1, 1, 0, mTimeFrameGPU->getStream(chunkId).get()>>>(mTimeFrameGPU->getChunk(chunkId).getDeviceNFoundLines(), rofs);
       offset += rofs;
     }
   } while (offset < mTimeFrameGPU->mNrof - 1); // offset is referring to the ROF id
