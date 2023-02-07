@@ -52,20 +52,6 @@ void trackleterKernelHost(
   const int ZBins{utils.getNzBins()};
   // loop on layer1 clusters
   int cumulativeStoredTracklets{0};
-  // if (rof == 0) {
-  // printf("number of clusters: %d\n", clustersCurrentLayer.size());}
-  // print indextablenext
-  if (rof == 152 && Mode == TrackletMode::Layer0Layer1 && DryRun) {
-    printf("nClCur: %d nClNex: %d\n", clustersCurrentLayer.size(), clustersNextLayer.size());
-
-    for (int i = 0; i < PhiBins * ZBins + 1; ++i) {
-      printf("%d ", indexTableNext[i]);
-      if (i % ZBins == 0)
-        printf("\n");
-    }
-    printf("\n");
-  }
-
   for (int iCurrentLayerClusterIndex = 0; iCurrentLayerClusterIndex < clustersCurrentLayer.size(); ++iCurrentLayerClusterIndex) {
     int storedTracklets{0};
     const Cluster& currentCluster{clustersCurrentLayer[iCurrentLayerClusterIndex]};
