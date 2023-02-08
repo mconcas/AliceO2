@@ -66,9 +66,6 @@ void trackleterKernelHost(
         const int firstBinIndex{utils.getBinIndex(selectedBinsRect.x, iPhiBin)};
         const int firstRowClusterIndex{indexTableNext[firstBinIndex]};
         const int maxRowClusterIndex{indexTableNext[firstBinIndex + ZBins]};
-        if (rof == 152) {
-          printf("\t\t => %d %d \n", firstRowClusterIndex, maxRowClusterIndex);
-        }
         // loop on clusters next layer
         for (int iNextLayerClusterIndex{firstRowClusterIndex}; iNextLayerClusterIndex < maxRowClusterIndex && iNextLayerClusterIndex < static_cast<int>(clustersNextLayer.size()); ++iNextLayerClusterIndex) {
           const Cluster& nextCluster{clustersNextLayer[iNextLayerClusterIndex]};
@@ -105,6 +102,7 @@ void trackletSelectionKernelHost(
   std::vector<Line>& destTracklets,
   const gsl::span<const MCCompLabel>& trackletLabels,
   std::vector<MCCompLabel>& linesLabels,
+  int rof,
   const float tanLambdaCut = 0.025f,
   const float phiCut = 0.005f,
   const int maxTracklets = static_cast<int>(1e2))
@@ -120,6 +118,8 @@ void trackletSelectionKernelHost(
         if (!usedTracklets[iTracklet01] && deltaTanLambda < tanLambdaCut && deltaPhi < phiCut && validTracklets != maxTracklets) {
           usedTracklets[iTracklet01] = true;
           destTracklets.emplace_back(tracklets01[iTracklet01], clusters0.data(), clusters1.data());
+          printf("rof: %d ", rof);
+          destTracklets.back().print();
           if (trackletLabels.size()) {
             linesLabels.emplace_back(trackletLabels[iTracklet01]);
           }
@@ -302,6 +302,7 @@ void VertexerTraits::computeTrackletMatching()
       mTimeFrame->getLines(rofId),
       mTimeFrame->getLabelsFoundTracklets(rofId, 0),
       mTimeFrame->getLinesLabel(rofId),
+      rofId,
       mVrtParams.tanLambdaCut,
       mVrtParams.phiCut);
   }

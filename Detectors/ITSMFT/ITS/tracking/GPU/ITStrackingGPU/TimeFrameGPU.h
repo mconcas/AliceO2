@@ -39,8 +39,34 @@ namespace its
 
 namespace gpu
 {
-template <int>
-class StaticTrackingParameters;
+
+template <int nLayers>
+struct StaticTrackingParameters {
+  StaticTrackingParameters<nLayers>& operator=(const StaticTrackingParameters<nLayers>& t) = default;
+  void set(const TrackingParameters& pars)
+  {
+    ClusterSharing = pars.ClusterSharing;
+    MinTrackLength = pars.MinTrackLength;
+    NSigmaCut = pars.NSigmaCut;
+    PVres = pars.PVres;
+    DeltaROF = pars.DeltaROF;
+    ZBins = pars.ZBins;
+    PhiBins = pars.PhiBins;
+    CellDeltaTanLambdaSigma = pars.CellDeltaTanLambdaSigma;
+  }
+
+  /// General parameters
+  int ClusterSharing = 0;
+  int MinTrackLength = nLayers;
+  float NSigmaCut = 5;
+  float PVres = 1.e-2f;
+  int DeltaROF = 0;
+  int ZBins{256};
+  int PhiBins{128};
+
+  /// Cell finding cuts
+  float CellDeltaTanLambdaSigma = 0.007f;
+};
 
 enum class Task {
   Tracker = 0,
@@ -66,7 +92,7 @@ class GpuTimeFrameChunk
   /// Most relevant operations
   void allocate(const size_t, Stream&);
   void reset(const size_t, const Task, Stream&);
-  size_t copyDeviceData(const size_t, const int, Stream&);
+  size_t loadDataOnDevice(const size_t, const int, Stream&);
 
   /// Interface
   Cluster* getDeviceClusters(const int);
@@ -78,8 +104,11 @@ class GpuTimeFrameChunk
   int* getDeviceTrackletsLookupTables(const int);
   Cell* getDeviceCells(const int);
   int* getDeviceCellsLookupTables(const int);
+  TimeFrameGPUConfig* getTimeFrameGPUConfig() const { return mTFGconf; }
 
-  int* getDeviceCUBTmpBuffers() { return mCUBTmpBufferDevice; }
+  void downloadDeviceLines(std::vector<Line>&, Stream&);
+
+  int* getDeviceCUBTmpBuffer() { return mCUBTmpBufferDevice; }
   int* getDeviceFoundTracklets() { return mFoundTrackletsDevice; }
   int* getDeviceFoundCells() { return mFoundCellsDevice; }
 
@@ -135,7 +164,7 @@ class TimeFrameGPU : public TimeFrame
   void registerHostMemory(const int);
   void unregisterHostMemory(const int);
   void initialise(const int, const TrackingParameters&, const int, const IndexTableUtils* utils = nullptr);
-  void initDevice(const int, const IndexTableUtils*, const int);
+  void initDevice(const int, const IndexTableUtils*, const TrackingParameters& trkParam, const int);
   void initDeviceChunks(const int, const int);
   template <Task task>
   size_t loadChunkData(const size_t, const size_t);
@@ -153,6 +182,7 @@ class TimeFrameGPU : public TimeFrame
   bool mHostRegistered = false;
   std::vector<GpuTimeFrameChunk<nLayers>> mMemChunks;
   TimeFrameGPUConfig mGpuConfig;
+  StaticTrackingParameters<nLayers> mStaticTrackingParams;
 
   // Device pointers
   StaticTrackingParameters<nLayers>* mTrackingParamsDevice;
@@ -174,11 +204,11 @@ size_t TimeFrameGPU<nLayers>::loadChunkData(const size_t chunk, const size_t off
                           task,
                           mGpuStreams[chunk]); // Reset chunks memory
   if constexpr ((bool)task) {
-    nRof = mMemChunks[chunk].copyDeviceData(offset, 3, mGpuStreams[chunk]);
+    nRof = mMemChunks[chunk].loadDataOnDevice(offset, 3, mGpuStreams[chunk]);
   } else {
-    nRof = mMemChunks[chunk].copyDeviceData(offset, nLayers, mGpuStreams[chunk]);
+    nRof = mMemChunks[chunk].loadDataOnDevice(offset, nLayers, mGpuStreams[chunk]);
   }
-  LOGP(info, "In chunk {}: loaded {} readout frames starting from {}", chunk, nRof, offset);
+  LOGP(debug, "In chunk {}: loaded {} readout frames starting from {}", chunk, nRof, offset);
   return nRof;
 }
 

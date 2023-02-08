@@ -37,35 +37,6 @@ using constants::MB;
 namespace gpu
 {
 using utils::checkGPUError;
-
-template <int nLayers>
-struct StaticTrackingParameters {
-  StaticTrackingParameters<nLayers>& operator=(const StaticTrackingParameters<nLayers>& t) = default;
-  void set(const TrackingParameters& pars)
-  {
-    ClusterSharing = pars.ClusterSharing;
-    MinTrackLength = pars.MinTrackLength;
-    NSigmaCut = pars.NSigmaCut;
-    PVres = pars.PVres;
-    DeltaROF = pars.DeltaROF;
-    ZBins = pars.ZBins;
-    PhiBins = pars.PhiBins;
-    CellDeltaTanLambdaSigma = pars.CellDeltaTanLambdaSigma;
-  }
-
-  /// General parameters
-  int ClusterSharing = 0;
-  int MinTrackLength = nLayers;
-  float NSigmaCut = 5;
-  float PVres = 1.e-2f;
-  int DeltaROF = 0;
-  int ZBins{256};
-  int PhiBins{128};
-
-  /// Cell finding cuts
-  float CellDeltaTanLambdaSigma = 0.007f;
-};
-
 /////////////////////////////////////////////////////////////////////////////////////////
 // GpuChunk
 template <int nLayers>
@@ -253,7 +224,7 @@ int* GpuTimeFrameChunk<nLayers>::getDeviceCellsLookupTables(const int layer)
 
 // Load data
 template <int nLayers>
-size_t GpuTimeFrameChunk<nLayers>::copyDeviceData(const size_t startRof, const int maxLayers, Stream& stream)
+size_t GpuTimeFrameChunk<nLayers>::loadDataOnDevice(const size_t startRof, const int maxLayers, Stream& stream)
 {
   RANGE("load_clusters_data", 5);
   int rofSize = (int)mTimeFramePtr->getNClustersROFrange(startRof, mNRof, 0).size();
@@ -279,11 +250,12 @@ size_t GpuTimeFrameChunk<nLayers>::copyDeviceData(const size_t startRof, const i
                                     cudaMemcpyHostToDevice, stream.get()));
     }
   }
-  return rofSize; // We want to return for how much ROFs we loaded the data.
+  return rofSize; // return the number of ROFs we loaded the data for.
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // TimeFrameGPU
+/////////////////////////////////////////////////////////////////////////////////////////
 template <int nLayers>
 TimeFrameGPU<nLayers>::TimeFrameGPU()
 {
@@ -318,7 +290,7 @@ void TimeFrameGPU<nLayers>::registerHostMemory(const int maxLayers)
   for (auto iLayer{0}; iLayer < maxLayers; ++iLayer) {
     checkGPUError(cudaHostRegister(mClusters[iLayer].data(), mClusters[iLayer].size() * sizeof(Cluster), cudaHostRegisterPortable));
     checkGPUError(cudaHostRegister(mNClustersPerROF[iLayer].data(), mNClustersPerROF[iLayer].size() * sizeof(int), cudaHostRegisterPortable));
-    checkGPUError(cudaHostRegister(mIndexTables[iLayer].data(), (256 * 128 + 1) * mNrof * sizeof(int), cudaHostRegisterPortable));
+    checkGPUError(cudaHostRegister(mIndexTables[iLayer].data(), (mStaticTrackingParams.ZBins * mStaticTrackingParams.PhiBins + 1) * mNrof * sizeof(int), cudaHostRegisterPortable));
   }
 }
 
@@ -343,7 +315,7 @@ void TimeFrameGPU<nLayers>::initialise(const int iteration,
 {
   mGpuStreams.resize(mGpuConfig.nTimeFrameChunks);
   auto init = [&](int p) -> void {
-    this->initDevice(p, utils, maxLayers);
+    this->initDevice(p, utils, trkParam, maxLayers);
   };
   std::thread t1{init, mGpuConfig.nTimeFrameChunks};
   RANGE("tf_cpu_initialisation", 1);
@@ -353,11 +325,12 @@ void TimeFrameGPU<nLayers>::initialise(const int iteration,
 }
 
 template <int nLayers>
-void TimeFrameGPU<nLayers>::initDevice(const int chunks, const IndexTableUtils* utils, const int maxLayers)
+void TimeFrameGPU<nLayers>::initDevice(const int chunks, const IndexTableUtils* utils, const TrackingParameters& trkParam, const int maxLayers)
 {
-  StaticTrackingParameters<nLayers> pars;
+  mStaticTrackingParams.ZBins = trkParam.ZBins;
+  mStaticTrackingParams.PhiBins = trkParam.PhiBins;
   checkGPUError(cudaMalloc(reinterpret_cast<void**>(&mTrackingParamsDevice), sizeof(gpu::StaticTrackingParameters<nLayers>)));
-  checkGPUError(cudaMemcpy(mTrackingParamsDevice, &pars, sizeof(gpu::StaticTrackingParameters<nLayers>), cudaMemcpyHostToDevice));
+  checkGPUError(cudaMemcpy(mTrackingParamsDevice, &mStaticTrackingParams, sizeof(gpu::StaticTrackingParameters<nLayers>), cudaMemcpyHostToDevice));
   if (utils) { // In a sense this check is a proxy to know whether this is the vertexergpu calling.
     for (auto iLayer{0}; iLayer < maxLayers; ++iLayer) {
       checkGPUError(cudaMalloc(reinterpret_cast<void**>(&mROframesClustersDevice[iLayer]), mNrof * sizeof(int)));
