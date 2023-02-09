@@ -333,8 +333,8 @@ void TimeFrameGPU<nLayers>::initDevice(const int chunks, const IndexTableUtils* 
   checkGPUError(cudaMemcpy(mTrackingParamsDevice, &mStaticTrackingParams, sizeof(gpu::StaticTrackingParameters<nLayers>), cudaMemcpyHostToDevice));
   if (utils) { // In a sense this check is a proxy to know whether this is the vertexergpu calling.
     for (auto iLayer{0}; iLayer < maxLayers; ++iLayer) {
-      checkGPUError(cudaMalloc(reinterpret_cast<void**>(&mROframesClustersDevice[iLayer]), mNrof * sizeof(int)));
-      checkGPUError(cudaMemcpy(mROframesClustersDevice[iLayer], mROframesClusters[iLayer].data(), mNrof * sizeof(int), cudaMemcpyHostToDevice));
+      checkGPUError(cudaMalloc(reinterpret_cast<void**>(&mROframesClustersDevice[iLayer]),  mROframesClusters[iLayer].size() * sizeof(int)));
+      checkGPUError(cudaMemcpy(mROframesClustersDevice[iLayer], mROframesClusters[iLayer].data(),  mROframesClusters[iLayer].size() * sizeof(int), cudaMemcpyHostToDevice));
     }
     checkGPUError(cudaMalloc(reinterpret_cast<void**>(&mIndexTableUtilsDevice), sizeof(IndexTableUtils)));
     checkGPUError(cudaMemcpy(mIndexTableUtilsDevice, utils, sizeof(IndexTableUtils), cudaMemcpyHostToDevice));

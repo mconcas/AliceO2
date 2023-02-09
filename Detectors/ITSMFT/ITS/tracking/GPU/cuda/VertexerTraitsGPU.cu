@@ -272,7 +272,6 @@ GPUg() void trackleterKernelMultipleRof(
           // loop on clusters next layer
           for (int iNextLayerClusterIndex{firstRowClusterIndex}; iNextLayerClusterIndex < maxRowClusterIndex && iNextLayerClusterIndex < nClustersNextLayerRof; ++iNextLayerClusterIndex) {
             const Cluster& nextCluster = clustersNextLayerRof[iNextLayerClusterIndex];
-            // printOnThread(0, "\t\t => %f \n", nextCluster.phi);
             if (o2::gpu::GPUCommonMath::Abs(currentCluster.phi - nextCluster.phi) < phiCut) {
               if (storedTracklets < maxTrackletsPerCluster) {
                 if constexpr (Mode == TrackletMode::Layer0Layer1) {
@@ -372,7 +371,11 @@ GPUg() void trackletSelectionKernelMultipleRof(
     if constexpr (!initRun) {
       nExclusiveFoundLinesRof = nExclusiveFoundLines + clustersL1offset;
     }
+    // if (threadIdx.x == 0) {
+    //   printf("rof: %d bid.x: %d/%d nClustersL1Rof: %d \n", rof, blockIdx.x, gridDim.x, nClustersL1Rof);
+    // }
     for (int iClusterIndexLayer1 = threadIdx.x; iClusterIndexLayer1 < nClustersL1Rof; iClusterIndexLayer1 += blockDim.x) {
+      // printf("rof/bidx: %d/%d thid/bDim: %d/%d icl1/nClus: %d/%d\n", rof, blockIdx.x, threadIdx.x, blockDim.x, iClusterIndexLayer1, nClustersL1Rof);
       const int stride{iClusterIndexLayer1 * maxTrackletsPerCluster};
       int validTracklets{0};
       for (int iTracklet12{0}; iTracklet12 < foundTracklets12Rof[iClusterIndexLayer1]; ++iTracklet12) {
@@ -383,14 +386,6 @@ GPUg() void trackletSelectionKernelMultipleRof(
             usedTrackletsRof[stride + iTracklet01] = true;
             if constexpr (!initRun) {
               new (lines + nExclusiveFoundLinesRof[iClusterIndexLayer1] + validTracklets) Line{tracklets01Rof[stride + iTracklet01], clustersL0Rof, clustersL1Rof};
-              printf("rof: %d Line: originPoint = (%f, %f, %f), cosinesDirector = (%f, %f, %f)\n", rof,
-                     lines[nExclusiveFoundLinesRof[iClusterIndexLayer1] + validTracklets].originPoint[0],
-                     lines[nExclusiveFoundLinesRof[iClusterIndexLayer1] + validTracklets].originPoint[1],
-                     lines[nExclusiveFoundLinesRof[iClusterIndexLayer1] + validTracklets].originPoint[2],
-                     lines[nExclusiveFoundLinesRof[iClusterIndexLayer1] + validTracklets].cosinesDirector[0],
-                     lines[nExclusiveFoundLinesRof[iClusterIndexLayer1] + validTracklets].cosinesDirector[1],
-                     lines[nExclusiveFoundLinesRof[iClusterIndexLayer1] + validTracklets].cosinesDirector[2]);
-              // lines[nExclusiveFoundLinesRof[iClusterIndexLayer1] + validTracklets].print();
             }
             ++validTracklets;
           }
@@ -640,7 +635,7 @@ void VertexerTraitsGPU::computeTracklets()
                                     mTimeFrameGPU->getStream(chunkId).get()),
                     __FILE__, __LINE__);
 
-      gpu::trackletSelectionKernelMultipleRof<false><<<1, 1, 0, mTimeFrameGPU->getStream(chunkId).get()>>>(
+      gpu::trackletSelectionKernelMultipleRof<false><<<rofs, 1024, 0, mTimeFrameGPU->getStream(chunkId).get()>>>(
         mTimeFrameGPU->getChunk(chunkId).getDeviceClusters(0),            // const Cluster* clusters0,               // Clusters on layer 0
         mTimeFrameGPU->getChunk(chunkId).getDeviceClusters(1),            // const Cluster* clusters1,               // Clusters on layer 1
         mTimeFrameGPU->getDeviceROframesClusters(0),                      // const int* sizeClustersL0,              // Number of clusters on layer 0 per ROF
@@ -659,8 +654,23 @@ void VertexerTraitsGPU::computeTracklets()
         mVrtParams.tanLambdaCut,                                          // const float tanLambdaCut = 0.025f,      // Cut on tan lambda
         mVrtParams.phiCut);                                               // const float phiCut = 0.002f)            // Cut on phi
 
+      //// DEBUG
+      int nClusters = mTimeFrameGPU->getTotalClustersPerROFrange(offset, rofs, 1);
+      int foundLinesLastElement;
+      checkGPUError(cudaMemcpyAsync(&foundLinesLastElement, mTimeFrameGPU->getChunk(chunkId).getDeviceNFoundLines() + nClusters - 1, sizeof(int), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
+      int foundLinesExclusiveLastElement;
+      checkGPUError(cudaMemcpyAsync(&foundLinesExclusiveLastElement, mTimeFrameGPU->getChunk(chunkId).getDeviceNExclusiveFoundLines() + nClusters - 1, sizeof(int), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
+      // LOGP(info, "Found {} lines in {} clusters, last is {}", foundLinesExclusiveLastElement + foundLinesLastElement, nClusters, foundLinesLastElement);
+      std::vector<Line> lines(foundLinesExclusiveLastElement + foundLinesLastElement);
+      checkGPUError(cudaMemcpyAsync(lines.data(), mTimeFrameGPU->getChunk(chunkId).getDeviceLines(), sizeof(Line) * lines.size(), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
+      for (int i = 0; i < lines.size(); ++i) {
+        lines[i].print();
+      }
+      ////
+      break;
       offset += rofs;
     }
+    break;
   } while (offset < mTimeFrameGPU->mNrof - 1); // offset is referring to the ROF id
   mTimeFrameGPU->unregisterHostMemory(3);
 
