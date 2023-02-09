@@ -208,7 +208,7 @@ size_t TimeFrameGPU<nLayers>::loadChunkData(const size_t chunk, const size_t off
   } else {
     nRof = mMemChunks[chunk].loadDataOnDevice(offset, nLayers, mGpuStreams[chunk]);
   }
-  LOGP(debug, "In chunk {}: loaded {} readout frames starting from {}", chunk, nRof, offset);
+  LOGP(info, "In chunk {}: loaded {} readout frames starting from {}", chunk, nRof, offset);
   return nRof;
 }
 

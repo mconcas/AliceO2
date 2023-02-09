@@ -118,8 +118,10 @@ void trackletSelectionKernelHost(
         if (!usedTracklets[iTracklet01] && deltaTanLambda < tanLambdaCut && deltaPhi < phiCut && validTracklets != maxTracklets) {
           usedTracklets[iTracklet01] = true;
           destTracklets.emplace_back(tracklets01[iTracklet01], clusters0.data(), clusters1.data());
-          printf("rof: %d ", rof);
-          destTracklets.back().print();
+          if (rof < 153) {
+            // printf("rof: %d ", rof);
+            destTracklets.back().print();
+          }
           if (trackletLabels.size()) {
             linesLabels.emplace_back(trackletLabels[iTracklet01]);
           }
@@ -305,6 +307,9 @@ void VertexerTraits::computeTrackletMatching()
       rofId,
       mVrtParams.tanLambdaCut,
       mVrtParams.phiCut);
+    if (rofId == 152) {
+      LOGP(info, "found lines cpu: {}", mTimeFrame->getLines(rofId).size());
+    }
   }
 
 #ifdef VTX_DEBUG
