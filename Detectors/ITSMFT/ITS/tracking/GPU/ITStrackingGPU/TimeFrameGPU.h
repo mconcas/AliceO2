@@ -118,6 +118,7 @@ class GpuTimeFrameChunk
   int* getDeviceNFoundLines() { return mNFoundLinesDevice; }
   int* getDeviceNExclusiveFoundLines() { return mNExclusiveFoundLinesDevice; }
   unsigned char* getDeviceUsedTracklets() { return mUsedTrackletsDevice; }
+  int* getDeviceClusteredLines() { return mClusteredLinesDevice; }
 
  private:
   /// Host
@@ -145,6 +146,7 @@ class GpuTimeFrameChunk
   int* mNExclusiveFoundLinesDevice;
   unsigned char* mUsedTrackletsDevice;
   std::array<int*, 2> mNTrackletsPerClusterDevice;
+  int* mClusteredLinesDevice;
 
   /// State and configuration
   bool mAllocated = false;
@@ -208,7 +210,7 @@ size_t TimeFrameGPU<nLayers>::loadChunkData(const size_t chunk, const size_t off
   } else {
     nRof = mMemChunks[chunk].loadDataOnDevice(offset, nLayers, mGpuStreams[chunk]);
   }
-  LOGP(info, "In chunk {}: loaded {} readout frames starting from {}", chunk, nRof, offset);
+  LOGP(debug, "In chunk {}: loaded {} readout frames starting from {}", chunk, nRof, offset);
   return nRof;
 }
 
