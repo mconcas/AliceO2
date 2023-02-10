@@ -93,6 +93,7 @@ void GpuTimeFrameChunk<nLayers>::allocate(const size_t nrof, Stream& stream)
   checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mNFoundLinesDevice), sizeof(int) * mTFGconf->clustersPerROfCapacity * nrof, stream.get()));
   checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mNExclusiveFoundLinesDevice), sizeof(int) * mTFGconf->clustersPerROfCapacity * nrof, stream.get()));
   checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mUsedTrackletsDevice), sizeof(unsigned char) * mTFGconf->maxTrackletsPerCluster * mTFGconf->clustersPerROfCapacity * nrof, stream.get()));
+  checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mClusteredLinesDevice), sizeof(int) * mTFGconf->clustersPerROfCapacity * mTFGconf->maxTrackletsPerCluster * nrof, stream.get()));
 
   /// Invariant allocations
   checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mFoundTrackletsDevice), (nLayers - 1) * sizeof(int) * nrof, stream.get()));
@@ -114,6 +115,7 @@ void GpuTimeFrameChunk<nLayers>::reset(const size_t nrof, const Task task, Strea
       checkGPUError(cudaMemsetAsync(mNTrackletsPerClusterDevice[i], 0, sizeof(int) * mTFGconf->clustersPerROfCapacity * nrof, stream.get()));
     }
     checkGPUError(cudaMemsetAsync(mUsedTrackletsDevice, false, sizeof(unsigned char) * mTFGconf->maxTrackletsPerCluster * mTFGconf->clustersPerROfCapacity * nrof, stream.get()));
+    checkGPUError(cudaMemsetAsync(mClusteredLinesDevice, -1, sizeof(int) * mTFGconf->clustersPerROfCapacity * mTFGconf->maxTrackletsPerCluster * nrof, stream.get()));
   } else {
     for (int i = 0; i < nLayers - 1; ++i) {
       checkGPUError(cudaMemsetAsync(mTrackletsLookupTablesDevice[i], 0, sizeof(int) * mTFGconf->clustersPerROfCapacity * nrof, stream.get()));
@@ -146,6 +148,7 @@ size_t GpuTimeFrameChunk<nLayers>::computeScalingSizeBytes(const int nrof, const
   rofsize += sizeof(Line) * config.maxTrackletsPerCluster * config.clustersPerROfCapacity;                     // lines
   rofsize += sizeof(int) * config.clustersPerROfCapacity;                                                      // found lines
   rofsize += sizeof(int) * config.clustersPerROfCapacity;                                                      // found lines exclusive sum
+  rofsize += sizeof(int) * config.clustersPerROfCapacity * config.maxTrackletsPerCluster;                      // lines used in clusterlines
 
   rofsize += (nLayers - 1) * sizeof(int); // total found tracklets
   rofsize += (nLayers - 2) * sizeof(int); // total found cells
@@ -333,8 +336,8 @@ void TimeFrameGPU<nLayers>::initDevice(const int chunks, const IndexTableUtils* 
   checkGPUError(cudaMemcpy(mTrackingParamsDevice, &mStaticTrackingParams, sizeof(gpu::StaticTrackingParameters<nLayers>), cudaMemcpyHostToDevice));
   if (utils) { // In a sense this check is a proxy to know whether this is the vertexergpu calling.
     for (auto iLayer{0}; iLayer < maxLayers; ++iLayer) {
-      checkGPUError(cudaMalloc(reinterpret_cast<void**>(&mROframesClustersDevice[iLayer]),  mROframesClusters[iLayer].size() * sizeof(int)));
-      checkGPUError(cudaMemcpy(mROframesClustersDevice[iLayer], mROframesClusters[iLayer].data(),  mROframesClusters[iLayer].size() * sizeof(int), cudaMemcpyHostToDevice));
+      checkGPUError(cudaMalloc(reinterpret_cast<void**>(&mROframesClustersDevice[iLayer]), mROframesClusters[iLayer].size() * sizeof(int)));
+      checkGPUError(cudaMemcpy(mROframesClustersDevice[iLayer], mROframesClusters[iLayer].data(), mROframesClusters[iLayer].size() * sizeof(int), cudaMemcpyHostToDevice));
     }
     checkGPUError(cudaMalloc(reinterpret_cast<void**>(&mIndexTableUtilsDevice), sizeof(IndexTableUtils)));
     checkGPUError(cudaMemcpy(mIndexTableUtilsDevice, utils, sizeof(IndexTableUtils), cudaMemcpyHostToDevice));

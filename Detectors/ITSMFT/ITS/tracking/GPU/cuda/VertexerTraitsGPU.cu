@@ -358,18 +358,18 @@ GPUg() void trackletSelectionKernelMultipleRof(
   for (unsigned int iRof{blockIdx.x}; iRof < rofSize; iRof += gridDim.x) {
     auto rof = iRof + startRofId;
     auto* clustersL0Rof = clusters0 + (sizeClustersL0[rof] - sizeClustersL0[startRofId]);
-    auto clustersL1offset = sizeClustersL1[rof] - sizeClustersL1[startRofId];
-    auto* clustersL1Rof = clusters1 + clustersL1offset;
+    auto clustersL1offsetRof = sizeClustersL1[rof] - sizeClustersL1[startRofId];
+    auto* clustersL1Rof = clusters1 + clustersL1offsetRof;
     auto nClustersL1Rof = sizeClustersL1[rof + 1] - sizeClustersL1[rof];
-    auto* tracklets01Rof = tracklets01 + clustersL1offset * maxTrackletsPerCluster;
-    auto* tracklets12Rof = tracklets12 + clustersL1offset * maxTrackletsPerCluster;
-    auto* foundTracklets01Rof = nFoundTracklets01 + clustersL1offset;
-    auto* foundTracklets12Rof = nFoundTracklets12 + clustersL1offset;
-    auto* usedTrackletsRof = usedTracklets + clustersL1offset * maxTrackletsPerCluster;
-    auto* foundLinesRof = nFoundLines + clustersL1offset;
+    auto* tracklets01Rof = tracklets01 + clustersL1offsetRof * maxTrackletsPerCluster;
+    auto* tracklets12Rof = tracklets12 + clustersL1offsetRof * maxTrackletsPerCluster;
+    auto* foundTracklets01Rof = nFoundTracklets01 + clustersL1offsetRof;
+    auto* foundTracklets12Rof = nFoundTracklets12 + clustersL1offsetRof;
+    auto* usedTrackletsRof = usedTracklets + clustersL1offsetRof * maxTrackletsPerCluster;
+    auto* foundLinesRof = nFoundLines + clustersL1offsetRof;
     int* nExclusiveFoundLinesRof = nullptr;
     if constexpr (!initRun) {
-      nExclusiveFoundLinesRof = nExclusiveFoundLines + clustersL1offset;
+      nExclusiveFoundLinesRof = nExclusiveFoundLines + clustersL1offsetRof;
     }
     // if (threadIdx.x == 0) {
     //   printf("rof: %d bid.x: %d/%d nClustersL1Rof: %d \n", rof, blockIdx.x, gridDim.x, nClustersL1Rof);
@@ -401,20 +401,59 @@ GPUg() void trackletSelectionKernelMultipleRof(
   } // rof loop
 }
 
-// GPUg() void printLinesRof(
-//   const int* sizeClustersL1, // Number of clusters on layer 1 per ROF
-//   int* nFoundLines,          // Number of found lines
-//   int startRofId,            // Starting rof id
-//   int rof,                   // rof id
-//   Line* lines,               // Lines
-// )
-// {
-//   auto nClustersL1Rof = sizeClustersL1[rof + 1] - sizeClustersL1[rof];
-//   auto* foundLinesRof = nFoundLines + (sizeClustersL1[rof] - sizeClustersL1[startRofId]);
-//   for (int iClusterIndexLayer1 = 0; iClusterIndexLayer1 < nClustersL1Rof; ++iClusterIndexLayer1) {
-//     for (int iLine = 0; iLine <
-//   }
-// }
+GPUg() void lineClustererMultipleRof(
+  const int* sizeClustersL1,     // Number of clusters on layer 1 per ROF
+  Line* lines,                   // Lines
+  int* nFoundLines,              // Number of found lines
+  int* nExclusiveFoundLines,     // Number of found lines exclusive scan
+  int* clusteredLines,           // Clustered lines
+  const unsigned int startRofId, // Starting ROF ID
+  const unsigned int rofSize,    // Number of ROFs to consider // Number of found lines exclusive scan
+  const float pairCut)           // Selection on line pairs
+{
+  for (unsigned int iRof{blockIdx.x}; iRof < rofSize; iRof += gridDim.x) {
+    auto rof = iRof + startRofId;
+    auto clustersL1offsetRof = sizeClustersL1[rof] - sizeClustersL1[startRofId]; // starting cluster offset for this ROF
+    auto nClustersL1Rof = sizeClustersL1[rof + 1] - sizeClustersL1[rof];         // number of clusters for this ROF
+    auto linesOffsetRof = nExclusiveFoundLines[clustersL1offsetRof];             // starting line offset for this ROF
+    auto* foundLinesRof = nFoundLines + clustersL1offsetRof;
+    auto nLinesRof = nExclusiveFoundLines[clustersL1offsetRof + nClustersL1Rof] - linesOffsetRof;
+    // for (int iClusterIndexLayer1 = 0; iClusterIndexLayer1 < nClustersL1Rof; ++iClusterIndexLayer1) {
+    for (int iLine1 = 0; iLine1 < nLinesRof; ++iLine1) {
+      // auto absLine1Index = nExclusiveFoundLines[clustersL1offsetRof + iClusterIndexLayer1] + iLine1;
+      // if (clusteredLines[absLine1Index] > -1) {
+      //   continue;
+      // }
+      // for (int iLine2 = iLine1 + 1; iLine2 < foundLinesRof[iClusterIndexLayer1]; ++iLine2) {
+      //   auto absLine2Index = nExclusiveFoundLines[clustersL1offsetRof + iClusterIndexLayer1] + iLine2;
+      //   if (clusteredLines[absLine2Index] > -1) {
+      //     continue;
+      //   }
+      //   if (Line::getDCA(lines[absLine1Index] + iLine1], lines[absLine2Index]) < pairCut) {
+      //     ClusterLinesGPU tmpClus{lines[nExclusiveFoundLines[clustersL1offsetRof + iClusterIndexLayer1] + iLine1],
+      //                             lines[nExclusiveFoundLines[clustersL1offsetRof + iClusterIndexLayer1] + iLine2]};
+      //     float tmpVertex[3] = tmpClus.getVertex();
+      //     if (tmpVertex[0] * tmpVertex[0] + tmpVertex[1] * tmpVertex[1] > 4.f) { // outside the beampipe, skip it
+      //       break;
+      //     }
+      //     clusteredLines[absLine1Index] = absLine1Index; // We set index of first line to contribute, so we can retrieve the cluster later
+      //     clusteredLines[absLine2Index] = absLine1Index;
+      //     for (int iLine3 = 0; iLine3 < foundLinesRof[iClusterIndexLayer1]; ++iLine3) {
+      //       auto absLine3Index = nExclusiveFoundLines[clustersL1offsetRof + iClusterIndexLayer1] + iLine3;
+      //       if (clusteredLines[absLine3Index] > -1) {
+      //         continue;
+      //       }
+      //       if (Line::getDistanceFromPoint(lines[absLine3Index], tmpVertex) < pairCut) {
+      //         clusteredLines[absLine3Index] = absLine1Index;
+      //       }
+      //     }
+      //     break;
+      //   }
+      // }
+    }
+    // }
+  } // rof loop
+}
 
 GPUg() void computeCentroidsKernel(
   Line* lines,
@@ -655,18 +694,28 @@ void VertexerTraitsGPU::computeTracklets()
         mVrtParams.phiCut);                                               // const float phiCut = 0.002f)            // Cut on phi
 
       //// DEBUG
-      int nClusters = mTimeFrameGPU->getTotalClustersPerROFrange(offset, rofs, 1);
-      int foundLinesLastElement;
-      checkGPUError(cudaMemcpyAsync(&foundLinesLastElement, mTimeFrameGPU->getChunk(chunkId).getDeviceNFoundLines() + nClusters - 1, sizeof(int), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
-      int foundLinesExclusiveLastElement;
-      checkGPUError(cudaMemcpyAsync(&foundLinesExclusiveLastElement, mTimeFrameGPU->getChunk(chunkId).getDeviceNExclusiveFoundLines() + nClusters - 1, sizeof(int), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
-      // LOGP(info, "Found {} lines in {} clusters, last is {}", foundLinesExclusiveLastElement + foundLinesLastElement, nClusters, foundLinesLastElement);
-      std::vector<Line> lines(foundLinesExclusiveLastElement + foundLinesLastElement);
-      checkGPUError(cudaMemcpyAsync(lines.data(), mTimeFrameGPU->getChunk(chunkId).getDeviceLines(), sizeof(Line) * lines.size(), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
-      for (int i = 0; i < lines.size(); ++i) {
-        lines[i].print();
-      }
+      // int nClusters = mTimeFrameGPU->getTotalClustersPerROFrange(offset, rofs, 1);
+      // int foundLinesLastElement;
+      // checkGPUError(cudaMemcpyAsync(&foundLinesLastElement, mTimeFrameGPU->getChunk(chunkId).getDeviceNFoundLines() + nClusters - 1, sizeof(int), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
+      // int foundLinesExclusiveLastElement;
+      // checkGPUError(cudaMemcpyAsync(&foundLinesExclusiveLastElement, mTimeFrameGPU->getChunk(chunkId).getDeviceNExclusiveFoundLines() + nClusters - 1, sizeof(int), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
+      // // LOGP(info, "Found {} lines in {} clusters, last is {}", foundLinesExclusiveLastElement + foundLinesLastElement, nClusters, foundLinesLastElement);
+      // std::vector<Line> lines(foundLinesExclusiveLastElement + foundLinesLastElement);
+      // checkGPUError(cudaMemcpyAsync(lines.data(), mTimeFrameGPU->getChunk(chunkId).getDeviceLines(), sizeof(Line) * lines.size(), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
+      // for (int i = 0; i < lines.size(); ++i) {
+      //   lines[i].print();
+      // }
       ////
+      gpu::lineClustererMultipleRof<<<rofs, 1, 0, mTimeFrameGPU->getStream(chunkId).get()>>>(
+        mTimeFrameGPU->getDeviceROframesClusters(1),                      // const int* sizeClustersL1,     // Number of clusters on layer 1 per ROF
+        mTimeFrameGPU->getChunk(chunkId).getDeviceLines(),                // Line* lines,                   // Lines
+        mTimeFrameGPU->getChunk(chunkId).getDeviceNFoundLines(),          // int* nFoundLines,              // Number of found lines
+        mTimeFrameGPU->getChunk(chunkId).getDeviceNExclusiveFoundLines(), // int* nExclusiveFoundLines,     // Number of found lines exclusive scan
+        mTimeFrameGPU->getChunk(chunkId).getDeviceClusteredLines(),       // int* clusteredLines,           // Clustered lines
+        offset,                                                           // const unsigned int startRofId, // Starting ROF ID
+        rofs,                                                             // const unsigned int rofSize,    // Number of ROFs to consider
+        mVrtParams.pairCut);                                              // const float pairCut)           // Selection on line pairs
+
       break;
       offset += rofs;
     }
