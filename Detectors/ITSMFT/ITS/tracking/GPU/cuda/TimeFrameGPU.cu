@@ -91,7 +91,7 @@ void GpuTimeFrameChunk<nLayers>::allocate(const size_t nrof, Stream& stream)
   checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mCUBTmpBufferDevice), mTFGconf->tmpCUBBufferSize * nrof, stream.get()));
   checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mLinesDevice), sizeof(Line) * mTFGconf->maxTrackletsPerCluster * mTFGconf->clustersPerROfCapacity * nrof, stream.get()));
   checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mNFoundLinesDevice), sizeof(int) * mTFGconf->clustersPerROfCapacity * nrof, stream.get()));
-  checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mNExclusiveFoundLinesDevice), sizeof(int) * mTFGconf->clustersPerROfCapacity * nrof, stream.get()));
+  checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mNExclusiveFoundLinesDevice), sizeof(int) * mTFGconf->clustersPerROfCapacity * nrof + 1, stream.get())); // + 1 for cub::DeviceScan::ExclusiveSum, to cover cases where we have maximum number of clusters per ROF
   checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mUsedTrackletsDevice), sizeof(unsigned char) * mTFGconf->maxTrackletsPerCluster * mTFGconf->clustersPerROfCapacity * nrof, stream.get()));
   checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mClusteredLinesDevice), sizeof(int) * mTFGconf->clustersPerROfCapacity * mTFGconf->maxTrackletsPerCluster * nrof, stream.get()));
 
