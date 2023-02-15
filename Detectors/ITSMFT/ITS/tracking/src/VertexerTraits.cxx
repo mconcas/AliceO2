@@ -509,113 +509,112 @@ void VertexerTraits::computeVerticesInRof(const int rofId, gsl::span<o2::its::Li
   clusterLines.clear();
   clusterLines.reserve(lines.size());
   const int numTracklets{static_cast<int>(lines.size())};
-  printf("rof: %d -> %d lines.\n", rofId, numTracklets);
 
-  // std::vector<bool> usedTracklets(numTracklets, false);
-  // for (int line1{0}; line1 < numTracklets; ++line1) {
-  //   if (usedLines[line1]) {
-  //     continue;
-  //   }
-  //   for (int line2{line1 + 1}; line2 < numTracklets; ++line2) {
-  //     if (usedLines[line2]) {
-  //       continue;
-  //     }
-  //     auto dca{Line::getDCA(lines[line1], lines[line2])};
-  //     if (dca < mVrtParams.pairCut) {
-  //       clusterLines.emplace_back(line1, lines[line1], line2, lines[line2]);
-  //       std::array<float, 3> tmpVertex{clusterLines.back().getVertex()};
-  //       if (tmpVertex[0] * tmpVertex[0] + tmpVertex[1] * tmpVertex[1] > 4.f) {
-  //         clusterLines.pop_back();
-  //         break;
-  //       }
-  //       usedLines[line1] = true;
-  //       usedLines[line2] = true;
-  //       for (int tracklet3{0}; tracklet3 < numTracklets; ++tracklet3) {
-  //         if (usedLines[tracklet3]) {
-  //           continue;
-  //         }
-  //         if (Line::getDistanceFromPoint(lines[tracklet3], tmpVertex) < mVrtParams.pairCut) {
-  //           clusterLines.back().add(tracklet3, lines[tracklet3]);
-  //           usedLines[tracklet3] = true;
-  //           tmpVertex = clusterLines.back().getVertex();
-  //         }
-  //       }
-  //       break;
-  //     }
-  //   }
-  // }
-  // if (mVrtParams.allowSingleContribClusters) {
-  //   auto beamLine = Line{{mTimeFrame->getBeamX(), mTimeFrame->getBeamY(), -50.f}, {mTimeFrame->getBeamX(), mTimeFrame->getBeamY(), 50.f}}; // use beam position as contributor
-  //   for (size_t iLine{0}; iLine < numTracklets; ++iLine) {
-  //     if (!usedLines[iLine]) {
-  //       auto dca = Line::getDCA(lines[iLine], beamLine);
-  //       if (dca < mVrtParams.pairCut) {
-  //         clusterLines.emplace_back(iLine, lines[iLine], -1, beamLine); // beamline must be passed as second line argument
-  //       }
-  //     }
-  //   }
-  // }
+  std::vector<bool> usedTracklets(numTracklets, false);
+  for (int line1{0}; line1 < numTracklets; ++line1) {
+    if (usedLines[line1]) {
+      continue;
+    }
+    for (int line2{line1 + 1}; line2 < numTracklets; ++line2) {
+      if (usedLines[line2]) {
+        continue;
+      }
+      auto dca{Line::getDCA(lines[line1], lines[line2])};
+      if (dca < mVrtParams.pairCut) {
+        clusterLines.emplace_back(line1, lines[line1], line2, lines[line2]);
+        std::array<float, 3> tmpVertex{clusterLines.back().getVertex()};
+        if (tmpVertex[0] * tmpVertex[0] + tmpVertex[1] * tmpVertex[1] > 4.f) {
+          clusterLines.pop_back();
+          break;
+        }
+        usedLines[line1] = true;
+        usedLines[line2] = true;
+        for (int tracklet3{0}; tracklet3 < numTracklets; ++tracklet3) {
+          if (usedLines[tracklet3]) {
+            continue;
+          }
+          if (Line::getDistanceFromPoint(lines[tracklet3], tmpVertex) < mVrtParams.pairCut) {
+            clusterLines.back().add(tracklet3, lines[tracklet3]);
+            usedLines[tracklet3] = true;
+            tmpVertex = clusterLines.back().getVertex();
+          }
+        }
+        break;
+      }
+    }
+  }
+  if (mVrtParams.allowSingleContribClusters) {
+    auto beamLine = Line{{mTimeFrame->getBeamX(), mTimeFrame->getBeamY(), -50.f}, {mTimeFrame->getBeamX(), mTimeFrame->getBeamY(), 50.f}}; // use beam position as contributor
+    for (size_t iLine{0}; iLine < numTracklets; ++iLine) {
+      if (!usedLines[iLine]) {
+        auto dca = Line::getDCA(lines[iLine], beamLine);
+        if (dca < mVrtParams.pairCut) {
+          clusterLines.emplace_back(iLine, lines[iLine], -1, beamLine); // beamline must be passed as second line argument
+        }
+      }
+    }
+  }
 
-  // // Cluster merging
-  // std::sort(clusterLines.begin(), clusterLines.end(), [](ClusterLines& cluster1, ClusterLines& cluster2) { return cluster1.getSize() > cluster2.getSize(); });
-  // size_t nClusters{clusterLines.size()};
-  // for (int iCluster1{0}; iCluster1 < nClusters; ++iCluster1) {
-  //   std::array<float, 3> vertex1{clusterLines[iCluster1].getVertex()};
-  //   std::array<float, 3> vertex2{};
-  //   for (int iCluster2{iCluster1 + 1}; iCluster2 < nClusters; ++iCluster2) {
-  //     vertex2 = clusterLines[iCluster2].getVertex();
-  //     if (std::abs(vertex1[2] - vertex2[2]) < mVrtParams.clusterCut) {
-  //       float distance{(vertex1[0] - vertex2[0]) * (vertex1[0] - vertex2[0]) +
-  //                      (vertex1[1] - vertex2[1]) * (vertex1[1] - vertex2[1]) +
-  //                      (vertex1[2] - vertex2[2]) * (vertex1[2] - vertex2[2])};
-  //       if (distance < mVrtParams.pairCut * mVrtParams.pairCut) {
-  //         for (auto label : clusterLines[iCluster2].getLabels()) {
-  //           clusterLines[iCluster1].add(label, lines[label]);
-  //           vertex1 = clusterLines[iCluster1].getVertex();
-  //         }
-  //         clusterLines.erase(clusterLines.begin() + iCluster2);
-  //         --iCluster2;
-  //         --nClusters;
-  //       }
-  //     }
-  //   }
-  // }
-
-  // std::sort(clusterLines.begin(), clusterLines.end(),
-  //           [](ClusterLines& cluster1, ClusterLines& cluster2) { return cluster1.getSize() > cluster2.getSize(); }); // ensure clusters are ordered by contributors, so that we can cut after the first.
-  // bool atLeastOneFound{false};
-  // for (int iCluster{0}; iCluster < nClusters; ++iCluster) {
-  //   bool lowMultCandidate{false};
-  //   if (atLeastOneFound && (lowMultCandidate = clusterLines[iCluster].getSize() < mVrtParams.clusterContributorsCut)) { // We might have pile up with nContr > cut.
-  //     float beamDistance2{(mTimeFrame->getBeamX() - clusterLines[iCluster].getVertex()[0]) * (mTimeFrame->getBeamX() - clusterLines[iCluster].getVertex()[0]) +
-  //                         (mTimeFrame->getBeamY() - clusterLines[iCluster].getVertex()[1]) * (mTimeFrame->getBeamY() - clusterLines[iCluster].getVertex()[1])};
-  //     lowMultCandidate &= beamDistance2 < mVrtParams.lowMultXYcut2;
-  //     if (!lowMultCandidate) { // Not the first cluster and not a low multiplicity candidate, we can remove it
-  //       clusterLines.erase(clusterLines.begin() + iCluster);
-  //       nClusters--;
-  //       continue;
-  //     }
-  //   }
-  //   float rXY{std::hypot(clusterLines[iCluster].getVertex()[0], clusterLines[iCluster].getVertex()[1])};
-  //   if (rXY < 1.98 && std::abs(clusterLines[iCluster].getVertex()[2]) < mVrtParams.maxZPositionAllowed) {
-  //     atLeastOneFound = true;
-  //     mVertices.emplace_back(clusterLines[iCluster].getVertex()[0],
-  //                            clusterLines[iCluster].getVertex()[1],
-  //                            clusterLines[iCluster].getVertex()[2],
-  //                            clusterLines[iCluster].getRMS2(),         // Symm matrix. Diagonal: RMS2 components,
-  //                                                                      // off-diagonal: square mean of projections on planes.
-  //                            clusterLines[iCluster].getSize(),         // Contributors
-  //                            clusterLines[iCluster].getAvgDistance2(), // In place of chi2
-  //                            rofId);
-  //     if (mTimeFrame->hasMCinformation()) {
-  //       mTimeFrame->getVerticesLabels().emplace_back();
-  //       for (auto& index : clusterLines[iCluster].getLabels()) {
-  //         mTimeFrame->getVerticesLabels().back().push_back(mTimeFrame->getLinesLabel(rofId)[index]); // then we can use nContributors from vertices to get the labels
-  //       }
-  //     }
-  //   }
-  // }
-  // std::vector<Vertex> vertices;
+  // Cluster merging
+  std::sort(clusterLines.begin(), clusterLines.end(), [](ClusterLines& cluster1, ClusterLines& cluster2) { return cluster1.getSize() > cluster2.getSize(); });
+  size_t nClusters{clusterLines.size()};
+  for (int iCluster1{0}; iCluster1 < nClusters; ++iCluster1) {
+    std::array<float, 3> vertex1{clusterLines[iCluster1].getVertex()};
+    std::array<float, 3> vertex2{};
+    for (int iCluster2{iCluster1 + 1}; iCluster2 < nClusters; ++iCluster2) {
+      vertex2 = clusterLines[iCluster2].getVertex();
+      if (std::abs(vertex1[2] - vertex2[2]) < mVrtParams.clusterCut) {
+        float distance{(vertex1[0] - vertex2[0]) * (vertex1[0] - vertex2[0]) +
+                       (vertex1[1] - vertex2[1]) * (vertex1[1] - vertex2[1]) +
+                       (vertex1[2] - vertex2[2]) * (vertex1[2] - vertex2[2])};
+        if (distance < mVrtParams.pairCut * mVrtParams.pairCut) {
+          for (auto label : clusterLines[iCluster2].getLabels()) {
+            clusterLines[iCluster1].add(label, lines[label]);
+            vertex1 = clusterLines[iCluster1].getVertex();
+          }
+          clusterLines.erase(clusterLines.begin() + iCluster2);
+          --iCluster2;
+          --nClusters;
+        }
+      }
+    }
+  }
+  std::sort(clusterLines.begin(), clusterLines.end(),
+            [](ClusterLines& cluster1, ClusterLines& cluster2) { return cluster1.getSize() > cluster2.getSize(); }); // ensure clusters are ordered by contributors, so that we can cut after the first.
+  bool atLeastOneFound{false};
+  for (int iCluster{0}; iCluster < nClusters; ++iCluster) {
+    bool lowMultCandidate{false};
+    if (atLeastOneFound && (lowMultCandidate = clusterLines[iCluster].getSize() < mVrtParams.clusterContributorsCut)) { // We might have pile up with nContr > cut.
+      float beamDistance2{(mTimeFrame->getBeamX() - clusterLines[iCluster].getVertex()[0]) * (mTimeFrame->getBeamX() - clusterLines[iCluster].getVertex()[0]) +
+                          (mTimeFrame->getBeamY() - clusterLines[iCluster].getVertex()[1]) * (mTimeFrame->getBeamY() - clusterLines[iCluster].getVertex()[1])};
+      lowMultCandidate &= beamDistance2 < mVrtParams.lowMultXYcut2;
+      if (!lowMultCandidate) { // Not the first cluster and not a low multiplicity candidate, we can remove it
+        clusterLines.erase(clusterLines.begin() + iCluster);
+        nClusters--;
+        continue;
+      }
+    }
+    float rXY{std::hypot(clusterLines[iCluster].getVertex()[0], clusterLines[iCluster].getVertex()[1])};
+    if (rXY < 1.98 && std::abs(clusterLines[iCluster].getVertex()[2]) < mVrtParams.maxZPositionAllowed) {
+      atLeastOneFound = true;
+      LOGP(info, "Found vertex inf rof {}, x={}, y={}, z={}, chi2={}, nContributors={}", rofId, clusterLines[iCluster].getVertex()[0], clusterLines[iCluster].getVertex()[1], clusterLines[iCluster].getVertex()[2], clusterLines[iCluster].getAvgDistance2(), clusterLines[iCluster].getSize());
+      // mVertices.emplace_back(clusterLines[iCluster].getVertex()[0],
+      //                        clusterLines[iCluster].getVertex()[1],
+      //                        clusterLines[iCluster].getVertex()[2],
+      //                        clusterLines[iCluster].getRMS2(),         // Symm matrix. Diagonal: RMS2 components,
+      //                                                                  // off-diagonal: square mean of projections on planes.
+      //                        clusterLines[iCluster].getSize(),         // Contributors
+      //                        clusterLines[iCluster].getAvgDistance2(), // In place of chi2
+      //                        rofId);
+      // if (mTimeFrame->hasMCinformation()) {
+      //   mTimeFrame->getVerticesLabels().emplace_back();
+      //   for (auto& index : clusterLines[iCluster].getLabels()) {
+      //     mTimeFrame->getVerticesLabels().back().push_back(mTimeFrame->getLinesLabel(rofId)[index]); // then we can use nContributors from vertices to get the labels
+      //   }
+      // }
+    }
+  }
+  std::vector<Vertex> vertices;
   // for (auto& vertex : mVertices) {
   //   vertices.emplace_back(o2::math_utils::Point3D<float>(vertex.mX, vertex.mY, vertex.mZ), vertex.mRMS2, vertex.mContributors, vertex.mAvgDistance2);
   //   vertices.back().setTimeStamp(vertex.mTimeStamp);

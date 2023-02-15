@@ -709,17 +709,16 @@ void VertexerTraitsGPU::computeTracklets()
         checkGPUError(cudaStreamSynchronize(mTimeFrameGPU->getStream(chunkId).get()));
         // Compute vertices
         for (int iRof{0}; iRof < rofs; ++iRof) {
-          auto offsetRofId = offset + iRof;
-          auto clustersL1offsetRof = mTimeFrameGPU->getDeviceROframesClusters(1)[offsetRofId] - mTimeFrameGPU->getDeviceROframesClusters(1)[offset];     // starting cluster offset for this ROF
-          auto nClustersL1Rof = mTimeFrameGPU->getDeviceROframesClusters(1)[offsetRofId + 1] - mTimeFrameGPU->getDeviceROframesClusters(1)[offsetRofId]; // number of clusters for this ROF
-          auto linesOffsetRof = exclusiveFoundLinesHost[clustersL1offsetRof];                                                                            // starting line offset for this ROF
+          auto rof = offset + iRof;
+          auto clustersL1offsetRof = mTimeFrameGPU->getROframeClusters(1)[rof] - mTimeFrameGPU->getROframeClusters(1)[offset]; // starting cluster offset for this ROF
+          auto nClustersL1Rof = mTimeFrameGPU->getROframeClusters(1)[rof + 1] - mTimeFrameGPU->getROframeClusters(1)[rof];     // number of clusters for this ROF
+          auto linesOffsetRof = exclusiveFoundLinesHost[clustersL1offsetRof];                                                  // starting line offset for this ROF
           auto nLinesRof = exclusiveFoundLinesHost[clustersL1offsetRof + nClustersL1Rof] - linesOffsetRof;
-          LOGP(info, "rof: {} lines: {}", offsetRofId, nLinesRof);
-          // gsl::span<o2::its::Line> linesinRof(lines.data() + linesOffsetRof, nLinesRof);
-          // std::vector<bool> usedLines;
-          // std::vector<ClusterLines> clusterLines;
-          // usedLines.reserve(linesinRof.size());
-          // computeVerticesInRof(offsetRofId, linesinRof, usedLines, clusterLines);
+          gsl::span<o2::its::Line> linesinRof(lines.data() + linesOffsetRof, nLinesRof);
+          std::vector<bool> usedLines;
+          std::vector<ClusterLines> clusterLines;
+          usedLines.reserve(linesinRof.size());
+          computeVerticesInRof(rof, linesinRof, usedLines, clusterLines);
         }
       };
 
