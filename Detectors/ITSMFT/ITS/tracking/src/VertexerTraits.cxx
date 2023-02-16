@@ -344,8 +344,6 @@ void VertexerTraits::computeVertices()
   std::vector<int> noClustersVec(mTimeFrame->getNrof(), 0);
   for (int rofId{0}; rofId < mTimeFrame->getNrof(); ++rofId) {
     const int numTracklets{static_cast<int>(mTimeFrame->getLines(rofId).size())};
-    printf("rof: %d -> %d lines.\n", rofId, numTracklets);
-
     std::vector<bool> usedTracklets(numTracklets, false);
     for (int line1{0}; line1 < numTracklets; ++line1) {
       if (usedTracklets[line1]) {
@@ -357,9 +355,9 @@ void VertexerTraits::computeVertices()
         }
         auto dca{Line::getDCA(mTimeFrame->getLines(rofId)[line1], mTimeFrame->getLines(rofId)[line2])};
         if (dca < mVrtParams.pairCut) {
-          printf("rof: %d, line1: %d, line2: %d, dca: %f\n", rofId, line1, line2, dca);
-          mTimeFrame->getLines(rofId)[line1].print();
-          mTimeFrame->getLines(rofId)[line2].print();
+          // printf("rof: %d, line1: %d, line2: %d, dca: %f\n", rofId, line1, line2, dca);
+          // mTimeFrame->getLines(rofId)[line1].print();
+          // mTimeFrame->getLines(rofId)[line2].print();
           mTimeFrame->getTrackletClusters(rofId).emplace_back(line1, mTimeFrame->getLines(rofId)[line1], line2, mTimeFrame->getLines(rofId)[line2]);
           std::array<float, 3> tmpVertex{mTimeFrame->getTrackletClusters(rofId).back().getVertex()};
           if (tmpVertex[0] * tmpVertex[0] + tmpVertex[1] * tmpVertex[1] > 4.f) {
@@ -503,12 +501,12 @@ void VertexerTraits::setNThreads(int n)
   LOGP(info, "Setting seeding vertexer with {} threads.", mNThreads);
 }
 
-void VertexerTraits::computeVerticesInRof(const int rofId, gsl::span<o2::its::Line>& lines, std::vector<bool>& usedLines, std::vector<ClusterLines>& clusterLines)
+void VertexerTraits::computeVerticesInRof(gsl::span<const o2::its::Line>& lines)
 {
-  usedLines.resize(lines.size(), false);
-  clusterLines.clear();
-  clusterLines.reserve(lines.size());
   const int numTracklets{static_cast<int>(lines.size())};
+  std::vector<ClusterLines> clusterLines;
+  std::vector<bool> usedLines(numTracklets, false);
+  clusterLines.reserve(numTracklets);
 
   std::vector<bool> usedTracklets(numTracklets, false);
   for (int line1{0}; line1 < numTracklets; ++line1) {
@@ -529,6 +527,16 @@ void VertexerTraits::computeVerticesInRof(const int rofId, gsl::span<o2::its::Li
         }
         usedLines[line1] = true;
         usedLines[line2] = true;
+        lines[line1].print();
+        lines[line2].print();
+        LOGP(info, "vertex x={}, y={}, z={}, chi2={}, nContributors={}, lines={}, clusterlines={}",
+             clusterLines.back().getVertex()[0],
+             clusterLines.back().getVertex()[1],
+             clusterLines.back().getVertex()[2],
+             clusterLines.back().getAvgDistance2(),
+             clusterLines.back().getSize(),
+             lines.size(),
+             clusterLines.size());
         for (int tracklet3{0}; tracklet3 < numTracklets; ++tracklet3) {
           if (usedLines[tracklet3]) {
             continue;
@@ -595,26 +603,26 @@ void VertexerTraits::computeVerticesInRof(const int rofId, gsl::span<o2::its::Li
       }
     }
     float rXY{std::hypot(clusterLines[iCluster].getVertex()[0], clusterLines[iCluster].getVertex()[1])};
-    if (rXY < 1.98 && std::abs(clusterLines[iCluster].getVertex()[2]) < mVrtParams.maxZPositionAllowed) {
-      atLeastOneFound = true;
-      LOGP(info, "Found vertex inf rof {}, x={}, y={}, z={}, chi2={}, nContributors={}", rofId, clusterLines[iCluster].getVertex()[0], clusterLines[iCluster].getVertex()[1], clusterLines[iCluster].getVertex()[2], clusterLines[iCluster].getAvgDistance2(), clusterLines[iCluster].getSize());
-      // mVertices.emplace_back(clusterLines[iCluster].getVertex()[0],
-      //                        clusterLines[iCluster].getVertex()[1],
-      //                        clusterLines[iCluster].getVertex()[2],
-      //                        clusterLines[iCluster].getRMS2(),         // Symm matrix. Diagonal: RMS2 components,
-      //                                                                  // off-diagonal: square mean of projections on planes.
-      //                        clusterLines[iCluster].getSize(),         // Contributors
-      //                        clusterLines[iCluster].getAvgDistance2(), // In place of chi2
-      //                        rofId);
-      // if (mTimeFrame->hasMCinformation()) {
-      //   mTimeFrame->getVerticesLabels().emplace_back();
-      //   for (auto& index : clusterLines[iCluster].getLabels()) {
-      //     mTimeFrame->getVerticesLabels().back().push_back(mTimeFrame->getLinesLabel(rofId)[index]); // then we can use nContributors from vertices to get the labels
-      //   }
-      // }
-    }
+    //   if (rXY < 1.98 && std::abs(clusterLines[iCluster].getVertex()[2]) < mVrtParams.maxZPositionAllowed) {
+    //     atLeastOneFound = true;
+
+    //     //     // mVertices.emplace_back(clusterLines[iCluster].getVertex()[0],
+    //     //     //                        clusterLines[iCluster].getVertex()[1],
+    //     //     //                        clusterLines[iCluster].getVertex()[2],
+    //     //     //                        clusterLines[iCluster].getRMS2(),         // Symm matrix. Diagonal: RMS2 components,
+    //     //     //                                                                  // off-diagonal: square mean of projections on planes.
+    //     //     //                        clusterLines[iCluster].getSize(),         // Contributors
+    //     //     //                        clusterLines[iCluster].getAvgDistance2(), // In place of chi2
+    //     //     //                        rofId);
+    //     //     // if (mTimeFrame->hasMCinformation()) {
+    //     //     //   mTimeFrame->getVerticesLabels().emplace_back();
+    //     //     //   for (auto& index : clusterLines[iCluster].getLabels()) {
+    //     //     //     mTimeFrame->getVerticesLabels().back().push_back(mTimeFrame->getLinesLabel(rofId)[index]); // then we can use nContributors from vertices to get the labels
+    //     //     //   }
+    //     //     // }
   }
-  std::vector<Vertex> vertices;
+  // }
+  // std::vector<Vertex> vertices;
   // for (auto& vertex : mVertices) {
   //   vertices.emplace_back(o2::math_utils::Point3D<float>(vertex.mX, vertex.mY, vertex.mZ), vertex.mRMS2, vertex.mContributors, vertex.mAvgDistance2);
   //   vertices.back().setTimeStamp(vertex.mTimeStamp);

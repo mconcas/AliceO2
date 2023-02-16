@@ -69,10 +69,7 @@ class VertexerTraits
   virtual void adoptTimeFrame(TimeFrame* tf);
   virtual void updateVertexingParameters(const VertexingParameters& vrtPar);
 
-  void computeVerticesInRof(const int,
-                            gsl::span<o2::its::Line>&,
-                            std::vector<bool>&,
-                            std::vector<ClusterLines>&);
+  void computeVerticesInRof(gsl::span<const o2::its::Line>&);
 
   VertexingParameters getVertexingParameters() const { return mVrtParams; }
   static const std::vector<std::pair<int, int>> selectClusters(const int* indexTable,
