@@ -708,17 +708,23 @@ void VertexerTraitsGPU::computeTracklets()
         checkGPUError(cudaMemcpyAsync(lines.data(), mTimeFrameGPU->getChunk(chunkId).getDeviceLines(), sizeof(Line) * lines.size(), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
         checkGPUError(cudaStreamSynchronize(mTimeFrameGPU->getStream(chunkId).get()));
         // Compute vertices
+        int counter{0};
         for (int iRof{0}; iRof < rofs; ++iRof) {
+
           auto rof = offset + iRof;
-          auto clustersL1offsetRof = mTimeFrameGPU->getROframeClusters(1)[rof] - mTimeFrameGPU->getROframeClusters(1)[offset]; // starting cluster offset for this ROF
-          auto nClustersL1Rof = mTimeFrameGPU->getROframeClusters(1)[rof + 1] - mTimeFrameGPU->getROframeClusters(1)[rof];     // number of clusters for this ROF
-          auto linesOffsetRof = exclusiveFoundLinesHost[clustersL1offsetRof];                                                  // starting line offset for this ROF
-          auto nLinesRof = exclusiveFoundLinesHost[clustersL1offsetRof + nClustersL1Rof] - linesOffsetRof;
-          gsl::span<o2::its::Line> linesinRof(lines.data() + linesOffsetRof, nLinesRof);
-          std::vector<bool> usedLines;
-          std::vector<ClusterLines> clusterLines;
-          usedLines.reserve(linesinRof.size());
-          computeVerticesInRof(rof, linesinRof, usedLines, clusterLines);
+          if (rof != 152 && rof != 304) {
+            auto clustersL1offsetRof = mTimeFrameGPU->getROframeClusters(1)[rof] - mTimeFrameGPU->getROframeClusters(1)[offset]; // starting cluster offset for this ROF
+            auto nClustersL1Rof = mTimeFrameGPU->getROframeClusters(1)[rof + 1] - mTimeFrameGPU->getROframeClusters(1)[rof];     // number of clusters for this ROF
+            auto linesOffsetRof = exclusiveFoundLinesHost[clustersL1offsetRof];                                                  // starting line offset for this ROF
+            auto nLinesRof = exclusiveFoundLinesHost[clustersL1offsetRof + nClustersL1Rof] - linesOffsetRof;
+            counter += nLinesRof;
+
+            gsl::span<const o2::its::Line> linesInRof(lines.data() + linesOffsetRof, static_cast<gsl::span<o2::its::Line>::size_type>(nLinesRof));
+            std::vector<bool> usedLines(linesInRof.size(), false);
+            std::vector<ClusterLines> clusterLines;
+            // usedLines.reserve(linesInRof.size());
+            computeVerticesInRof(linesInRof);
+          }
         }
       };
 
