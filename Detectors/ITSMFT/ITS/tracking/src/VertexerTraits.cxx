@@ -501,14 +501,18 @@ void VertexerTraits::setNThreads(int n)
   LOGP(info, "Setting seeding vertexer with {} threads.", mNThreads);
 }
 
-void VertexerTraits::computeVerticesInRof(gsl::span<const o2::its::Line>& lines)
+void VertexerTraits::computeVerticesInRof(int rofId,
+                                          gsl::span<const o2::its::Line>& lines,
+                                          std::vector<bool>& usedLines,
+                                          std::vector<o2::its::ClusterLines>& clusterLines,
+                                          std::array<float, 2>& beamPosXY,
+                                          std::vector<Vertex>& vertices,
+                                          std::vector<int>& verticesInRof,
+                                          TimeFrame* tf,
+                                          std::vector<o2::MCCompLabel>* labels)
 {
+  int foundVertices{0};
   const int numTracklets{static_cast<int>(lines.size())};
-  std::vector<ClusterLines> clusterLines;
-  std::vector<bool> usedLines(numTracklets, false);
-  clusterLines.reserve(numTracklets);
-
-  std::vector<bool> usedTracklets(numTracklets, false);
   for (int line1{0}; line1 < numTracklets; ++line1) {
     if (usedLines[line1]) {
       continue;
@@ -527,16 +531,6 @@ void VertexerTraits::computeVerticesInRof(gsl::span<const o2::its::Line>& lines)
         }
         usedLines[line1] = true;
         usedLines[line2] = true;
-        lines[line1].print();
-        lines[line2].print();
-        LOGP(info, "vertex x={}, y={}, z={}, chi2={}, nContributors={}, lines={}, clusterlines={}",
-             clusterLines.back().getVertex()[0],
-             clusterLines.back().getVertex()[1],
-             clusterLines.back().getVertex()[2],
-             clusterLines.back().getAvgDistance2(),
-             clusterLines.back().getSize(),
-             lines.size(),
-             clusterLines.size());
         for (int tracklet3{0}; tracklet3 < numTracklets; ++tracklet3) {
           if (usedLines[tracklet3]) {
             continue;
@@ -593,8 +587,8 @@ void VertexerTraits::computeVerticesInRof(gsl::span<const o2::its::Line>& lines)
   for (int iCluster{0}; iCluster < nClusters; ++iCluster) {
     bool lowMultCandidate{false};
     if (atLeastOneFound && (lowMultCandidate = clusterLines[iCluster].getSize() < mVrtParams.clusterContributorsCut)) { // We might have pile up with nContr > cut.
-      float beamDistance2{(mTimeFrame->getBeamX() - clusterLines[iCluster].getVertex()[0]) * (mTimeFrame->getBeamX() - clusterLines[iCluster].getVertex()[0]) +
-                          (mTimeFrame->getBeamY() - clusterLines[iCluster].getVertex()[1]) * (mTimeFrame->getBeamY() - clusterLines[iCluster].getVertex()[1])};
+      float beamDistance2{(beamPosXY[0] - clusterLines[iCluster].getVertex()[0]) * (beamPosXY[0] - clusterLines[iCluster].getVertex()[0]) +
+                          (beamPosXY[1] - clusterLines[iCluster].getVertex()[1]) * (beamPosXY[1] - clusterLines[iCluster].getVertex()[1])};
       lowMultCandidate &= beamDistance2 < mVrtParams.lowMultXYcut2;
       if (!lowMultCandidate) { // Not the first cluster and not a low multiplicity candidate, we can remove it
         clusterLines.erase(clusterLines.begin() + iCluster);
@@ -603,32 +597,25 @@ void VertexerTraits::computeVerticesInRof(gsl::span<const o2::its::Line>& lines)
       }
     }
     float rXY{std::hypot(clusterLines[iCluster].getVertex()[0], clusterLines[iCluster].getVertex()[1])};
-    //   if (rXY < 1.98 && std::abs(clusterLines[iCluster].getVertex()[2]) < mVrtParams.maxZPositionAllowed) {
-    //     atLeastOneFound = true;
-
-    //     //     // mVertices.emplace_back(clusterLines[iCluster].getVertex()[0],
-    //     //     //                        clusterLines[iCluster].getVertex()[1],
-    //     //     //                        clusterLines[iCluster].getVertex()[2],
-    //     //     //                        clusterLines[iCluster].getRMS2(),         // Symm matrix. Diagonal: RMS2 components,
-    //     //     //                                                                  // off-diagonal: square mean of projections on planes.
-    //     //     //                        clusterLines[iCluster].getSize(),         // Contributors
-    //     //     //                        clusterLines[iCluster].getAvgDistance2(), // In place of chi2
-    //     //     //                        rofId);
-    //     //     // if (mTimeFrame->hasMCinformation()) {
-    //     //     //   mTimeFrame->getVerticesLabels().emplace_back();
-    //     //     //   for (auto& index : clusterLines[iCluster].getLabels()) {
-    //     //     //     mTimeFrame->getVerticesLabels().back().push_back(mTimeFrame->getLinesLabel(rofId)[index]); // then we can use nContributors from vertices to get the labels
-    //     //     //   }
-    //     //     // }
+    if (rXY < 1.98 && std::abs(clusterLines[iCluster].getVertex()[2]) < mVrtParams.maxZPositionAllowed) {
+      atLeastOneFound = true;
+      ++foundVertices;
+      vertices.emplace_back(o2::math_utils::Point3D<float>(clusterLines[iCluster].getVertex()[0],
+                                                           clusterLines[iCluster].getVertex()[1],
+                                                           clusterLines[iCluster].getVertex()[2]),
+                            clusterLines[iCluster].getRMS2(),          // Symm matrix. Diagonal: RMS2 components,
+                                                                       // off-diagonal: square mean of projections on planes.
+                            clusterLines[iCluster].getSize(),          // Contributors
+                            clusterLines[iCluster].getAvgDistance2()); // In place of chi2
+      vertices.back().setTimeStamp(rofId);
+      if (labels) {
+        for (auto& index : clusterLines[iCluster].getLabels()) {
+          labels->push_back(tf->getLinesLabel(rofId)[index]); // then we can use nContributors from vertices to get the labels
+        }
+      }
+    }
   }
-  // }
-  // std::vector<Vertex> vertices;
-  // for (auto& vertex : mVertices) {
-  //   vertices.emplace_back(o2::math_utils::Point3D<float>(vertex.mX, vertex.mY, vertex.mZ), vertex.mRMS2, vertex.mContributors, vertex.mAvgDistance2);
-  //   vertices.back().setTimeStamp(vertex.mTimeStamp);
-  // }
-  // mTimeFrame->addPrimaryVertices(vertices);
-  // mVertices.clear();
+  verticesInRof.push_back(foundVertices);
 }
 } // namespace its
 } // namespace o2

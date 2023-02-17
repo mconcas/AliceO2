@@ -179,6 +179,7 @@ class TimeFrame
   gsl::span<int> getNTrackletsCluster(int rofId, int combId);
   uint32_t getTotalTrackletsTF(const int iLayer) { return mTotalTracklets[iLayer]; }
   int getTotalClustersPerROFrange(int rofMin, int range, int layerId) const;
+  std::array<float, 2>& getBeamXY() { return mBeamPos; }
   // \Vertexer
 
   void initialiseRoadLabels();
@@ -226,7 +227,7 @@ class TimeFrame
  private:
   float mBz = 5.;
   int mBeamPosWeight = 0;
-  float mBeamPos[2] = {0.f, 0.f};
+  std::array<float, 2> mBeamPos = {0.f, 0.f};
   bool isBeamPositionOverridden = false;
   std::vector<float> mMinR;
   std::vector<float> mMaxR;

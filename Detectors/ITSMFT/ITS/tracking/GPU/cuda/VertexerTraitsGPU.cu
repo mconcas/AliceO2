@@ -372,11 +372,7 @@ GPUg() void trackletSelectionKernelMultipleRof(
     if constexpr (!initRun) {
       nExclusiveFoundLinesRof = nExclusiveFoundLines + clustersL1offsetRof;
     }
-    // if (threadIdx.x == 0) {
-    //   printf("rof: %d bid.x: %d/%d nClustersL1Rof: %d \n", rof, blockIdx.x, gridDim.x, nClustersL1Rof);
-    // }
     for (int iClusterIndexLayer1 = threadIdx.x; iClusterIndexLayer1 < nClustersL1Rof; iClusterIndexLayer1 += blockDim.x) {
-      // printf("rof/bidx: %d/%d thid/bDim: %d/%d icl1/nClus: %d/%d\n", rof, blockIdx.x, threadIdx.x, blockDim.x, iClusterIndexLayer1, nClustersL1Rof);
       const int stride{iClusterIndexLayer1 * maxTrackletsPerCluster};
       int validTracklets{0};
       for (int iTracklet12{0}; iTracklet12 < foundTracklets12Rof[iClusterIndexLayer1]; ++iTracklet12) {
@@ -612,10 +608,13 @@ void VertexerTraitsGPU::computeTracklets()
   if (!mTimeFrameGPU->getClusters().size()) {
     return;
   }
-  std::vector<std::thread> threads(mTimeFrameGPU->getNPartions());
+  std::vector<std::thread> threads(mTimeFrameGPU->getNChunks());
   size_t offset{0};
   do {
-    for (size_t chunkId{0}; chunkId < mTimeFrameGPU->getNPartions() && offset < mTimeFrameGPU->mNrof - 1; ++chunkId) {
+    for (size_t chunkId{0}; chunkId < mTimeFrameGPU->getNChunks() && offset < mTimeFrameGPU->mNrof - 1; ++chunkId) {
+      mTimeFrameGPU->getVerticesInChunks()[chunkId].clear();
+      mTimeFrameGPU->getNVerticesInChunks()[chunkId].clear();
+      mTimeFrameGPU->getLabelsInChunks()[chunkId].clear();
       auto rofs = mTimeFrameGPU->loadChunkData<gpu::Task::Vertexer>(chunkId, offset);
       auto doVertexReconstruction = [&, chunkId, offset, rofs]() -> void {
         RANGE("chunk_gpu_processing", 1);
@@ -669,7 +668,7 @@ void VertexerTraitsGPU::computeTracklets()
         discardResult(cub::DeviceScan::ExclusiveSum(mTimeFrameGPU->getChunk(chunkId).getDeviceCUBTmpBuffer(),
                                                     mTimeFrameGPU->getChunk(chunkId).getTimeFrameGPUConfig()->tmpCUBBufferSize,
                                                     mTimeFrameGPU->getChunk(chunkId).getDeviceNFoundLines(),
-                                                    mTimeFrameGPU->getChunk(chunkId).getDeviceNExclusiveFoundLines() + 1,
+                                                    mTimeFrameGPU->getChunk(chunkId).getDeviceNExclusiveFoundLines() /*+ 1*/,
                                                     mTimeFrameGPU->getTotalClustersPerROFrange(offset, rofs, 1),
                                                     mTimeFrameGPU->getStream(chunkId).get()));
 
@@ -700,31 +699,45 @@ void VertexerTraitsGPU::computeTracklets()
           mVrtParams.phiCut);                                               // const float phiCut = 0.002f)            // Cut on phi
 
         int nClusters = mTimeFrameGPU->getTotalClustersPerROFrange(offset, rofs, 1);
+        int lastFoundLines;
         std::vector<int> exclusiveFoundLinesHost(nClusters + 1);
 
-        checkGPUError(cudaMemcpyAsync(exclusiveFoundLinesHost.data(), mTimeFrameGPU->getChunk(chunkId).getDeviceNExclusiveFoundLines(), (nClusters + 1) * sizeof(int), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
+        // Obtain whole exclusive sum including nCluster+1 element  (nCluster+1)th element is the total number of found lines.
+        checkGPUError(cudaMemcpyAsync(exclusiveFoundLinesHost.data(), mTimeFrameGPU->getChunk(chunkId).getDeviceNExclusiveFoundLines(), (nClusters) * sizeof(int), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
+        checkGPUError(cudaMemcpyAsync(&lastFoundLines, mTimeFrameGPU->getChunk(chunkId).getDeviceNFoundLines() + nClusters - 1, sizeof(int), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
+        exclusiveFoundLinesHost[nClusters] = exclusiveFoundLinesHost[nClusters - 1] + lastFoundLines;
 
         std::vector<Line> lines(exclusiveFoundLinesHost[nClusters]);
+
         checkGPUError(cudaMemcpyAsync(lines.data(), mTimeFrameGPU->getChunk(chunkId).getDeviceLines(), sizeof(Line) * lines.size(), cudaMemcpyDeviceToHost, mTimeFrameGPU->getStream(chunkId).get()));
         checkGPUError(cudaStreamSynchronize(mTimeFrameGPU->getStream(chunkId).get()));
+
         // Compute vertices
         int counter{0};
+        std::vector<ClusterLines> clusterLines;
+        std::vector<bool> usedLines;
         for (int iRof{0}; iRof < rofs; ++iRof) {
-
           auto rof = offset + iRof;
-          if (rof != 152 && rof != 304) {
-            auto clustersL1offsetRof = mTimeFrameGPU->getROframeClusters(1)[rof] - mTimeFrameGPU->getROframeClusters(1)[offset]; // starting cluster offset for this ROF
-            auto nClustersL1Rof = mTimeFrameGPU->getROframeClusters(1)[rof + 1] - mTimeFrameGPU->getROframeClusters(1)[rof];     // number of clusters for this ROF
-            auto linesOffsetRof = exclusiveFoundLinesHost[clustersL1offsetRof];                                                  // starting line offset for this ROF
-            auto nLinesRof = exclusiveFoundLinesHost[clustersL1offsetRof + nClustersL1Rof] - linesOffsetRof;
-            counter += nLinesRof;
+          auto clustersL1offsetRof = mTimeFrameGPU->getROframeClusters(1)[rof] - mTimeFrameGPU->getROframeClusters(1)[offset]; // starting cluster offset for this ROF
+          auto nClustersL1Rof = mTimeFrameGPU->getROframeClusters(1)[rof + 1] - mTimeFrameGPU->getROframeClusters(1)[rof];     // number of clusters for this ROF
+          auto linesOffsetRof = exclusiveFoundLinesHost[clustersL1offsetRof];                                                  // starting line offset for this ROF
+          auto nLinesRof = exclusiveFoundLinesHost[clustersL1offsetRof + nClustersL1Rof] - linesOffsetRof;
+          counter += nLinesRof;
 
-            gsl::span<const o2::its::Line> linesInRof(lines.data() + linesOffsetRof, static_cast<gsl::span<o2::its::Line>::size_type>(nLinesRof));
-            std::vector<bool> usedLines(linesInRof.size(), false);
-            std::vector<ClusterLines> clusterLines;
-            // usedLines.reserve(linesInRof.size());
-            computeVerticesInRof(linesInRof);
-          }
+          gsl::span<const o2::its::Line> linesInRof(lines.data() + linesOffsetRof, static_cast<gsl::span<o2::its::Line>::size_type>(nLinesRof));
+
+          usedLines.resize(linesInRof.size(), false);
+          clusterLines.clear();
+          clusterLines.reserve(nClustersL1Rof);
+          computeVerticesInRof(rof,
+                               linesInRof,
+                               usedLines,
+                               clusterLines,
+                               mTimeFrameGPU->getBeamXY(),
+                               mTimeFrameGPU->getVerticesInChunks()[chunkId],
+                               mTimeFrameGPU->getNVerticesInChunks()[chunkId],
+                               mTimeFrameGPU->hasMCinformation() ? mTimeFrameGPU : nullptr,
+                               mTimeFrameGPU->hasMCinformation() ? &mTimeFrameGPU->getLabelsInChunks()[chunkId] : nullptr);
         }
       };
 
@@ -735,6 +748,18 @@ void VertexerTraitsGPU::computeTracklets()
     for (auto& thread : threads) {
       if (thread.joinable()) { // in case not all partitions were fed with data
         thread.join();
+      }
+    }
+    for (int chunkId{0}; chunkId < mTimeFrameGPU->getNChunks(); ++chunkId) {
+      int start{0};
+      for (int iRof{0}; iRof < mTimeFrameGPU->getNVerticesInChunks()[chunkId].size(); ++iRof) {
+        gsl::span<const Vertex> rofVerts{mTimeFrameGPU->getVerticesInChunks()[chunkId].data() + start, static_cast<gsl::span<Vertex>::size_type>(mTimeFrameGPU->getNVerticesInChunks()[chunkId][iRof])};
+        mTimeFrameGPU->addPrimaryVertices(rofVerts);
+        if (mTimeFrameGPU->hasMCinformation()) {
+          mTimeFrameGPU->getVerticesLabels().emplace_back();
+          // TODO: add MC labels
+        }
+        start += mTimeFrameGPU->getNVerticesInChunks()[chunkId][iRof];
       }
     }
   } while (offset < mTimeFrameGPU->mNrof - 1); // offset is referring to the ROF id

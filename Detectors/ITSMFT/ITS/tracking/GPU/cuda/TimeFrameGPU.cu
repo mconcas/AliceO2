@@ -230,7 +230,7 @@ template <int nLayers>
 size_t GpuTimeFrameChunk<nLayers>::loadDataOnDevice(const size_t startRof, const int maxLayers, Stream& stream)
 {
   RANGE("load_clusters_data", 5);
-  int rofSize = (int)mTimeFramePtr->getNClustersROFrange(startRof, mNRof, 0).size();
+  mNPopulatedRof = mTimeFramePtr->getNClustersROFrange(startRof, mNRof, 0).size();
   for (int i = 0; i < maxLayers; ++i) {
     mHostClusters[i] = mTimeFramePtr->getClustersPerROFrange(startRof, mNRof, i);
     if (maxLayers < nLayers) { // Vertexer
@@ -253,7 +253,7 @@ size_t GpuTimeFrameChunk<nLayers>::loadDataOnDevice(const size_t startRof, const
                                     cudaMemcpyHostToDevice, stream.get()));
     }
   }
-  return rofSize; // return the number of ROFs we loaded the data for.
+  return mNPopulatedRof; // return the number of ROFs we loaded the data for.
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -343,9 +343,12 @@ void TimeFrameGPU<nLayers>::initDevice(const int chunks, const IndexTableUtils* 
     checkGPUError(cudaMemcpy(mIndexTableUtilsDevice, utils, sizeof(IndexTableUtils), cudaMemcpyHostToDevice));
   }
   mMemChunks.resize(chunks, GpuTimeFrameChunk<nLayers>{static_cast<TimeFrame*>(this), mGpuConfig});
+  mVerticesInChunks.resize(chunks);
+  mNVerticesInChunks.resize(chunks);
+  mLabelsInChunks.resize(chunks);
   LOGP(debug, "Size of fixed part is: {} MB", GpuTimeFrameChunk<nLayers>::computeFixedSizeBytes(mGpuConfig) / MB);
   LOGP(debug, "Size of scaling part is: {} MB", GpuTimeFrameChunk<nLayers>::computeScalingSizeBytes(GpuTimeFrameChunk<nLayers>::computeRofPerChunk(mGpuConfig, mAvailMemGB), mGpuConfig) / MB);
-  LOGP(info, "Allocating {} chunks counting {} rofs each.", chunks, GpuTimeFrameChunk<nLayers>::computeRofPerChunk(mGpuConfig, mAvailMemGB));
+  LOGP(info, "Allocating {} chunks of {} rofs capacity each.", chunks, GpuTimeFrameChunk<nLayers>::computeRofPerChunk(mGpuConfig, mAvailMemGB));
 
   initDeviceChunks(GpuTimeFrameChunk<nLayers>::computeRofPerChunk(mGpuConfig, mAvailMemGB), maxLayers);
 }

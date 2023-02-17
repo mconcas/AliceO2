@@ -215,7 +215,7 @@ void TrackerDPL::run(ProcessingContext& pc)
     vtxROF.setFirstEntry(vertices.size());
     if (mRunVertexer) {
       auto vtxSpan = gsl::span<const Vertex>();
-      // timeFrame->getPrimaryVertices(iRof);
+      timeFrame->getPrimaryVertices(iRof);
       vtxROF.setNEntries(vtxSpan.size());
       bool selROF = vtxSpan.size() == 0;
       for (auto iV{0}; iV < vtxSpan.size(); ++iV) {

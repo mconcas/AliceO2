@@ -119,6 +119,7 @@ class GpuTimeFrameChunk
   int* getDeviceNExclusiveFoundLines() { return mNExclusiveFoundLinesDevice; }
   unsigned char* getDeviceUsedTracklets() { return mUsedTrackletsDevice; }
   int* getDeviceClusteredLines() { return mClusteredLinesDevice; }
+  size_t getNPopulatedRof() const { return mNPopulatedRof; }
 
  private:
   /// Host
@@ -151,6 +152,7 @@ class GpuTimeFrameChunk
   /// State and configuration
   bool mAllocated = false;
   size_t mNRof = 0;
+  size_t mNPopulatedRof = 0;
   o2::its::TimeFrame* mTimeFramePtr = nullptr;
   TimeFrameGPUConfig* mTFGconf = nullptr;
 };
@@ -170,7 +172,7 @@ class TimeFrameGPU : public TimeFrame
   void initDeviceChunks(const int, const int);
   template <Task task>
   size_t loadChunkData(const size_t, const size_t);
-  size_t getNPartions() const { return mMemChunks.size(); }
+  size_t getNChunks() const { return mMemChunks.size(); }
   GpuTimeFrameChunk<nLayers>& getChunk(const int chunk) { return mMemChunks[chunk]; }
   Stream& getStream(const size_t stream) { return mGpuStreams[stream]; }
 
@@ -178,6 +180,9 @@ class TimeFrameGPU : public TimeFrame
   int getNClustersInRofSpan(const int, const int, const int) const;
   IndexTableUtils* getDeviceIndexTableUtils() { return mIndexTableUtilsDevice; }
   int* getDeviceROframesClusters(const int layer) { return mROframesClustersDevice[layer]; }
+  std::vector<std::vector<Vertex>>& getVerticesInChunks() { return mVerticesInChunks; }
+  std::vector<std::vector<int>>& getNVerticesInChunks() { return mNVerticesInChunks; }
+  std::vector<std::vector<o2::MCCompLabel>>& getLabelsInChunks() { return mLabelsInChunks; }
 
  private:
   bool mDeviceInitialised = false;
@@ -194,6 +199,11 @@ class TimeFrameGPU : public TimeFrame
   // State
   std::vector<Stream> mGpuStreams;
   size_t mAvailMemGB;
+
+  // Output
+  std::vector<std::vector<Vertex>> mVerticesInChunks;
+  std::vector<std::vector<int>> mNVerticesInChunks;
+  std::vector<std::vector<o2::MCCompLabel>> mLabelsInChunks;
 };
 
 template <int nLayers>
