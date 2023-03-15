@@ -243,8 +243,8 @@ void TimeFrame::initialise(const int iteration, const TrackingParameters& trkPar
   if (iteration == 0) {
     if (maxLayers < trkParam.NLayers) {
       mROframesPV.resize(1, 0);
+      mPrimaryVertices.clear();
     }
-    mPrimaryVertices.clear();
     mTracks.clear();
     mTracksLabel.clear();
     mLinesLabels.clear();
