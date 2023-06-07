@@ -62,7 +62,7 @@ void ImpactParameterStudy::process(o2::globaltracking::RecoContainer& recoData)
 {
   auto trackIndex = recoData.getPrimaryVertexMatchedTracks(); // Global ID's for associated tracks
   auto vtxRefs = recoData.getPrimaryVertexMatchedTrackRefs(); // references from vertex to these track IDs
-  auto pvertices = recoData.getPrimaryVertices(); // gsl::span of primary vertices
+  auto pvertices = recoData.getPrimaryVertices();             // gsl::span of primary vertices
 
   int nv = vtxRefs.size() - 1;      // The last entry is for unassigned tracks, ignore them
   for (int iv = 0; iv < nv; iv++) { // Loop over PVs
