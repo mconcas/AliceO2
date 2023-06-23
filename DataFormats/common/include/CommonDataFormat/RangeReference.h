@@ -38,12 +38,12 @@ class RangeReference
     mFirstEntry = ent;
     mEntries = n;
   }
-  GPUd() void clear() { set(0, 0); }
-  GPUd() FirstEntry getFirstEntry() const { return mFirstEntry; }
+  GPUhd() void clear() { set(0, 0); }
+  GPUhd() FirstEntry getFirstEntry() const { return mFirstEntry; }
   GPUd() FirstEntry getEntriesBound() const { return mFirstEntry + mEntries; }
-  GPUd() NElem getEntries() const { return mEntries; }
-  GPUd() void setFirstEntry(FirstEntry ent) { mFirstEntry = ent; }
-  GPUd() void setEntries(NElem n) { mEntries = n; }
+  GPUhd() NElem getEntries() const { return mEntries; }
+  GPUhd() void setFirstEntry(FirstEntry ent) { mFirstEntry = ent; }
+  GPUhd() void setEntries(NElem n) { mEntries = n; }
   GPUd() void changeEntriesBy(NElem inc) { mEntries += inc; }
   GPUd() bool operator==(const RangeReference& other) const
   {

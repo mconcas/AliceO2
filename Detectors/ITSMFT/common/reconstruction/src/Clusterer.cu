@@ -13,16 +13,26 @@
 /// \brief Implementation of the ITS cluster finder
 #include <algorithm>
 #include <TTree.h>
-#include "Framework/Logger.h"
-#include "ITSMFTBase/GeometryTGeo.h"
+// #include "Framework/Logger.h"
+// #include "ITSMFTBase/GeometryTGeo.h"
 #include "ITSMFTReconstruction/Clusterer.h"
 #include "SimulationDataFormat/MCTruthContainer.h"
 #include "CommonDataFormat/InteractionRecord.h"
+#include <cuda.h>
 
 #ifdef WITH_OPENMP
 #include <omp.h>
 #endif
 using namespace o2::itsmft;
+
+namespace o2::itsmft::gpu
+{
+// Empty CUDA kernel
+__global__ void empty_kernel()
+{
+  printf("Hello world from gpu\n");
+}
+} // namespace o2::itsmft::gpu
 
 //__________________________________________________
 void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClus,
@@ -40,7 +50,7 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
     if (autoDecode) {
       reader.setDecodeNextAuto(false); // internally do not autodecode
       if (!reader.decodeNextTrigger()) {
-        break; // on the fly decoding was requested, but there were no data left
+        break;                         // on the fly decoding was requested, but there were no data left
       }
     }
     if (reader.getInteractionRecord().isDummy()) {
@@ -151,7 +161,7 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
     }
     rof.setNEntries(compClus->size() - rof.getFirstEntry()); // update
   } while (autoDecode);
-  reader.setDecodeNextAuto(autoDecode); // restore setting
+  reader.setDecodeNextAuto(autoDecode);                      // restore setting
 #ifdef _PERFORM_TIMING_
   mTimer.Stop();
 #endif
@@ -176,7 +186,7 @@ void Clusterer::ClustererThread::process(uint16_t chip, uint16_t nChips, CompClu
     auto nclus0 = compClusPtr->size();
     auto validPixID = curChipData->getFirstUnmasked();
     auto npix = curChipData->getData().size();
-    if (validPixID < npix) { // chip data may have all of its pixels masked!
+    if (validPixID < npix) {    // chip data may have all of its pixels masked!
       auto valp = validPixID++;
       if (validPixID == npix) { // special case of a single pixel fired on the chip
         finishChipSingleHitFast(valp, curChipData, compClusPtr, patternsPtr, labelsDigPtr, labelsClPtr);
@@ -222,7 +232,7 @@ void Clusterer::ClustererThread::finishChip(ChipPixelData* curChipData, CompClus
       if (labelsClusPtr) {
         if (parent->mSquashingDepth) { // the MCtruth for this pixel is stored in chip data: due to squashing we lose contiguity
           fetchMCLabels(curChipData->getOrderedPixId(pixEntry.second), labelsDigPtr, nlab);
-        } else { // the MCtruth for this pixel is at curChipData->startID+pixEntry.second
+        } else {                       // the MCtruth for this pixel is at curChipData->startID+pixEntry.second
           fetchMCLabels(pixEntry.second + curChipData->getStartID(), labelsDigPtr, nlab);
         }
       }
@@ -242,7 +252,7 @@ void Clusterer::ClustererThread::finishChip(ChipPixelData* curChipData, CompClus
         if (labelsClusPtr) {
           if (parent->mSquashingDepth) { // the MCtruth for this pixel is stored in chip data: due to squashing we lose contiguity
             fetchMCLabels(curChipData->getOrderedPixId(pixEntry.second), labelsDigPtr, nlab);
-          } else { // the MCtruth for this pixel is at curChipData->startID+pixEntry.second
+          } else {                       // the MCtruth for this pixel is at curChipData->startID+pixEntry.second
             fetchMCLabels(pixEntry.second + curChipData->getStartID(), labelsDigPtr, nlab);
           }
         }
@@ -318,6 +328,12 @@ void Clusterer::ClustererThread::finishChipSingleHitFast(uint32_t hit, ChipPixel
 //__________________________________________________
 Clusterer::Clusterer() : mPattIdConverter()
 {
+  gpu::empty_kernel<<<1, 1>>>();
+
+  // Check for any errors
+  cudaError_t cudaerr = cudaDeviceSynchronize();
+  if (cudaerr != cudaSuccess)
+    printf("Kernel launch failed with error \"%s\".\n", cudaGetErrorString(cudaerr));
 #ifdef _PERFORM_TIMING_
   mTimer.Stop();
   mTimer.Reset();
@@ -369,7 +385,7 @@ void Clusterer::ClustererThread::updateChip(const ChipPixelData* curChipData, ui
 
   Bool_t orphan = true;
 
-  if (noLeftCol) { // check only the row above
+  if (noLeftCol) {                              // check only the row above
     if (curr[row - 1] >= 0) {
       expandPreCluster(ip, row, curr[row - 1]); // attach to the precluster of the previous row
       return;
@@ -414,7 +430,7 @@ void Clusterer::ClustererThread::fetchMCLabels(int digID, const ConstMCTruth* la
     int ic = nfilled;
     for (; ic--;) { // check if the label is already present
       if (labelsBuff[ic] == lbls[i]) {
-        return; // label is found, do nothing
+        return;     // label is found, do nothing
       }
     }
     labelsBuff[nfilled++] = lbls[i];

@@ -16,7 +16,7 @@ o2_add_library(ITSMFTReconstruction
                SOURCES src/ChipMappingITS.cxx
                        src/ChipMappingMFT.cxx
                        src/DigitPixelReader.cxx
-                       src/Clusterer.cxx
+                       src/Clusterer.cu
                        src/ClustererParam.cxx
                        src/PixelData.cxx
                        src/BuildTopologyDictionary.cxx
