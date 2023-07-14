@@ -58,6 +58,11 @@ class TrackerTraits
   virtual void computeLayerCells(const int iteration);
   virtual void findCellsNeighbours(const int iteration);
   virtual void findRoads(const int iteration);
+  virtual void initialiseTimeFrameHybrid(const int iteration) { LOGP(info, "Something is wrong, this method should never be called"); }
+  virtual void computeTrackletsHybrid(const int iteration) { LOGP(info, "Something is wrong, this method should never be called"); }
+  virtual void computeCellsHybrid(const int iteration) { LOGP(info, "Something is wrong, this method should never be called"); }
+  virtual void findCellsNeighboursHybrid(const int iteration) { LOGP(info, "Something is wrong, this method should never be called"); }
+  virtual void findRoadsHybrid(const int iteration) { LOGP(info, "Something is wrong, this method should never be called"); }
   virtual void findTracks();
   virtual void extendTracks(const int iteration);
   virtual void findShortPrimaries();

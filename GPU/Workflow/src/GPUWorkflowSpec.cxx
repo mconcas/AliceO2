@@ -865,7 +865,7 @@ void GPURecoWorkflowSpec::run(ProcessingContext& pc)
     mErrorQA.clear(); // FIXME: This is a race condition once we run multi-threaded!
   }
   mTimer->Stop();
-  LOG(info) << "GPU Reoncstruction time for this TF " << mTimer->CpuTime() - cput << " s (cpu), " << mTimer->RealTime() - realt << " s (wall)";
+  LOG(info) << "GPU Reconstruction time for this TF " << mTimer->CpuTime() - cput << " s (cpu), " << mTimer->RealTime() - realt << " s (wall)";
 }
 
 int GPURecoWorkflowSpec::runITSTracking(o2::framework::ProcessingContext& pc)
@@ -1012,7 +1012,7 @@ int GPURecoWorkflowSpec::runITSTracking(o2::framework::ProcessingContext& pc)
 
     mITSTimeFrame->setMultiplicityCutMask(processingMask);
     // Run CA tracker
-    mITSTracker->clustersToTracks(logger, errorLogger);
+    mITSTracker->clustersToTracksHybrid(logger, errorLogger);
     if (mITSTimeFrame->hasBogusClusters()) {
       LOG(warning) << fmt::format(" - The processed timeframe had {} clusters with wild z coordinates, check the dictionaries", mITSTimeFrame->hasBogusClusters());
     }
