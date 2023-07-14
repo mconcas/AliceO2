@@ -582,7 +582,7 @@ GPUg() void computeLayerRoadsKernel(
 template <int nLayers>
 void TrackerTraitsGPU<nLayers>::initialiseTimeFrame(const int iteration)
 {
-  mTimeFrameGPU->initialise(iteration, mTrkParams[iteration], nLayers);
+  mTimeFrameGPU->initialiseHybrid(iteration, mTrkParams[iteration], nLayers);
 }
 
 template <int nLayers>
