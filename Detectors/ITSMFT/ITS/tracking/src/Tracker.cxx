@@ -106,7 +106,7 @@ void Tracker::clustersToTracksHybrid(std::function<void(std::string s)> logger, 
   mTraits->UpdateTrackingParameters(mTrkParams);
   for (int iteration = 0; iteration < (int)mTrkParams.size(); ++iteration) {
     total += evaluateTask(&Tracker::initialiseTimeFrameHybrid, "Hybrid Timeframe initialisation", logger, iteration);
-    total += evaluateTask(&Tracker::computeTrackletsHybrid, "Tracklet finding", logger, iteration);
+    total += evaluateTask(&Tracker::computeTrackletsHybrid, "Hybrid Tracklet finding", logger, iteration);
     logger(fmt::format("\t- Number of tracklets: {}", mTraits->getTFNumberOfTracklets()));
     if (!mTimeFrame->checkMemory(mTrkParams[iteration].MaxMemory)) {
       error("Too much memory used during trackleting, check the detector status and/or the selections.");
@@ -118,7 +118,7 @@ void Tracker::clustersToTracksHybrid(std::function<void(std::string s)> logger, 
       break;
     }
 
-    total += evaluateTask(&Tracker::computeCellsHybrid, "Cell finding", logger, iteration);
+    total += evaluateTask(&Tracker::computeCellsHybrid, "Hybrid Cell finding", logger, iteration);
     logger(fmt::format("\t- Number of Cells: {}", mTraits->getTFNumberOfCells()));
     if (!mTimeFrame->checkMemory(mTrkParams[iteration].MaxMemory)) {
       error("Too much memory used during cell finding, check the detector status and/or the selections.");
@@ -129,6 +129,9 @@ void Tracker::clustersToTracksHybrid(std::function<void(std::string s)> logger, 
       error(fmt::format("Too many cells per cluster ({}), check the detector status and/or the selections.", cellsPerCluster));
       break;
     }
+    total += evaluateTask(&Tracker::findCellsNeighboursHybrid, "Hybrid Neighbour finding", logger, iteration);
+    total += evaluateTask(&Tracker::findRoadsHybrid, "Hybrid Road finding", logger, iteration);
+    logger(fmt::format("\t- Number of Roads: {}", mTimeFrame->getRoads().size()));
   }
 }
 

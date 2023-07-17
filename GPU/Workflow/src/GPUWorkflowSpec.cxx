@@ -955,7 +955,7 @@ int GPURecoWorkflowSpec::runITSTracking(o2::framework::ProcessingContext& pc)
   float vertexerElapsedTime{0.f};
   if (mITSRunVertexer) {
     // Run seeding vertexer
-    vertexerElapsedTime = mITSVertexer->clustersToVertices(logger);
+    vertexerElapsedTime = mITSVertexer->clustersToVerticesHybrid(logger);
   } else { // cosmics
     mITSTimeFrame->resetRofPV();
   }

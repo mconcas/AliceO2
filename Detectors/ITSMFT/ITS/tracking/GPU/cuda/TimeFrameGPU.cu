@@ -180,8 +180,8 @@ size_t GpuTimeFrameChunk<nLayers>::computeScalingSizeBytes(const int nrof, const
   rofsize += sizeof(int) * config.clustersPerROfCapacity;                                                      // found lines exclusive sum
   rofsize += sizeof(int) * config.clustersPerROfCapacity * config.maxTrackletsPerCluster;                      // lines used in clusterlines
 
-  rofsize += (nLayers - 1) * sizeof(int); // total found tracklets
-  rofsize += (nLayers - 2) * sizeof(int); // total found cells
+  rofsize += (nLayers - 1) * sizeof(int);                                                                      // total found tracklets
+  rofsize += (nLayers - 2) * sizeof(int);                                                                      // total found cells
 
   return rofsize * nrof;
 }
@@ -362,6 +362,27 @@ void TimeFrameGPU<nLayers>::initialise(const int iteration,
 }
 
 template <int nLayers>
+void TimeFrameGPU<nLayers>::initialiseHybrid(const int iteration,
+                                             const TrackingParameters& trkParam,
+                                             const int maxLayers,
+                                             IndexTableUtils* utils,
+                                             const TimeFrameGPUParameters* gpuParam)
+{
+  mGpuStreams.resize(mGpuParams.nTimeFrameChunks);
+  // mHostNTracklets.resize((nLayers - 1) * mGpuParams.nTimeFrameChunks, 0);
+  // mHostNCells.resize((nLayers - 2) * mGpuParams.nTimeFrameChunks, 0);
+
+  auto init = [&](int p) -> void {
+    this->initDeviceSAFitting(/*p, utils, trkParam, *gpuParam, maxLayers, iteration*/);
+  };
+  std::thread t1{init, mGpuParams.nTimeFrameChunks};
+  RANGE("tf_cpu_initialisation", 1);
+  o2::its::TimeFrame::initialise(iteration, trkParam, maxLayers);
+  // registerHostMemory(maxLayers);
+  t1.join();
+}
+
+template <int nLayers>
 void TimeFrameGPU<nLayers>::wipe(const int maxLayers)
 {
   unregisterHostMemory(maxLayers);
@@ -432,6 +453,12 @@ void TimeFrameGPU<nLayers>::initDevice(const int chunks,
     }
   }
   checkGPUError(cudaMemcpy(mIndexTableUtilsDevice, &mIndexTableUtils, sizeof(IndexTableUtils), cudaMemcpyHostToDevice));
+}
+
+template <int nLayers>
+void TimeFrameGPU<nLayers>::initDeviceSAFitting()
+{
+  
 }
 
 template <int nLayers>

@@ -181,7 +181,9 @@ class TimeFrameGPU : public TimeFrame
   void registerHostMemory(const int);
   void unregisterHostMemory(const int);
   void initialise(const int, const TrackingParameters&, const int, IndexTableUtils* utils = nullptr, const TimeFrameGPUParameters* pars = nullptr);
+  void initialiseHybrid(const int, const TrackingParameters&, const int, IndexTableUtils* utils = nullptr, const TimeFrameGPUParameters* pars = nullptr);
   void initDevice(const int, IndexTableUtils*, const TrackingParameters& trkParam, const TimeFrameGPUParameters&, const int, const int);
+  void initDeviceSAFitting();
   void initDeviceChunks(const int, const int);
   template <Task task>
   size_t loadChunkData(const size_t, const size_t, const size_t);
