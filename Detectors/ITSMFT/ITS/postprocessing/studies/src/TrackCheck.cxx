@@ -10,7 +10,7 @@
 // or submit itself to any jurisdiction.
 
 #include "ITSStudies/TrackCheck.h"
-#include "ITSStudies/ITSStudyConfigParam.h"
+#include "ITSStudies/ITSStudiesConfigParam.h"
 
 #include "DataFormatsITS/TrackITS.h"
 #include "SimulationDataFormat/MCTrack.h"
