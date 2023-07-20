@@ -17,6 +17,6 @@
 
 #pragma link C++ class o2::its::study::ITSAvgClusSizeParamConfig + ;
 #pragma link C++ class o2::conf::ConfigurableParamHelper < o2::its::study::ITSAvgClusSizeParamConfig> + ;
-#pragma link C++ class o2::conf::ConfigurableParamHelper < o2::its::study::ITSCheckTracksParamConfig > + ;
+#pragma link C++ class o2::conf::ConfigurableParamHelper < o2::its::study::ITSCheckTracksParamConfig> + ;
 
 #endif

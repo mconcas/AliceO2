@@ -358,9 +358,9 @@ void AvgClusSizeStudy::process(o2::globaltracking::RecoContainer& recoData)
     d1recoTrk = recoData.getITSTrack(v0.getProngID(1));
 
     pv = recoData.getPrimaryVertex(v0.getVertexID()); // extract primary vertex
-    d0recoTrk.propagateToDCA(pv, b, &d0DCA); // calculate and store DCA objects for both prongs
+    d0recoTrk.propagateToDCA(pv, b, &d0DCA);          // calculate and store DCA objects for both prongs
     d1recoTrk.propagateToDCA(pv, b, &d1DCA);
-    d0pvDCA = std::sqrt(d0DCA.getR2());      // calculate DCA distance
+    d0pvDCA = std::sqrt(d0DCA.getR2()); // calculate DCA distance
     d1pvDCA = std::sqrt(d1DCA.getR2());
 
     eta = v0.getEta();
@@ -370,7 +370,7 @@ void AvgClusSizeStudy::process(o2::globaltracking::RecoContainer& recoData)
     v0R = std::sqrt(v0.calcR2());                 // gives distance from pvertex to origin? in centimeters (?) NOTE: unsure if this is to the primary vertex or to origin
     if (mUseMC) {                                 // check whether V0 is a K0s in MC, and fill the cut validation plots
       isMCK0s = false;
-      d0lab = mcLabels[v0.getProngID(0)];         // extract MC label for the prongs
+      d0lab = mcLabels[v0.getProngID(0)]; // extract MC label for the prongs
       d1lab = mcLabels[v0.getProngID(1)];
       // Now we check validity, etc. for the labels (essentially strength of reco) to determine which reconstructed V0 are real K0s
       if (d0lab.isValid() && d1lab.isValid()) {
