@@ -46,7 +46,7 @@ GpuTimeFrameChunk<nLayers>::~GpuTimeFrameChunk()
   if (mAllocated) {
     for (int i = 0; i < nLayers; ++i) {
       checkGPUError(cudaFree(mClustersDevice[i]));
-      checkGPUError(cudaFree(mTrackingFrameInfoDevice[i]));
+      // checkGPUError(cudaFree(mTrackingFrameInfoDevice[i]));
       checkGPUError(cudaFree(mClusterExternalIndicesDevice[i]));
       checkGPUError(cudaFree(mIndexTablesDevice[i]));
       if (i < nLayers - 1) {
@@ -63,7 +63,7 @@ GpuTimeFrameChunk<nLayers>::~GpuTimeFrameChunk()
         }
       }
     }
-    checkGPUError(cudaFree(mRoadsDevice));
+    // checkGPUError(cudaFree(mRoadsDevice));
     checkGPUError(cudaFree(mCUBTmpBufferDevice));
     checkGPUError(cudaFree(mFoundTrackletsDevice));
     checkGPUError(cudaFree(mNFoundCellsDevice));
@@ -80,7 +80,7 @@ void GpuTimeFrameChunk<nLayers>::allocate(const size_t nrof, Stream& stream)
   mNRof = nrof;
   for (int i = 0; i < nLayers; ++i) {
     checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&(mClustersDevice[i])), sizeof(Cluster) * mTFGPUParams->clustersPerROfCapacity * nrof, stream.get()));
-    checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&(mTrackingFrameInfoDevice[i])), sizeof(TrackingFrameInfo) * mTFGPUParams->clustersPerROfCapacity * nrof, stream.get()));
+    // checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&(mTrackingFrameInfoDevice[i])), sizeof(TrackingFrameInfo) * mTFGPUParams->clustersPerROfCapacity * nrof, stream.get()));
     checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&(mClusterExternalIndicesDevice[i])), sizeof(int) * mTFGPUParams->clustersPerROfCapacity * nrof, stream.get()));
     checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&(mIndexTablesDevice[i])), sizeof(int) * (256 * 128 + 1) * nrof, stream.get()));
     if (i < nLayers - 1) {
@@ -207,11 +207,11 @@ Cluster* GpuTimeFrameChunk<nLayers>::getDeviceClusters(const int layer)
   return mClustersDevice[layer];
 }
 
-template <int nLayers>
-TrackingFrameInfo* GpuTimeFrameChunk<nLayers>::getDeviceTrackingFrameInfo(const int layer)
-{
-  return mTrackingFrameInfoDevice[layer];
-}
+// template <int nLayers>
+// TrackingFrameInfo* GpuTimeFrameChunk<nLayers>::getDeviceTrackingFrameInfo(const int layer)
+// {
+//   return mTrackingFrameInfoDevice[layer];
+// }
 
 template <int nLayers>
 int* GpuTimeFrameChunk<nLayers>::getDeviceClusterExternalIndices(const int layer)
@@ -458,7 +458,7 @@ void TimeFrameGPU<nLayers>::initDevice(const int chunks,
 template <int nLayers>
 void TimeFrameGPU<nLayers>::initDeviceSAFitting()
 {
-  checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mRoadsDevice), sizeof(Road<nLayers - 2>) * mTFGPUParams->maxRoadPerRofSize * nrof, stream.get()));
+  // checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mRoadsDevice), sizeof(Road<nLayers - 2>) * mTFGPUParams->maxRoadPerRofSize * nrof, stream.get()));
 }
 
 template <int nLayers>
