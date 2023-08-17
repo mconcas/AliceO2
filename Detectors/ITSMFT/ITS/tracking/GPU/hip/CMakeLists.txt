@@ -43,6 +43,7 @@ if(HIP_ENABLED)
                          Utils.hip.cxx
                  PUBLIC_INCLUDE_DIRECTORIES ../
                  PUBLIC_LINK_LIBRARIES O2::ITStracking
+                                       O2::GPUTracking
                                        hip::host
                                        hip::device
                                        hip::hipcub

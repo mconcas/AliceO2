@@ -88,6 +88,7 @@ class Tracker
   void computeCellsHybrid(int& iteration);
   void findCellsNeighboursHybrid(int& iteration);
   void findRoadsHybrid(int& iteration);
+  void findTracksHybrid(int& iteration);
 
   void findShortPrimaries();
   void findTracks();

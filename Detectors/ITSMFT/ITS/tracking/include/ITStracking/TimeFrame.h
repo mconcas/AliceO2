@@ -42,6 +42,10 @@
 
 namespace o2
 {
+namespace gpu
+{
+class GPUChainITS;
+}
 
 namespace itsmft
 {
@@ -69,6 +73,7 @@ struct lightVertex {
 class TimeFrame
 {
  public:
+  friend class TimeFrameGPU;
   TimeFrame(int nLayers = 7);
   const Vertex& getPrimaryVertex(const int) const;
   gsl::span<const Vertex> getPrimaryVertices(int tf) const;
@@ -220,6 +225,9 @@ class TimeFrame
   IndexTableUtils mIndexTableUtils;
 
   bool mIsGPU = false;
+  void setChain(o2::gpu::GPUChainITS*);
+  void setExtAllocator(bool ext) { mExtAllocator = ext; }
+  bool getExtAllocator() const { return mExtAllocator; }
   std::vector<std::vector<Cluster>> mClusters;
   std::vector<std::vector<TrackingFrameInfo>> mTrackingFrameInfo;
   std::vector<std::vector<int>> mClusterExternalIndices;
@@ -233,6 +241,12 @@ class TimeFrame
   int mNrof = 0;
   std::vector<int> mROframesPV = {0};
   std::vector<Vertex> mPrimaryVertices;
+
+  // State if memory will be externally managed.
+  bool mExtAllocator = false;
+  o2::gpu::GPUChainITS* mChain = nullptr;
+  std::vector<Road<5>> mRoads;
+  std::vector<std::vector<TrackITSExt>> mTracks;
 
  private:
   float mBz = 5.;
@@ -254,9 +268,7 @@ class TimeFrame
   std::vector<std::vector<float>> mCellSeedsChi2;
   std::vector<std::vector<int>> mCellsLookupTable;
   std::vector<std::vector<std::vector<int>>> mCellsNeighbours;
-  std::vector<Road<5>> mRoads;
   std::vector<std::vector<MCCompLabel>> mTracksLabel;
-  std::vector<std::vector<TrackITSExt>> mTracks;
   std::vector<int> mBogusClusters; /// keep track of clusters with wild coordinates
 
   std::vector<std::vector<Tracklet>> mTracklets;
@@ -610,6 +622,13 @@ inline int TimeFrame::getNumberOfTracks() const
     nTracks += t.size();
   }
   return nTracks;
+}
+
+inline void TimeFrame::setChain(o2::gpu::GPUChainITS* chain)
+{
+  LOGP(info, "Setting ITS chain to: {}", (void*)chain);
+  mChain = chain;
+  mExtAllocator = true;
 }
 
 } // namespace its

@@ -21,6 +21,10 @@
 #include <unistd.h>
 #include <thread>
 
+#define GPUCA_TPC_GEOMETRY_O2 // To set working switch in GPUTPCGeometry whose else statement is bugged
+#include "GPUReconstructionCUDADef.h"
+#include "GPUChainITS.h"
+
 #ifndef __HIPCC__
 #define THRUST_NAMESPACE thrust::cuda
 #else
@@ -308,6 +312,18 @@ template <int nLayers>
 TimeFrameGPU<nLayers>::~TimeFrameGPU() = default;
 
 template <int nLayers>
+void TimeFrameGPU<nLayers>::allocMemAsync(void** ptr, size_t size, Stream* strPtr)
+{
+  if (getExtAllocator()) {
+    LOGP(info, "Calling external allocator on {} chain and {} reconstruction", (void*)mChain, (void*)mChain->rec());
+    *ptr = mChain->rec()->AllocateUnmanagedMemory(size, o2::gpu::GPUMemoryResource::MEMORY_GPU);
+  } else {
+    LOGP(info, "Calling default CUDA allocator");
+    checkGPUError(cudaMallocAsync(ptr, size, strPtr->get()));
+  }
+}
+
+template <int nLayers>
 void TimeFrameGPU<nLayers>::registerHostMemory(const int maxLayers)
 {
   if (mHostRegistered) {
@@ -371,7 +387,7 @@ void TimeFrameGPU<nLayers>::initialiseHybrid(const int iteration,
   mGpuStreams.resize(mGpuParams.nTimeFrameChunks);
   // mHostNTracklets.resize((nLayers - 1) * mGpuParams.nTimeFrameChunks, 0);
   // mHostNCells.resize((nLayers - 2) * mGpuParams.nTimeFrameChunks, 0);
-
+  
   auto init = [&](int p) -> void {
     this->initDeviceSAFitting(/*p, utils, trkParam, *gpuParam, maxLayers, iteration*/);
   };
@@ -380,6 +396,14 @@ void TimeFrameGPU<nLayers>::initialiseHybrid(const int iteration,
   o2::its::TimeFrame::initialise(iteration, trkParam, maxLayers);
   // registerHostMemory(maxLayers);
   t1.join();
+}
+
+template <int nLayers>
+void TimeFrameGPU<nLayers>::loadForHybridTracking()
+{
+  // REgister and loads roads
+  checkGPUError(cudaHostRegister(mRoads.data(), mRoads.size() * sizeof(Road<nLayers - 2>), cudaHostRegisterPortable));
+  checkGPUError(cudaMemcpyAsync(mRoadsDevice, mRoads.data(), mRoads.size() * sizeof(Road<nLayers - 2>), cudaMemcpyHostToDevice, mGpuStreams[0].get()));
 }
 
 template <int nLayers>
@@ -458,7 +482,8 @@ void TimeFrameGPU<nLayers>::initDevice(const int chunks,
 template <int nLayers>
 void TimeFrameGPU<nLayers>::initDeviceSAFitting()
 {
-  // checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(&mRoadsDevice), sizeof(Road<nLayers - 2>) * mTFGPUParams->maxRoadPerRofSize * nrof, stream.get()));
+  allocMemAsync(reinterpret_cast<void**>(&mRoadsDevice), sizeof(Road<nLayers - 2>) * mGpuParams.maxRoadPerRofSize * 2304, nullptr);
+  LOGP(info, "Check: {}", (void*)mRoadsDevice);
 }
 
 template <int nLayers>

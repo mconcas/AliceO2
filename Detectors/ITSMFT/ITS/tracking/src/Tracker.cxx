@@ -132,6 +132,7 @@ void Tracker::clustersToTracksHybrid(std::function<void(std::string s)> logger, 
     total += evaluateTask(&Tracker::findCellsNeighboursHybrid, "Hybrid Neighbour finding", logger, iteration);
     total += evaluateTask(&Tracker::findRoadsHybrid, "Hybrid Road finding", logger, iteration);
     logger(fmt::format("\t- Number of Roads: {}", mTimeFrame->getRoads().size()));
+    total += evaluateTask(&Tracker::findTracksHybrid, "Hybrid Track fitting", logger, iteration);
   }
 }
 
@@ -183,6 +184,11 @@ void Tracker::findCellsNeighboursHybrid(int& iteration)
 void Tracker::findRoadsHybrid(int& iteration)
 {
   mTraits->findRoadsHybrid(iteration);
+}
+
+void Tracker::findTracksHybrid(int& iteration)
+{
+  mTraits->findTracksHybrid(iteration);
 }
 
 void Tracker::findTracks()

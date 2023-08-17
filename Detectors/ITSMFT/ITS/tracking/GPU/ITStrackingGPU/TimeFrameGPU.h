@@ -33,7 +33,10 @@
 
 namespace o2
 {
-
+namespace gpu
+{
+class GPUChainITS;
+}
 namespace its
 {
 
@@ -171,12 +174,15 @@ template <int nLayers = 7>
 class TimeFrameGPU : public TimeFrame
 {
  public:
+  friend class GpuTimeFrameChunk<nLayers>;
+
   TimeFrameGPU();
   ~TimeFrameGPU();
 
   /// Most relevant operations
   void registerHostMemory(const int);
   void unregisterHostMemory(const int);
+  void loadForHybridTracking();
   void initialise(const int, const TrackingParameters&, const int, IndexTableUtils* utils = nullptr, const TimeFrameGPUParameters* pars = nullptr);
   void initialiseHybrid(const int, const TrackingParameters&, const int, IndexTableUtils* utils = nullptr, const TimeFrameGPUParameters* pars = nullptr);
   void initDevice(const int, IndexTableUtils*, const TrackingParameters& trkParam, const TimeFrameGPUParameters&, const int, const int);
@@ -210,6 +216,7 @@ class TimeFrameGPU : public TimeFrame
   gsl::span<int> getHostNCells(const int chunkId);
 
  private:
+  void allocMemAsync(void**, size_t, Stream*); // Abstract owned and unowned memory allocations
   bool mHostRegistered = false;
   std::vector<GpuTimeFrameChunk<nLayers>> mMemChunks;
   TimeFrameGPUParameters mGpuParams;
