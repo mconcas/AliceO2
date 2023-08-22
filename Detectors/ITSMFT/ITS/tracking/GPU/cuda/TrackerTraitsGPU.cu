@@ -28,6 +28,8 @@
 #include "ITStracking/Configuration.h"
 #include "ITStracking/IndexTableUtils.h"
 #include "ITStracking/MathUtils.h"
+#include "DetectorsBase/Propagator.h"
+#include "DataFormatsITS/TrackITS.h"
 
 #include "ITStrackingGPU/TrackerTraitsGPU.h"
 #include "ITStrackingGPU/TracerGPU.h"
@@ -579,14 +581,71 @@ GPUg() void computeLayerRoadsKernel(
 
 template <int nLayers = 7>
 GPUg() void fitTracksKernel(
+  Cluster** foundClusters,
+  Cluster** foundUnsortedClusters,
+  TrackingFrameInfo** foundTrackingFrameInfo,
+  Tracklet** foundTracklets,
+  Cell** foundCells,
+  o2::track::TrackParCovF** trackSeeds,
   const Road<nLayers - 2>* roads,
   const size_t nRoads)
 {
   for (int iCurrentRoadIndex = blockIdx.x * blockDim.x + threadIdx.x; iCurrentRoadIndex < nRoads; iCurrentRoadIndex += blockDim.x * gridDim.x) {
     auto& currentRoad{roads[iCurrentRoadIndex]};
-    if (iCurrentRoadIndex < 5) {
-      printf("Test road: %d\n", currentRoad.getRoadSize());
+    int clusters[nLayers];
+    int tracklets[nLayers - 1];
+    memset(clusters, constants::its::UnusedIndex, sizeof(clusters));
+    memset(tracklets, constants::its::UnusedIndex, sizeof(tracklets));
+    int lastCellLevel{constants::its::UnusedIndex}, firstTracklet{constants::its::UnusedIndex}, lastCellIndex{constants::its::UnusedIndex};
+
+    for (int iCell{0}; iCell < nLayers - 2; ++iCell) {
+      const int cellIndex = currentRoad[iCell];
+      if (cellIndex == constants::its::UnusedIndex) {
+        continue;
+      } else {
+        if (firstTracklet == constants::its::UnusedIndex) {
+          firstTracklet = iCell;
+          tracklets[iCell] = foundCells[iCell][cellIndex].getFirstTrackletIndex();
+          tracklets[iCell + 1] = foundCells[iCell][cellIndex].getSecondTrackletIndex();
+          clusters[iCell] = foundCells[iCell][cellIndex].getFirstClusterIndex();
+          clusters[iCell + 1] = foundCells[iCell][cellIndex].getSecondClusterIndex();
+          clusters[iCell + 2] = foundCells[iCell][cellIndex].getThirdClusterIndex();
+          lastCellLevel = iCell;
+          lastCellIndex = cellIndex;
+        }
+      }
     }
+    int count{1};
+
+    unsigned short rof{foundTracklets[firstTracklet][tracklets[firstTracklet]].rof[0]};
+    for (int iT = firstTracklet; iT < nLayers - 1; ++iT) {
+      if (tracklets[iT] == constants::its::UnusedIndex) {
+        continue;
+      }
+      if (rof == foundTracklets[iT][tracklets[iT]].rof[1]) {
+        count++;
+      } else {
+        if (count == 1) {
+          rof = foundTracklets[iT][tracklets[iT]].rof[1];
+        } else {
+          count--;
+        }
+      }
+    }
+    if (lastCellLevel == constants::its::UnusedIndex) {
+      continue;
+    }
+    for (size_t iC{0}; iC < nLayers; iC++) {
+      if (clusters[iC] != constants::its::UnusedIndex) {
+        clusters[iC] = foundClusters[iC][clusters[iC]].clusterId;
+      }
+    }
+
+    /// Track seed preparation. Clusters are numbered progressively from the innermost going outward.
+    const auto& cluster1_glo = foundUnsortedClusters[lastCellLevel][clusters[lastCellLevel]];
+    const auto& cluster2_glo = foundUnsortedClusters[lastCellLevel + 1][clusters[lastCellLevel + 1]];
+    const auto& cluster3_glo = foundUnsortedClusters[lastCellLevel + 2][clusters[lastCellLevel + 2]];
+    const auto& cluster3_tf = foundTrackingFrameInfo[lastCellLevel + 2][clusters[lastCellLevel + 2]];
   }
 }
 
@@ -596,6 +655,9 @@ template <int nLayers>
 void TrackerTraitsGPU<nLayers>::initialiseTimeFrame(const int iteration)
 {
   mTimeFrameGPU->initialiseHybrid(iteration, mTrkParams[iteration], nLayers);
+  mTimeFrameGPU->loadClustersDevice();
+  mTimeFrameGPU->loadUnsortedClustersDevice();
+  mTimeFrameGPU->loadTrackingFrameInfoDevice();
 }
 
 template <int nLayers>
@@ -847,13 +909,6 @@ template <int nLayers>
 void TrackerTraitsGPU<nLayers>::findTracks(){};
 
 template <int nLayers>
-void TrackerTraitsGPU<nLayers>::findTracksHybrid(const int iteration)
-{
-  mTimeFrameGPU->loadForHybridTracking();
-  gpu::fitTracksKernel<<<1, 1>>>(mTimeFrameGPU->getDeviceRoads(), mTimeFrameGPU->getRoads().size());
-}
-
-template <int nLayers>
 void TrackerTraitsGPU<nLayers>::extendTracks(const int iteration){};
 
 template <int nLayers>
@@ -879,6 +934,50 @@ template <int nLayers>
 int TrackerTraitsGPU<nLayers>::getTFNumberOfCells() const
 {
   return mTimeFrameGPU->getNumberOfCells();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Hybrid tracking
+template <int nLayers>
+void TrackerTraitsGPU<nLayers>::computeTrackletsHybrid(const int iteration)
+{
+  TrackerTraits::computeLayerTracklets(iteration);
+  mTimeFrameGPU->loadTrackletsDevice();
+}
+
+template <int nLayers>
+void TrackerTraitsGPU<nLayers>::computeCellsHybrid(const int iteration)
+{
+  TrackerTraits::computeLayerCells(iteration);
+  mTimeFrameGPU->loadCellsDevice();
+};
+
+template <int nLayers>
+void TrackerTraitsGPU<nLayers>::findCellsNeighboursHybrid(const int iteration)
+{
+  TrackerTraits::findCellsNeighbours(iteration);
+};
+
+template <int nLayers>
+void TrackerTraitsGPU<nLayers>::findRoadsHybrid(const int iteration)
+{
+  TrackerTraits::findRoads(iteration);
+  mTimeFrameGPU->loadRoadsDevice();
+  mTimeFrameGPU->loadTrackSeedsDevice();
+};
+
+template <int nLayers>
+void TrackerTraitsGPU<nLayers>::findTracksHybrid(const int iteration)
+{
+  // mTimeFrameGPU->loadForHybridTracking();
+  gpu::fitTracksKernel<<<1, 1>>>(mTimeFrameGPU->getDeviceArrayClusters(),
+                                 mTimeFrameGPU->getDeviceArrayUnsortedClusters(),
+                                 mTimeFrameGPU->getDeviceArrayTrackingFrameInfo(),
+                                 mTimeFrameGPU->getDeviceArrayTracklets(),
+                                 mTimeFrameGPU->getDeviceArrayCells(),
+                                 mTimeFrameGPU->getDeviceArrayTrackSeeds(),
+                                 mTimeFrameGPU->getDeviceRoads(),
+                                 mTimeFrameGPU->getRoads().size());
 }
 
 template class TrackerTraitsGPU<7>;

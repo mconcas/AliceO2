@@ -187,6 +187,13 @@ class TimeFrameGPU : public TimeFrame
   void initialiseHybrid(const int, const TrackingParameters&, const int, IndexTableUtils* utils = nullptr, const TimeFrameGPUParameters* pars = nullptr);
   void initDevice(const int, IndexTableUtils*, const TrackingParameters& trkParam, const TimeFrameGPUParameters&, const int, const int);
   void initDeviceSAFitting();
+  void loadTrackingFrameInfoDevice();
+  void loadUnsortedClustersDevice();
+  void loadClustersDevice();
+  void loadTrackletsDevice();
+  void loadCellsDevice();
+  void loadTrackSeedsDevice();
+  void loadRoadsDevice();
   void initDeviceChunks(const int, const int);
   template <Task task>
   size_t loadChunkData(const size_t, const size_t, const size_t);
@@ -210,6 +217,12 @@ class TimeFrameGPU : public TimeFrame
   // Hybrid
   Road<nLayers - 2>* getDeviceRoads() { return mRoadsDevice; }
   TrackingFrameInfo* getDeviceTrackingFrameInfo(const int);
+  TrackingFrameInfo** getDeviceArrayTrackingFrameInfo() { return mTrackingFrameInfoDeviceArray; }
+  Cluster** getDeviceArrayClusters() const { return mClustersDeviceArray; }
+  Cluster** getDeviceArrayUnsortedClusters() const { return mUnsortedClustersDeviceArray; }
+  Tracklet** getDeviceArrayTracklets() const { return mTrackletsDeviceArray; }
+  Cell** getDeviceArrayCells() const { return mCellsDeviceArray; }
+  o2::track::TrackParCovF** getDeviceArrayTrackSeeds() { return mCellSeedsDeviceArray; }
 
   // Host-specific getters
   gsl::span<int> getHostNTracklets(const int chunkId);
@@ -229,9 +242,25 @@ class TimeFrameGPU : public TimeFrame
   std::array<unsigned char*, nLayers> mUsedClustersDevice;
   Vertex* mVerticesDevice;
   int* mROframesPVDevice;
+
+  // Hybrid pref
+  std::array<Cluster*, nLayers> mClustersDevice;
+  std::array<Cluster*, nLayers> mUnsortedClustersDevice;
+  Cluster** mClustersDeviceArray;
+  Cluster** mUnsortedClustersDeviceArray;
+  std::array<Tracklet*, nLayers - 1> mTrackletsDevice;
+  Tracklet** mTrackletsDeviceArray;
+  std::array<Cell*, nLayers - 2> mCellsDevice;
+  Cell** mCellsDeviceArray;
+  std::array<o2::track::TrackParCovF*, nLayers - 2> mCellSeedsDevice;
+  o2::track::TrackParCovF** mCellSeedsDeviceArray;
+  float* mCellSeedsChi2Device;
+  float** mCellSeedsChi2DeviceArray;
+
   Road<nLayers - 2>* mRoadsDevice;
   TrackITSExt* mTrackITSExtDevice;
   std::array<TrackingFrameInfo*, nLayers> mTrackingFrameInfoDevice;
+  TrackingFrameInfo** mTrackingFrameInfoDeviceArray;
 
   // State
   std::vector<Stream> mGpuStreams;

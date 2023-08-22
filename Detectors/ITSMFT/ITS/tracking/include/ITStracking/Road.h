@@ -40,7 +40,8 @@ class Road final
   void setLabel(const int);
   bool isFakeRoad() const;
   void setFakeRoad(const bool);
-  GPUhdni() int& operator[](const int&);
+  GPUhd() int& operator[](const int&);
+  GPUhd() int operator[](const int&) const;
 
   GPUhd() void resetRoad()
   {
@@ -84,6 +85,12 @@ GPUhdi() int Road<maxRoadSize>::getRoadSize() const
 
 template <unsigned char maxRoadSize>
 GPUhdi() int& Road<maxRoadSize>::operator[](const int& i)
+{
+  return mCellIds[i];
+}
+
+template <unsigned char maxRoadSize>
+GPUhdi() int Road<maxRoadSize>::operator[](const int& i) const
 {
   return mCellIds[i];
 }
