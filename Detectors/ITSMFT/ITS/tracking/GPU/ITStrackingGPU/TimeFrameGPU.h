@@ -232,7 +232,7 @@ class TimeFrameGPU : public TimeFrame
   gsl::span<int> getHostNCells(const int chunkId);
 
  private:
-  void allocMemAsync(void**, size_t, Stream*); // Abstract owned and unowned memory allocations
+  void allocMemAsync(void**, size_t, Stream*, bool); // Abstract owned and unowned memory allocations
   bool mHostRegistered = false;
   std::vector<GpuTimeFrameChunk<nLayers>> mMemChunks;
   TimeFrameGPUParameters mGpuParams;
