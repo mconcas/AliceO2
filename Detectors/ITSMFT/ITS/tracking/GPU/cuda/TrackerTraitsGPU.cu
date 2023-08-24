@@ -131,41 +131,49 @@ GPUd() bool fitTrack(TrackITSExt& track,
                      int nCl,
                      TrackingFrameInfo** tfInfos,
                      const o2::base::Propagator* prop,
-                     o2::base::PropagatorF::MatCorrType matCorrType = o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT)
+                     o2::base::PropagatorF::MatCorrType matCorrType = o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT,
+                     bool debugPrint = false)
 {
   for (int iLayer{start}; iLayer != end; iLayer += step) {
+    if (debugPrint) {
+      printf("fitTrack: layer %d track.getClusterIndex(iLayer): %d \n", iLayer, track.getClusterIndex(iLayer));
+    }
     if (track.getClusterIndex(iLayer) == constants::its::UnusedIndex) {
       continue;
     }
     const TrackingFrameInfo& trackingHit = tfInfos[iLayer][track.getClusterIndex(iLayer)];
-    if (!track.rotate(trackingHit.alphaTrackingFrame)) {
-      return false;
-    }
-    if (!prop->propagateToX(track, trackingHit.xTrackingFrame,
-                            prop->getNominalBz(),
-                            o2::base::PropagatorImpl<float>::MAX_SIN_PHI,
-                            o2::base::PropagatorImpl<float>::MAX_STEP, matCorrType)) {
-      return false;
-    }
-    // To be implemented
-    if (matCorrType == o2::base::PropagatorF::MatCorrType::USEMatCorrNONE) {
-      // float radl = 9.36f; // Radiation length of Si [cm]
-      // float rho = 2.33f;  // Density of Si [g/cm^3]
-      // if (!track.correctForMaterial(mTrkParams[0].LayerxX0[iLayer], mTrkParams[0].LayerxX0[iLayer] * radl * rho, true)) {
-      // continue;
-      // }
-    }
-    auto predChi2{track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
-    if ((nCl >= 3 && predChi2 > chi2clcut) || predChi2 < 0.f) {
-      return false;
-    }
-    track.setChi2(track.getChi2() + predChi2);
-    if (!track.o2::track::TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
-      return false;
-    }
-    nCl++;
+    // if (debugPrint) {
+    //   trackingHit.print();
+    // }
+    //   if (!track.rotate(trackingHit.alphaTrackingFrame)) {
+    //     return false;
+    //   }
+    //   if (!prop->propagateToX(track, trackingHit.xTrackingFrame,
+    //                           prop->getNominalBz(),
+    //                           o2::base::PropagatorImpl<float>::MAX_SIN_PHI,
+    //                           o2::base::PropagatorImpl<float>::MAX_STEP, matCorrType)) {
+    //     return false;
+    //   }
+    //   // To be implemented
+    //   if (matCorrType == o2::base::PropagatorF::MatCorrType::USEMatCorrNONE) {
+    //     // float radl = 9.36f; // Radiation length of Si [cm]
+    //     // float rho = 2.33f;  // Density of Si [g/cm^3]
+    //     // if (!track.correctForMaterial(mTrkParams[0].LayerxX0[iLayer], mTrkParams[0].LayerxX0[iLayer] * radl * rho, true)) {
+    //     // continue;
+    //     // }
+    //   }
+    //   auto predChi2{track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
+    //   if ((nCl >= 3 && predChi2 > chi2clcut) || predChi2 < 0.f) {
+    //     return false;
+    //   }
+    //   track.setChi2(track.getChi2() + predChi2);
+    //   if (!track.o2::track::TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
+    //     return false;
+    //   }
+    //   nCl++;
   }
-  return o2::gpu::GPUCommonMath::Abs(track.getQ2Pt()) < maxQoverPt && track.getChi2() < chi2ndfcut * (nCl * 2 - 5);
+  // return o2::gpu::GPUCommonMath::Abs(track.getQ2Pt()) < maxQoverPt && track.getChi2() < chi2ndfcut * (nCl * 2 - 5);
+  return true;
 }
 
 // Functors to sort tracklets
@@ -644,83 +652,98 @@ GPUg() void fitTracksKernel(
 
   for (int iCurrentRoadIndex = blockIdx.x * blockDim.x + threadIdx.x; iCurrentRoadIndex < nRoads; iCurrentRoadIndex += blockDim.x * gridDim.x) {
     auto& currentRoad{roads[iCurrentRoadIndex]};
-    printf("road: %d\n", iCurrentRoadIndex);
-    printf("\tfake: %d, size: %d\n", currentRoad.isFakeRoad(), currentRoad.getRoadSize());
-    for (int i = 0; i < nLayers - 2; ++i) {
-      printf("\tindex: %d %d\n", i, currentRoad[i]);
+    if (iCurrentRoadIndex < 5) {
+      printf("road: %d\n", iCurrentRoadIndex);
     }
+    // printf("\tfake: %d, size: %d\n", currentRoad.isFakeRoad(), currentRoad.getRoadSize());
+    // for (int i = 0; i < nLayers - 2; ++i) {
+    //   printf("\tindex: %d %d\n", i, currentRoad[i]);
+    // }
     int clusters[nLayers];
     int tracklets[nLayers - 1];
     memset(clusters, constants::its::UnusedIndex, sizeof(clusters));
     memset(tracklets, constants::its::UnusedIndex, sizeof(tracklets));
     int lastCellLevel{constants::its::UnusedIndex}, firstTracklet{constants::its::UnusedIndex}, lastCellIndex{constants::its::UnusedIndex};
 
-    // for (int iCell{0}; iCell < nLayers - 2; ++iCell) {
-    //   const int cellIndex = currentRoad[iCell];
-    //   if (cellIndex == constants::its::UnusedIndex) {
-    //     continue;
-    //   } else {
-    //     if (firstTracklet == constants::its::UnusedIndex) {
-    //       firstTracklet = iCell;
-    //       tracklets[iCell] = foundCells[iCell][cellIndex].getFirstTrackletIndex();
-    //       tracklets[iCell + 1] = foundCells[iCell][cellIndex].getSecondTrackletIndex();
-    //       clusters[iCell] = foundCells[iCell][cellIndex].getFirstClusterIndex();
-    //       clusters[iCell + 1] = foundCells[iCell][cellIndex].getSecondClusterIndex();
-    //       clusters[iCell + 2] = foundCells[iCell][cellIndex].getThirdClusterIndex();
-    //       lastCellLevel = iCell;
-    //       lastCellIndex = cellIndex;
-    //     }
-    //   }
+    for (int iCell{0}; iCell < nLayers - 2; ++iCell) {
+      const int cellIndex = currentRoad[iCell];
+      if (cellIndex == constants::its::UnusedIndex) {
+        continue;
+      } else {
+        if (firstTracklet == constants::its::UnusedIndex) {
+          firstTracklet = iCell;
+          tracklets[iCell] = foundCells[iCell][cellIndex].getFirstTrackletIndex();
+          tracklets[iCell + 1] = foundCells[iCell][cellIndex].getSecondTrackletIndex();
+          clusters[iCell] = foundCells[iCell][cellIndex].getFirstClusterIndex();
+          clusters[iCell + 1] = foundCells[iCell][cellIndex].getSecondClusterIndex();
+          clusters[iCell + 2] = foundCells[iCell][cellIndex].getThirdClusterIndex();
+          lastCellLevel = iCell;
+          lastCellIndex = cellIndex;
+          // if (iCurrentRoadIndex < 5) {
+          //   printf("\tfirst tracklet: %d\n", firstTracklet);
+          //   printf("\ttracklets: %d %d %d\n", tracklets[iCell], tracklets[iCell + 1]);
+          //   printf("\tclusters: %d %d %d\n", clusters[iCell], clusters[iCell + 1], clusters[iCell + 2]);
+          // }
+        }
+      }
+    }
+
+    int count{1};
+    unsigned short rof{foundTracklets[firstTracklet][tracklets[firstTracklet]].rof[0]};
+    // if (iCurrentRoadIndex < 5) {
+    //   printf("\trof: %d\n", rof);
     // }
-    //   int count{1};
+    for (int iT = firstTracklet; iT < nLayers - 1; ++iT) {
+      if (tracklets[iT] == constants::its::UnusedIndex) {
+        continue;
+      }
+      if (rof == foundTracklets[iT][tracklets[iT]].rof[1]) {
+        count++;
+      } else {
+        if (count == 1) {
+          rof = foundTracklets[iT][tracklets[iT]].rof[1];
+        } else {
+          count--;
+        }
+      }
+    }
+    if (lastCellLevel == constants::its::UnusedIndex) {
+      continue;
+    }
+    for (size_t iC{0}; iC < nLayers; iC++) {
+      if (clusters[iC] != constants::its::UnusedIndex) {
+        clusters[iC] = foundClusters[iC][clusters[iC]].clusterId;
+      }
+    }
 
-    //   unsigned short rof{foundTracklets[firstTracklet][tracklets[firstTracklet]].rof[0]};
-    //   for (int iT = firstTracklet; iT < nLayers - 1; ++iT) {
-    //     if (tracklets[iT] == constants::its::UnusedIndex) {
-    //       continue;
-    //     }
-    //     if (rof == foundTracklets[iT][tracklets[iT]].rof[1]) {
-    //       count++;
-    //     } else {
-    //       if (count == 1) {
-    //         rof = foundTracklets[iT][tracklets[iT]].rof[1];
-    //       } else {
-    //         count--;
-    //       }
-    //     }
-    //   }
-    //   if (lastCellLevel == constants::its::UnusedIndex) {
-    //     continue;
-    //   }
-    //   for (size_t iC{0}; iC < nLayers; iC++) {
-    //     if (clusters[iC] != constants::its::UnusedIndex) {
-    //       clusters[iC] = foundClusters[iC][clusters[iC]].clusterId;
-    //     }
-    //   }
-
-    //   /// Track seed preparation. Clusters are numbered progressively from the innermost going outward.
-    //   const auto& cluster1_glo = foundUnsortedClusters[lastCellLevel][clusters[lastCellLevel]];
-    //   const auto& cluster2_glo = foundUnsortedClusters[lastCellLevel + 1][clusters[lastCellLevel + 1]];
-    //   const auto& cluster3_glo = foundUnsortedClusters[lastCellLevel + 2][clusters[lastCellLevel + 2]];
-    //   const auto& cluster3_tf = foundTrackingFrameInfo[lastCellLevel + 2][clusters[lastCellLevel + 2]];
-
-    //   TrackITSExt temporaryTrack{trackSeeds[lastCellLevel][lastCellIndex]};
-    //   temporaryTrack.setChi2(trackSeedsChi2[lastCellLevel][lastCellIndex]);
-    //   for (size_t iC = 0; iC < nLayers; ++iC) {
-    //     temporaryTrack.setExternalClusterIndex(iC, clusters[iC], clusters[iC] != constants::its::UnusedIndex);
-    //   }
-    //   bool fitSuccess = fitTrack(temporaryTrack,                                               // TrackITSExt& track,
-    //                              lastCellLevel - 1,                                            // int lastLayer,
-    //                              -1,                                                           // int firstLayer,
-    //                              -1,                                                           // int firstCluster,
-    //                              maxChi2ClusterAttachment,                                     // float maxChi2ClusterAttachment,
-    //                              maxChi2NDF,                                                   // float maxChi2NDF,
-    //                              1.e3,                                                         // float maxChi2PerCluster,
-    //                              3,                                                            // int maxIterations,
-    //                              foundTrackingFrameInfo,                                       // TrackingFrameInfo** trackingFrameInfo,
-    //                              propagator,                                                   // const o2::base::Propagator* propagator,
-    //                              o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT); // o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT
-    //   printf("Fit success: %d\n", fitSuccess);
+    /// Track seed preparation. Clusters are numbered progressively from the innermost going outward.
+    const auto& cluster1_glo = foundUnsortedClusters[lastCellLevel][clusters[lastCellLevel]];
+    const auto& cluster2_glo = foundUnsortedClusters[lastCellLevel + 1][clusters[lastCellLevel + 1]];
+    const auto& cluster3_glo = foundUnsortedClusters[lastCellLevel + 2][clusters[lastCellLevel + 2]];
+    const auto& cluster3_tf = foundTrackingFrameInfo[lastCellLevel + 2][clusters[lastCellLevel + 2]];
+    TrackITSExt temporaryTrack{trackSeeds[lastCellLevel][lastCellIndex]};
+    temporaryTrack.setChi2(trackSeedsChi2[lastCellLevel][lastCellIndex]);
+    for (size_t iC = 0; iC < nLayers; ++iC) {
+      temporaryTrack.setExternalClusterIndex(iC, clusters[iC], clusters[iC] != constants::its::UnusedIndex);
+    }
+    bool fitSuccess = false;
+    fitSuccess = fitTrack(temporaryTrack,                                              // TrackITSExt& track,
+                          lastCellLevel - 1,                                           // int lastLayer,
+                          -1,                                                          // int firstLayer,
+                          -1,                                                          // int firstCluster,
+                          maxChi2ClusterAttachment,                                    // float maxChi2ClusterAttachment,
+                          maxChi2NDF,                                                  // float maxChi2NDF,
+                          1.e3,                                                        // float maxChi2PerCluster,
+                          3,                                                           // int maxIterations,
+                          foundTrackingFrameInfo,                                      // TrackingFrameInfo** trackingFrameInfo,
+                          propagator,                                                  // const o2::base::Propagator* propagator,
+                          o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT, // o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT
+                          iCurrentRoadIndex < 5);
+    if (fitSuccess) {
+      printf("Fit success\n");
+    } else {
+      printf("Fit failed\n");
+    }
   }
 }
 
@@ -730,9 +753,9 @@ template <int nLayers>
 void TrackerTraitsGPU<nLayers>::initialiseTimeFrame(const int iteration)
 {
   mTimeFrameGPU->initialiseHybrid(iteration, mTrkParams[iteration], nLayers);
-  mTimeFrameGPU->loadClustersDevice();
+  // mTimeFrameGPU->loadClustersDevice();
   mTimeFrameGPU->loadUnsortedClustersDevice();
-  mTimeFrameGPU->loadTrackingFrameInfoDevice();
+  // mTimeFrameGPU->loadTrackingFrameInfoDevice();
 }
 
 template <int nLayers>
@@ -1045,15 +1068,14 @@ void TrackerTraitsGPU<nLayers>::findRoadsHybrid(const int iteration)
 template <int nLayers>
 void TrackerTraitsGPU<nLayers>::findTracksHybrid(const int iteration)
 {
-  for (int i = 0; i < 5; ++i) {
-    auto& currentRoad{mTimeFrameGPU->getRoads()[i]};
-    printf("road: %d\n", i);
-    printf("\tfake: %d, size: %d\n", currentRoad.isFakeRoad(), currentRoad.getRoadSize());
-    for (int i = 0; i < nLayers - 2; ++i) {
-      printf("\tindex: %d %d\n", i, currentRoad[i]);
-    }
-  }
-  LOGP(info, "++++++/nsto lanciando su {} roads", mTimeFrameGPU->getRoads().size());
+  // for (int i = 0; i < 5; ++i) {
+  //   auto& currentRoad{mTimeFrameGPU->getRoads()[i]};
+  //   printf("road: %d\n", i);
+  //   printf("\tfake: %d, size: %d\n", currentRoad.isFakeRoad(), currentRoad.getRoadSize());
+  //   for (int i = 0; i < nLayers - 2; ++i) {
+  //     printf("\tindex: %d %d\n", i, currentRoad[i]);
+  //   }
+  // }
   gpu::fitTracksKernel<<<1, 1>>>(mTimeFrameGPU->getDeviceArrayClusters(),          // Cluster** foundClusters,
                                  mTimeFrameGPU->getDeviceArrayUnsortedClusters(),  // Cluster** foundUnsortedClusters,
                                  mTimeFrameGPU->getDeviceArrayTrackingFrameInfo(), // TrackingFrameInfo** foundTrackingFrameInfo,
