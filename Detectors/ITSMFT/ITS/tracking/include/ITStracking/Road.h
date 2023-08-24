@@ -38,7 +38,7 @@ class Road final
   GPUhd() int getRoadSize() const;
   int getLabel() const;
   void setLabel(const int);
-  bool isFakeRoad() const;
+  GPUhd() bool isFakeRoad() const;
   void setFakeRoad(const bool);
   GPUhd() int& operator[](const int&);
   GPUhd() int operator[](const int&) const;

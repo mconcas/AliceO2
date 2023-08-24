@@ -755,7 +755,7 @@ void TrackParametrizationWithError<value_T>::buildCombinedCovMatrix(const TrackP
 
 //______________________________________________
 template <typename value_T>
-auto TrackParametrizationWithError<value_T>::getPredictedChi2(const TrackParametrizationWithError<value_T>& rhs) const -> value_t
+GPUd() auto TrackParametrizationWithError<value_T>::getPredictedChi2(const TrackParametrizationWithError<value_T>& rhs) const -> value_t
 {
   MatrixDSym5 cov; // perform matrix operations in double!
   return getPredictedChi2(rhs, cov);
@@ -763,7 +763,7 @@ auto TrackParametrizationWithError<value_T>::getPredictedChi2(const TrackParamet
 
 //______________________________________________
 template <typename value_T>
-auto TrackParametrizationWithError<value_T>::getPredictedChi2(const TrackParametrizationWithError<value_T>& rhs, MatrixDSym5& covToSet) const -> value_t
+GPUd() auto TrackParametrizationWithError<value_T>::getPredictedChi2(const TrackParametrizationWithError<value_T>& rhs, MatrixDSym5& covToSet) const -> value_t
 {
   // get chi2 wrt other track, which must be defined at the same parameters X,alpha
   // Supplied non-initialized covToSet matrix is filled by inverse combined matrix for further use
@@ -796,7 +796,7 @@ auto TrackParametrizationWithError<value_T>::getPredictedChi2(const TrackParamet
 
 //______________________________________________
 template <typename value_T>
-bool TrackParametrizationWithError<value_T>::update(const TrackParametrizationWithError<value_T>& rhs, const MatrixDSym5& covInv)
+GPUd() bool TrackParametrizationWithError<value_T>::update(const TrackParametrizationWithError<value_T>& rhs, const MatrixDSym5& covInv)
 {
   // update track with other track, the inverted combined cov matrix should be supplied
 
@@ -864,7 +864,7 @@ bool TrackParametrizationWithError<value_T>::update(const TrackParametrizationWi
 
 //______________________________________________
 template <typename value_T>
-bool TrackParametrizationWithError<value_T>::update(const TrackParametrizationWithError<value_T>& rhs)
+GPUd() bool TrackParametrizationWithError<value_T>::update(const TrackParametrizationWithError<value_T>& rhs)
 {
   // update track with other track
   MatrixDSym5 covI; // perform matrix operations in double!
