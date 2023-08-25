@@ -164,15 +164,15 @@ class TrackITSExt : public TrackITS
   static constexpr int MaxClusters = 16; /// Prepare for overlaps and new detector configurations
   using TrackITS::TrackITS;              // inherit base constructors
 
-  GPUd() TrackITSExt(o2::track::TrackParCov&& parCov, short ncl, float chi2,
-                     o2::track::TrackParCov&& outer, std::array<int, MaxClusters> cls)
+  GPUh() TrackITSExt(o2::track::TrackParCov&& parCov, short ncl, float chi2,
+                     o2::track::TrackParCov&& outer, o2::gpu::gpustd::array<int, MaxClusters> cls)
     : TrackITS(parCov, chi2, outer), mIndex{cls}
   {
     setNumberOfClusters(ncl);
   }
 
-  GPUd() TrackITSExt(o2::track::TrackParCov& parCov, short ncl, float chi2, std::uint32_t rof,
-                     o2::track::TrackParCov& outer, std::array<int, MaxClusters> cls)
+  GPUh() TrackITSExt(o2::track::TrackParCov& parCov, short ncl, float chi2, std::uint32_t rof,
+                     o2::track::TrackParCov& outer, o2::gpu::gpustd::array<int, MaxClusters> cls)
     : TrackITS(parCov, chi2, outer), mIndex{cls}
   {
     setNumberOfClusters(ncl);
@@ -200,13 +200,13 @@ class TrackITSExt : public TrackITS
     mIndex[layer] = idx;
   }
 
-  std::array<int, MaxClusters>& getClusterIndexes()
+  GPUh() o2::gpu::gpustd::array<int, MaxClusters> getClusterIndexes()
   {
     return mIndex;
   }
 
  private:
-  std::array<int, MaxClusters> mIndex = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}; ///< Indices of associated clusters
+  o2::gpu::gpustd::array<int, MaxClusters> mIndex = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}; ///< Indices of associated clusters
   ClassDefNV(TrackITSExt, 2);
 };
 } // namespace its
