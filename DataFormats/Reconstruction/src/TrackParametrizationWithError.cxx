@@ -155,6 +155,13 @@ GPUd() bool TrackParametrizationWithError<value_T>::propagateTo(value_t xk, valu
 
 //______________________________________________________________
 template <typename value_T>
+GPUd() bool TrackParametrizationWithError<value_T>::testRotate(value_t) const
+{
+  // no ops
+  return true;
+}
+//______________________________________________________________
+template <typename value_T>
 GPUd() bool TrackParametrizationWithError<value_T>::rotate(value_t alpha)
 {
   // rotate to alpha frame
