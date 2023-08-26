@@ -42,8 +42,13 @@ if(HIP_ENABLED)
                          VertexerTraitsGPU.hip.cxx
                          Utils.hip.cxx
                  PUBLIC_INCLUDE_DIRECTORIES ../
+                 PRIVATE_INCLUDE_DIRECTORIES
+                       ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/Base/hip
+                       ${CMAKE_SOURCE_DIR}/DataFormats/Reconstruction/src
                  PUBLIC_LINK_LIBRARIES O2::ITStracking
                                        O2::GPUTracking
+                                       O2::SimulationDataFormat
+                                       O2::ReconstructionDataFormats
                                        hip::host
                                        hip::device
                                        hip::hipcub
@@ -56,4 +61,5 @@ if(HIP_ENABLED)
     # Need to add gpu target also to link flags due to gpu-rdc option
     target_link_options(${targetName} PUBLIC ${O2_HIP_CMAKE_LINK_FLAGS})
   endif()
+set_target_hip_arch(${targetName})
 endif()
