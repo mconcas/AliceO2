@@ -18,9 +18,6 @@
 #include "ITStrackingGPU/TimeFrameGPU.h"
 #include "ITStrackingGPU/TracerGPU.h"
 
-#include "TrackParametrization.cxx"
-#include "TrackParametrizationWithError.cxx"
-
 #include <unistd.h>
 #include <thread>
 
@@ -51,6 +48,7 @@
 #define GPUCA_KRNL_BACKEND_CLASS GPUReconstructionHIPBackend
 // clang-format on
 #endif
+
 #include "GPUChainITS.h"
 
 namespace o2

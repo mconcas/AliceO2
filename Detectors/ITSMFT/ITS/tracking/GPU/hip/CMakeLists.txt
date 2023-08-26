@@ -45,6 +45,7 @@ if(HIP_ENABLED)
                  PRIVATE_INCLUDE_DIRECTORIES
                        ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/Base/hip
                        ${CMAKE_SOURCE_DIR}/DataFormats/Reconstruction/src
+                       ${CMAKE_SOURCE_DIR}/Detectors/Base/src
                  PUBLIC_LINK_LIBRARIES O2::ITStracking
                                        O2::GPUTracking
                                        O2::SimulationDataFormat
