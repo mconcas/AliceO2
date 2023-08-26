@@ -142,7 +142,7 @@ GPUd() bool fitTrack(TrackITSExt& track,
       continue;
     }
     const TrackingFrameInfo& trackingHit = tfInfos[iLayer][track.getClusterIndex(iLayer)];
-    if (!track.o2::track::TrackParCovF::testRotate(trackingHit.alphaTrackingFrame)) {
+    if (!track.o2::track::TrackParCovF::rotate(trackingHit.alphaTrackingFrame)) {
       return false;
     }
     //   if (!prop->propagateToX(track, trackingHit.xTrackingFrame,
