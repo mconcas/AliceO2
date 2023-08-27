@@ -49,8 +49,6 @@
 // clang-format on
 #endif
 
-#include "GPUChainITS.h"
-
 namespace o2
 {
 namespace its
@@ -61,6 +59,13 @@ using constants::MB;
 namespace gpu
 {
 using utils::checkGPUError;
+
+void* DefaultGPUAllocator::allocate(size_t size)
+{
+  LOGP(info, "Called DefaultGPUAllocator::allocate with size {}", size);
+  return nullptr; // to be implemented
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////
 // GpuChunk
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -335,8 +340,7 @@ template <int nLayers>
 void TimeFrameGPU<nLayers>::allocMemAsync(void** ptr, size_t size, Stream* strPtr, bool extAllocator)
 {
   if (extAllocator) {
-    LOGP(debug, "Calling external allocator on {} chain and {} reconstruction", (void*)mChain, (void*)mChain->rec());
-    *ptr = mChain->rec()->AllocateUnmanagedMemory(size, o2::gpu::GPUMemoryResource::MEMORY_GPU);
+    *ptr = mAllocator->allocate(size);
   } else {
     LOGP(debug, "Calling default CUDA allocator");
     checkGPUError(cudaMallocAsync(reinterpret_cast<void**>(ptr), size, strPtr->get()));
@@ -344,9 +348,9 @@ void TimeFrameGPU<nLayers>::allocMemAsync(void** ptr, size_t size, Stream* strPt
 }
 
 template <int nLayers>
-const o2::base::Propagator* TimeFrameGPU<nLayers>::getChainPropagator()
+void TimeFrameGPU<nLayers>::setDevicePropagator(const o2::base::PropagatorImpl<float>* propagator)
 {
-  return mChain->processorsShadow()->calibObjects.o2Propagator;
+  mPropagatorDevice = propagator;
 }
 
 template <int nLayers>

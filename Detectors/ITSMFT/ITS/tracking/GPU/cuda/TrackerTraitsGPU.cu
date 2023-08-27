@@ -41,8 +41,8 @@
 #include "GPUCommonAlgorithmThrust.h"
 
 #ifndef __HIPCC__
-  #define THRUST_NAMESPACE thrust::cuda
-  #include "GPUReconstructionCUDADef.h"
+#define THRUST_NAMESPACE thrust::cuda
+#include "GPUReconstructionCUDADef.h"
 #else
 #define THRUST_NAMESPACE thrust::hip
 // clang-format off
@@ -64,7 +64,7 @@
 #define GPUCA_KRNL_BACKEND_CLASS GPUReconstructionHIPBackend
 // clang-format on
 #endif
-#include "GPUConstantMem.h"
+// #include "GPUConstantMem.h"
 
 // Files for propagation with material
 #include "MatLayerCylSet.cxx"
@@ -73,7 +73,7 @@
 // O2 track model
 #include "TrackParametrization.cxx"
 #include "TrackParametrizationWithError.cxx"
-#include "Propagator.cxx"
+// #include "Propagator.cxx"
 
 namespace o2
 {
@@ -84,7 +84,6 @@ using namespace constants::its2;
 
 namespace gpu
 {
-
 GPUd() const int4 getBinsRect(const Cluster& currentCluster, const int layerIndex,
                               const o2::its::IndexTableUtils& utils,
                               const float z1, const float z2, float maxdeltaz, float maxdeltaphi)
@@ -174,12 +173,15 @@ GPUd() bool fitTrack(TrackITSExt& track,
     if (!track.o2::track::TrackParCovF::rotate(trackingHit.alphaTrackingFrame)) {
       return false;
     }
-      if (!prop->propagateToX(track, trackingHit.xTrackingFrame,
-                              prop->getNominalBz(),
-                              o2::base::PropagatorImpl<float>::MAX_SIN_PHI,
-                              o2::base::PropagatorImpl<float>::MAX_STEP, matCorrType)) {
-        return false;
-      }
+    if (debugPrint) {
+      track.print();
+    }
+    // if (!prop->propagateToX(track, trackingHit.xTrackingFrame,
+    //                         prop->getNominalBz(),
+    //                         o2::base::PropagatorImpl<float>::MAX_SIN_PHI,
+    //                         o2::base::PropagatorImpl<float>::MAX_STEP, matCorrType)) {
+    //   return false;
+    // }
     //   // To be implemented
     //   if (matCorrType == o2::base::PropagatorF::MatCorrType::USEMatCorrNONE) {
     //     // float radl = 9.36f; // Radiation length of Si [cm]
@@ -676,7 +678,6 @@ GPUg() void fitTracksKernel(
   const o2::base::Propagator* propagator)
 {
   o2::track::TrackParCovF track;
-  printf("+++++> %f", track.getEta());
   for (int iCurrentRoadIndex = blockIdx.x * blockDim.x + threadIdx.x; iCurrentRoadIndex < nRoads; iCurrentRoadIndex += blockDim.x * gridDim.x) {
     auto& currentRoad{roads[iCurrentRoadIndex]};
     int clusters[nLayers];
@@ -1081,12 +1082,7 @@ void TrackerTraitsGPU<nLayers>::findRoadsHybrid(const int iteration)
 template <int nLayers>
 void TrackerTraitsGPU<nLayers>::findTracksHybrid(const int iteration)
 {
-  // LOGP(info, "========================");
-  // mTimeFrameGPU->getCellSeeds()[0][0].print();
-  // mTimeFrameGPU->getCellSeeds()[1][0].print();
-  // mTimeFrameGPU->getCellSeeds()[2][0].print();
-  // mTimeFrameGPU->getCellSeeds()[3][0].print();
-  // LOGP(info, "========================");
+  LOGP(info, "until here all good.");
   gpu::fitTracksKernel<<<1, 1>>>(mTimeFrameGPU->getDeviceArrayClusters(),          // Cluster** foundClusters,
                                  mTimeFrameGPU->getDeviceArrayUnsortedClusters(),  // Cluster** foundUnsortedClusters,
                                  mTimeFrameGPU->getDeviceArrayTrackingFrameInfo(), // TrackingFrameInfo** foundTrackingFrameInfo,
@@ -1098,7 +1094,7 @@ void TrackerTraitsGPU<nLayers>::findTracksHybrid(const int iteration)
                                  mTimeFrameGPU->getRoads().size(),                 // const size_t nRoads,
                                  mTrkParams[0].MaxChi2ClusterAttachment,           // float maxChi2ClusterAttachment,
                                  mTrkParams[0].MaxChi2NDF,                         // float maxChi2NDF,
-                                 mTimeFrameGPU->getChainPropagator());             // const o2::base::Propagator* propagator
+                                 mTimeFrameGPU->getDevicePropagator());            // const o2::base::Propagator* propagator
 }
 
 template class TrackerTraitsGPU<7>;
