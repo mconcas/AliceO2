@@ -64,7 +64,7 @@
 #define GPUCA_KRNL_BACKEND_CLASS GPUReconstructionHIPBackend
 // clang-format on
 #endif
-// #include "GPUConstantMem.h"
+#include "GPUConstantMem.h"
 
 // Files for propagation with material
 #include "MatLayerCylSet.cxx"
@@ -73,7 +73,7 @@
 // O2 track model
 #include "TrackParametrization.cxx"
 #include "TrackParametrizationWithError.cxx"
-// #include "Propagator.cxx"
+#include "Propagator.cxx"
 
 namespace o2
 {
