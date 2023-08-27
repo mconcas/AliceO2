@@ -92,7 +92,7 @@ o2::its::TimeFrame* GPUChainITS::GetITSTimeframe()
   mFrameworkAllocator.reset(new o2::its::GPUFrameworkExternalAllocator);
   mFrameworkAllocator->setReconstructionFramework(rec());
   mITSTimeFrame->setExternalAllocator(mFrameworkAllocator.get());
-mITSTimeFrame->setDevicePropagator(processorsShadow()->calibObjects.o2Propagator);
+  mITSTimeFrame->setDevicePropagator(processorsShadow()->calibObjects.o2Propagator);
   return mITSTimeFrame.get();
 }
 
