@@ -39,6 +39,11 @@ o2_add_library(ITStrackingCUDA
                        ${CMAKE_SOURCE_DIR}/Detectors/TRD/base/include           # "TRDBase/GeometryFlat.h"
                        ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/Definitions
                        ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/Merger
+                       ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/TPCConvert
+                       ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/DataCompression
+                       ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/ITS
+                       ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/TPCClusterFinder
+                       ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/Refit
                PUBLIC_LINK_LIBRARIES O2::ITStracking
                                      O2::SimConfig
                                      O2::SimulationDataFormat
