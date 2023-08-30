@@ -18,21 +18,13 @@
 #include "ITSMFTReconstruction/Clusterer.h"
 #include "SimulationDataFormat/MCTruthContainer.h"
 #include "CommonDataFormat/InteractionRecord.h"
+#include "ITSMFTReconstruction/BoundingBox.h"
 #include <cuda.h>
 
 #ifdef WITH_OPENMP
 #include <omp.h>
 #endif
 using namespace o2::itsmft;
-
-namespace o2::itsmft::gpu
-{
-// Empty CUDA kernel
-__global__ void empty_kernel()
-{
-  printf("Hello world from gpu\n");
-}
-} // namespace o2::itsmft::gpu
 
 //__________________________________________________
 void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClus,
@@ -59,7 +51,14 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
     // pre-fetch all non-empty chips of current ROF
     ChipPixelData* curChipData = nullptr;
     mFiredChipsPtr.clear();
+
+    // NOTE: should be total number of pixels fired in ROF
     size_t nPix = 0;
+
+    // NOTE: cycle until no more chips fired in ROF 
+
+    // NOTE: not really sure how getNextChipData works tbh. should not matter for now
+    // NOTE: does it only return chips that fired?
     while ((curChipData = reader.getNextChipData(mChips))) {
       mFiredChipsPtr.push_back(curChipData);
       nPix += curChipData->getData().size();
@@ -68,12 +67,14 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
     auto& rof = vecROFRec->emplace_back(reader.getInteractionRecord(), vecROFRec->size(), compClus->size(), 0); // create new ROF
 
     uint16_t nFired = mFiredChipsPtr.size();
+    // std::cout << "FIRED CHIPS: " << nFired << std::endl;
     if (!nFired) {
       if (autoDecode) {
         continue;
       }
       break; // just 1 ROF was asked to be processed
     }
+    // NOTE: probably start (at least) one thread per chip. less threads needed if less chips fired
     if (nFired < nThreads) {
       nThreads = nFired;
     }
@@ -164,7 +165,34 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
   reader.setDecodeNextAuto(autoDecode);                      // restore setting
 #ifdef _PERFORM_TIMING_
   mTimer.Stop();
+  LOGP(info, "Time to finish: {}s", mTimer.RealTime());
 #endif
+  std::vector<BoundingBox2> outClusterBBoxes;
+  std::vector<std::vector<PixelData>> outClusterPixels;
+  mToyProblem.executeToyProblem(outClusterBBoxes, outClusterPixels);
+  std::cout << "TOY PROBLEM PRODUCED: " << outClusterBBoxes.size() << " BOUNDING BOXES." << std::endl;
+  std::cout << "TOY PROBLEM PRODUCED: " << outClusterPixels.size() << " PIXEL LISTS." << std::endl;
+
+  std::vector<BBox> originalClusterBBoxes;
+
+  for (const auto& outBox : outClusterBBoxes) {
+    BBox newBox(outBox.chipID);
+    newBox.rowMin = outBox.rowMin;
+    newBox.rowMax = outBox.rowMax;
+    newBox.colMin = outBox.colMin;
+    newBox.colMax = outBox.colMax;
+    originalClusterBBoxes.push_back(newBox);
+  }
+
+  ClustererThread clustererThread;
+  ConstMCTruth labelsDigPtr = *(labelsCl ? reader.getDigitsMCTruth() : nullptr);
+  int nlab;
+  clustererThread.fetchMCLabels(, labelsDigPtr, nlab);
+
+  for (int i = 0; i < originalClusterBBoxes.size() && i < outClusterPixels.size(); ++i) {
+    this->streamCluster(outClusterPixels[i], const std::array<Label, MaxLabels>* lblBuff, originalClusterBBoxes[i], mPattIdConverter,
+                        compClus, patterns, labelsCl, nlab)
+  }
 }
 
 //__________________________________________________
@@ -176,6 +204,10 @@ void Clusterer::ClustererThread::process(uint16_t chip, uint16_t nChips, CompClu
   }
   for (int ic = 0; ic < nChips; ic++) {
     auto* curChipData = parent->mFiredChipsPtr[chip + ic];
+    #pragma omp critical
+    {
+      parent->mToyProblem.addChipAsync(curChipData);
+    }
     auto chipID = curChipData->getChipID();
     if (parent->mMaxBCSeparationToMask > 0) { // mask pixels fired from the previous ROF
       const auto& chipInPrevROF = parent->mChipsOld[chipID];
@@ -328,12 +360,6 @@ void Clusterer::ClustererThread::finishChipSingleHitFast(uint32_t hit, ChipPixel
 //__________________________________________________
 Clusterer::Clusterer() : mPattIdConverter()
 {
-  gpu::empty_kernel<<<1, 1>>>();
-
-  // Check for any errors
-  cudaError_t cudaerr = cudaDeviceSynchronize();
-  if (cudaerr != cudaSuccess)
-    printf("Kernel launch failed with error \"%s\".\n", cudaGetErrorString(cudaerr));
 #ifdef _PERFORM_TIMING_
   mTimer.Stop();
   mTimer.Reset();

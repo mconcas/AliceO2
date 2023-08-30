@@ -31,6 +31,9 @@ o2_add_library(ITSMFTReconstruction
                        src/RawPixelDecoder.cxx
                        src/CTFCoder.cxx
                        src/DecodingStat.cxx
+                       src/ToyProblem.cxx
+                       src/ExpansionRegionExtractor.cxx
+                       src/ClusterAlgorithm.cu
                PUBLIC_LINK_LIBRARIES O2::ITSMFTBase
                                      O2::CommonDataFormat
                                      O2::DetectorsRaw
@@ -61,7 +64,8 @@ o2_target_root_dictionary(
           include/ITSMFTReconstruction/PayLoadCont.h
           include/ITSMFTReconstruction/PayLoadSG.h
           include/ITSMFTReconstruction/DecodingStat.h
-          include/ITSMFTReconstruction/RUInfo.h)
+          include/ITSMFTReconstruction/RUInfo.h
+          include/ITSMFTReconstruction/BoundingBox.h)
 
 if (OpenMP_CXX_FOUND)
     target_compile_definitions(${targetName} PRIVATE WITH_OPENMP)

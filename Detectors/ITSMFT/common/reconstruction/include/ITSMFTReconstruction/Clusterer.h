@@ -33,6 +33,8 @@
 #include "ITSMFTReconstruction/LookUp.h"
 #include "SimulationDataFormat/MCCompLabel.h"
 #include "CommonConstants/LHCConstants.h"
+#include "ITSMFTReconstruction/ToyProblem.h"
+#include "ITSMFTReconstruction/ExpansionRegionExtractor.h"
 #include "Rtypes.h"
 
 #ifdef _PERFORM_TIMING_
@@ -258,6 +260,8 @@ class Clusterer
 
   TStopwatch mTimer;
   TStopwatch mTimerMerge;
+
+  ToyProblem mToyProblem{std::make_unique<ExpansionRegionExtractor>()};
 };
 
 template <typename VCLUS, typename VPAT>
@@ -301,7 +305,6 @@ void Clusterer::streamCluster(const std::vector<PixelData>& pixbuf, const std::a
   }
   compClusPtr->emplace_back(row, col, pattID, bbox.chipID);
 }
-
 } // namespace itsmft
 } // namespace o2
 #endif /* ALICEO2_ITS_CLUSTERER_H */
