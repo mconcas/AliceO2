@@ -54,6 +54,7 @@
 #include <FT3Simulation/Detector.h>
 #include <FCTSimulation/Detector.h>
 #include <Alice3DetectorsPassive/Pipe.h>
+#include <IOTOFSimulation/Detector.h>
 #endif
 
 void finalize_geometry(FairRunSim* run);
@@ -212,6 +213,11 @@ void build_geometry(FairRunSim* run = nullptr)
   if (isActivated("FCT")) {
     // ALICE 3 FCT
     run->AddModule(new o2::fct::Detector(isReadout("FCT")));
+  }
+
+  if (isActivated("TF3")) {
+    // ALICE 3 tofs
+    run->AddModule(new o2::iotof::Detector(isReadout("TF3")));
   }
 #endif
 
