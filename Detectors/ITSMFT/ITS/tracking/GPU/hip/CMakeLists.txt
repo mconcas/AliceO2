@@ -27,7 +27,7 @@ if(HIP_ENABLED)
   install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${baseTargetName}
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-  # set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} ${O2_HIP_CMAKE_CXX_FLAGS} -fgpu-rdc")
+  set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} ${O2_HIP_CMAKE_CXX_FLAGS} -fgpu-rdc")
   message(STATUS "Building ITS HIP tracker")
   o2_add_library(ITStrackingHIP
                  SOURCES ClusterLinesGPU.hip

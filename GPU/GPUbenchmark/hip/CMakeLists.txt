@@ -31,6 +31,12 @@ o2_add_executable(gpu-memory-benchmark-hip
                                         Boost::program_options
                                         ROOT::Tree
                   TARGETVARNAME targetName)
+# >:-)
+include_directories(${Boost_INCLUDE_DIRS})
+add_executable(alternative-gpu-memory-benchmark-hip benchmark.hip Kernels.hip)
+target_link_libraries(alternative-gpu-memory-benchmark-hip Boost::program_options ROOT::Tree)
+install(TARGETS alternative-gpu-memory-benchmark-hip RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
 if(O2_HIP_CMAKE_LINK_FLAGS)
   # Need to add gpu target also to link flags due to gpu-rdc option
   target_link_options(${targetName} PUBLIC ${O2_HIP_CMAKE_LINK_FLAGS})
