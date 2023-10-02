@@ -9,6 +9,10 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
+#ifndef O2_CLUSTER_CHECK_STUDY_H
+#define O2_CLUSTER_CHECK_STUDY_H
+
+#include <Framework/DataProcessorSpec.h>
 #include "ITSStudies/ITSStudiesConfigParam.h"
 
 namespace o2
@@ -17,15 +21,8 @@ namespace its
 {
 namespace study
 {
-static auto& sAvgClusSizeParamITS = o2::its::study::ITSAvgClusSizeParamConfig::Instance();
-static auto& sCheckTracksParamsITS = o2::its::study::ITSCheckTracksParamConfig::Instance();
-static auto& sImpactParameterParamsITS = o2::its::study::ITSImpactParameterParamConfig::Instance();
-static auto& sClustersCheckParamsITS = o2::its::study::ITSClustersCheckParamConfig::Instance();
-
-O2ParamImpl(o2::its::study::ITSAvgClusSizeParamConfig);
-O2ParamImpl(o2::its::study::ITSCheckTracksParamConfig);
-O2ParamImpl(o2::its::study::ITSImpactParameterParamConfig);
-O2ParamImpl(o2::its::study::ITSClustersCheckParamConfig);
-} // namespace study
+o2::framework::DataProcessorSpec getClusterUsageStudy(bool useMC = false);
+}
 } // namespace its
 } // namespace o2
+#endif

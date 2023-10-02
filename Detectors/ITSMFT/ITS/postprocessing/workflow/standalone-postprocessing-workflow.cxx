@@ -16,12 +16,13 @@
 #include "Framework/CompletionPolicyHelpers.h"
 #include "GlobalTrackingWorkflowHelpers/InputHelper.h"
 #include "DetectorsRaw/HBFUtilsInitializer.h"
+#include "Steer/MCKinematicsReader.h"
 
 // Include studies hereafter
 #include "ITSStudies/ImpactParameter.h"
 #include "ITSStudies/AvgClusSize.h"
 #include "ITSStudies/TrackCheck.h"
-#include "Steer/MCKinematicsReader.h"
+#include "ITSStudies/ClusterCheck.h"
 
 using namespace o2::framework;
 using GID = o2::dataformats::GlobalTrackID;
@@ -44,6 +45,7 @@ void customize(std::vector<ConfigParamSpec>& workflowOptions)
     {"cluster-size-study", VariantType::Bool, false, {"Perform the average cluster size study"}},
     {"track-study", VariantType::Bool, false, {"Perform the track study"}},
     {"impact-parameter-study", VariantType::Bool, false, {"Perform the impact parameter study"}},
+    {"cluster-usage-study", VariantType::Bool, false, {"Perform the cluster usage study"}},
     {"configKeyValues", VariantType::String, "", {"Semicolon separated key=value strings ..."}}};
   o2::raw::HBFUtilsInitializer::addConfigOption(options, "o2_tfidinfo.root");
   std::swap(workflowOptions, options);
@@ -87,6 +89,11 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
     anyStudy = true;
     specs.emplace_back(o2::its::study::getTrackCheckStudy(GID::getSourcesMask("ITS"), GID::getSourcesMask("ITS"), useMC, mcKinematicsReader));
   }
+  if (configcontext.options().get<bool>("cluster-usage-study")) {
+    anyStudy = true;
+    specs.emplace_back(o2::its::study::getClusterUsageStudy(useMC));
+  }
+
   if (!anyStudy) {
     LOGP(info, "No study selected, dryrunning");
   }

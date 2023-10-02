@@ -83,6 +83,13 @@ struct ITSImpactParameterParamConfig : public o2::conf::ConfigurableParamHelper<
   O2ParamDef(ITSImpactParameterParamConfig, "ITSImpactParameterParam");
 };
 
+struct ITSClustersCheckParamConfig : public o2::conf::ConfigurableParamHelper<ITSClustersCheckParamConfig> {
+  std::string outFileName = "its_ClustersCheck.root";
+  bool useMC = false;
+
+  O2ParamDef(ITSClustersCheckParamConfig, "ITSClustersCheckParam");
+};
+
 } // namespace study
 } // namespace its
 } // namespace o2
