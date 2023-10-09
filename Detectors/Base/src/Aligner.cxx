@@ -66,7 +66,7 @@ void Aligner::applyAlignment(long timestamp, DetID::mask_t addMask) const
       skipped.set(id);
     }
   }
-  pw->AddOverlap(gGeoManager->GetVolume("ITSUWrapVol0"));
+  // pw->AddOverlap(gGeoManager->GetVolume("ITSUWrapVol0"));
   pw->CloseGeometry();
   gGeoManager->SetUseParallelWorldNav(true);
   std::string log = fmt::format("Alignment from {} for timestamp {}: ", o2::base::NameConf::getCCDBServer(), timestamp);
