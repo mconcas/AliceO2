@@ -131,16 +131,15 @@ class TrackITS : public o2::track::TrackParCov
   ClassDefNV(TrackITS, 5);
 };
 
-template <int MaxClusters = 8>
+template <int maxClusters = TrackITS::MaxClusters>
 class TrackITSExtN : public TrackITS
 {
   ///< heavy version of TrackITS, with clusters embedded
  public:
-  // static constexpr int MaxClusters = 16; /// Prepare for overlaps and new detector configurations
   using TrackITS::TrackITS; // inherit base constructors
-
+  GPUh() TrackITSExtN() { std::memset(mIndex.data(), -1, sizeof(mIndex)); }
   GPUh() TrackITSExtN(o2::track::TrackParCov&& parCov, short ncl, float chi2,
-                     o2::track::TrackParCov&& outer, o2::gpu::gpustd::array<int, MaxClusters> cls)
+                      o2::track::TrackParCov&& outer, o2::gpu::gpustd::array<int, maxClusters> cls)
     : TrackITS(parCov, chi2, outer), mIndex{cls}
   {
     std::memset(mIndex.data(), -1, sizeof(mIndex));
@@ -148,14 +147,18 @@ class TrackITSExtN : public TrackITS
   }
 
   GPUh() TrackITSExtN(o2::track::TrackParCov& parCov, short ncl, float chi2, std::uint32_t rof,
-                     o2::track::TrackParCov& outer, o2::gpu::gpustd::array<int, MaxClusters> cls)
+                      o2::track::TrackParCov& outer, o2::gpu::gpustd::array<int, maxClusters> cls)
     : TrackITS(parCov, chi2, outer), mIndex{cls}
   {
     std::memset(mIndex.data(), -1, sizeof(mIndex));
     setNumberOfClusters(ncl);
   }
 
-  GPUdDefault() TrackITSExtN(const TrackITSExtN& t) = default;
+  GPUd() TrackITSExtN(const TrackITSExtN& t) : TrackITS(t)
+  {
+    for (size_t i{0}; i < mIndex.size(); ++i)
+      mIndex[i] = t.mIndex[i];
+  }
 
   void setClusterIndex(int l, int i)
   {
@@ -177,17 +180,17 @@ class TrackITSExtN : public TrackITS
     mIndex[layer] = idx;
   }
 
-  GPUh() o2::gpu::gpustd::array<int, MaxClusters>& getClusterIndexes()
+  GPUh() o2::gpu::gpustd::array<int, maxClusters>& getClusterIndexes()
   {
     return mIndex;
   }
 
  private:
-  o2::gpu::gpustd::array<int, MaxClusters> mIndex; ///< Indices of associated clusters
+  o2::gpu::gpustd::array<int, maxClusters> mIndex; ///< Indices of associated clusters
   ClassDefNV(TrackITSExtN, 2);
 };
 
-using TrackITSExt = TrackITSExtN<8>;
+using TrackITSExt = TrackITSExtN<TrackITS::MaxClusters>;
 } // namespace its
 } // namespace o2
 #endif /* ALICEO2_ITS_TRACKITS_H */

@@ -306,9 +306,12 @@ void Tracker::rectifyClusterIndices()
 {
   for (int iROF{0}; iROF < mTimeFrame->getNrof(); ++iROF) {
     for (auto& track : mTimeFrame->getTracks(iROF)) {
-      for (int iCluster = 0; iCluster < TrackITSExt::MaxClusters; ++iCluster) {
+      for (int iCluster = 0; iCluster < TrackITS::MaxClusters; ++iCluster) {
         const int index = track.getClusterIndex(iCluster);
         if (index != constants::its::UnusedIndex) {
+          if (iCluster == 7) {
+            LOGP(info, "Cluster index: {}", index);
+          }
           track.setExternalClusterIndex(iCluster, mTimeFrame->getClusterExternalIndex(iCluster, index));
         }
       }
