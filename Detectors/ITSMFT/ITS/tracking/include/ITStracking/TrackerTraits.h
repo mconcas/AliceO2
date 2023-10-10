@@ -44,9 +44,9 @@ class GPUChainITS;
 }
 namespace its
 {
-
-class TrackITSExt;
-typedef std::function<int(o2::gpu::GPUChainITS&, std::vector<Road<5>>& roads, std::vector<const Cluster*>&, std::vector<const Cell*>&, const std::vector<std::vector<TrackingFrameInfo>>&, std::vector<TrackITSExt>&)> FuncRunITSTrackFit_t;
+template <int>
+class TrackITSExtN;
+typedef std::function<int(o2::gpu::GPUChainITS&, std::vector<Road<5>>& roads, std::vector<const Cluster*>&, std::vector<const Cell*>&, const std::vector<std::vector<TrackingFrameInfo>>&, std::vector<TrackITSExtN<>>&)> FuncRunITSTrackFit_t;
 
 class TrackerTraits
 {
@@ -61,9 +61,9 @@ class TrackerTraits
   virtual void findTracks();
   virtual void extendTracks(const int iteration);
   virtual void findShortPrimaries();
-  virtual void refitTracks(const int iteration, const std::vector<std::vector<TrackingFrameInfo>>&, std::vector<TrackITSExt>&);
+  virtual void refitTracks(const int iteration, const std::vector<std::vector<TrackingFrameInfo>>&, std::vector<TrackITSExtN<>>&);
   virtual void setBz(float bz);
-  virtual bool trackFollowing(TrackITSExt* track, int rof, bool outward, const int iteration);
+  virtual bool trackFollowing(TrackITSExtN<>* track, int rof, bool outward, const int iteration);
 
   void UpdateTrackingParameters(const std::vector<TrackingParameters>& trkPars);
   TimeFrame* getTimeFrame() { return mTimeFrame; }
@@ -98,7 +98,7 @@ class TrackerTraits
  private:
   void traverseCellsTree(const int, const int);
   track::TrackParCov buildTrackSeed(const Cluster& cluster1, const Cluster& cluster2, const Cluster& cluster3, const TrackingFrameInfo& tf3);
-  bool fitTrack(TrackITSExt& track, int start, int end, int step, float chi2clcut = o2::constants::math::VeryBig, float chi2ndfcut = o2::constants::math::VeryBig, float maxQoverPt = o2::constants::math::VeryBig, int nCl = 0);
+  bool fitTrack(TrackITSExtN<>& track, int start, int end, int step, float chi2clcut = o2::constants::math::VeryBig, float chi2ndfcut = o2::constants::math::VeryBig, float maxQoverPt = o2::constants::math::VeryBig, int nCl = 0);
 
   int mNThreads = 1;
   bool mApplySmoothing = false;
