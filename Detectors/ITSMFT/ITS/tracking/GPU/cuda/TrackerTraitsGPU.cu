@@ -779,19 +779,19 @@ GPUg() void fitTracksKernel(
     }
     temporaryTrack.resetCovariance();
     temporaryTrack.setChi2(0);
-    fitSuccess = fitTrack(temporaryTrack,           // TrackITSExt& track,
-                          0,                        // int lastLayer,
-                          7,                        // int firstLayer,
-                          1,                        // int firstCluster,
-                          Bz,                       // float Bz,
-                          maxChi2ClusterAttachment, // float maxChi2ClusterAttachment,
-                          maxChi2NDF,               // float maxChi2NDF,
-                          o2::constants::math::VeryBig,                          // float maxChi2PerCluster,
-                                                    // int maxIterations,
-                                                    // TrackingFrameInfo** trackingFrameInfo,
-                                                    // const o2::base::Propagator* propagator,
-                                                    // o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT
-    );                                              // Debug print
+    fitSuccess = fitTrack(temporaryTrack,               // TrackITSExt& track,
+                          0,                            // int lastLayer,
+                          7,                            // int firstLayer,
+                          1,                            // int firstCluster,
+                          Bz,                           // float Bz,
+                          maxChi2ClusterAttachment,     // float maxChi2ClusterAttachment,
+                          maxChi2NDF,                   // float maxChi2NDF,
+                          o2::constants::math::VeryBig, // float maxChi2PerCluster,
+                                                        // int maxIterations,
+                                                        // TrackingFrameInfo** trackingFrameInfo,
+                                                        // const o2::base::Propagator* propagator,
+                                                        // o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT
+    );                                                  // Debug print
 
     if (!fitSuccess) {
       continue;
