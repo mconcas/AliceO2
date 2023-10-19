@@ -751,10 +751,10 @@ GPUg() void fitTracksKernel(
     }
 
     /// Track seed preparation. Clusters are numbered progressively from the innermost going outward.
-    const auto& cluster1_glo = foundUnsortedClusters[lastCellLevel][clusters[lastCellLevel]];
-    const auto& cluster2_glo = foundUnsortedClusters[lastCellLevel + 1][clusters[lastCellLevel + 1]];
-    const auto& cluster3_glo = foundUnsortedClusters[lastCellLevel + 2][clusters[lastCellLevel + 2]];
-    const auto& cluster3_tf = foundTrackingFrameInfo[lastCellLevel + 2][clusters[lastCellLevel + 2]];
+    // const auto& cluster1_glo = foundUnsortedClusters[lastCellLevel][clusters[lastCellLevel]];
+    // const auto& cluster2_glo = foundUnsortedClusters[lastCellLevel + 1][clusters[lastCellLevel + 1]];
+    // const auto& cluster3_glo = foundUnsortedClusters[lastCellLevel + 2][clusters[lastCellLevel + 2]];
+    // const auto& cluster3_tf = foundTrackingFrameInfo[lastCellLevel + 2][clusters[lastCellLevel + 2]];
 
     TrackITSExt temporaryTrack{trackSeeds[lastCellLevel][lastCellIndex]};
     temporaryTrack.setChi2(trackSeedsChi2[lastCellLevel][lastCellIndex]);
@@ -769,16 +769,40 @@ GPUg() void fitTracksKernel(
                                maxChi2ClusterAttachment,                                     // float maxChi2ClusterAttachment,
                                maxChi2NDF,                                                   // float maxChi2NDF,
                                1.e3,                                                         // float maxChi2PerCluster,
-                               3,                                                            // int maxIterations,
+                               3,                                                            // int nCl,
                                foundTrackingFrameInfo,                                       // TrackingFrameInfo** trackingFrameInfo,
                                propagator,                                                   // const o2::base::Propagator* propagator,
                                o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrNONE, // o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT
-                               iCurrentRoadIndex < 5);
-    // if (fitSuccess) {
-    //   printf("Fit success\n");
-    // } else {
-    //   printf("Fit failed\n");
-    // }
+                               iCurrentRoadIndex < 5);                                       // Debug print
+    if (!fitSuccess) {
+      continue;
+    }
+    temporaryTrack.resetCovariance();
+    temporaryTrack.setChi2(0);
+    fitSuccess = fitTrack(temporaryTrack,           // TrackITSExt& track,
+                          0,                        // int lastLayer,
+                          7,                        // int firstLayer,
+                          1,                        // int firstCluster,
+                          Bz,                       // float Bz,
+                          maxChi2ClusterAttachment, // float maxChi2ClusterAttachment,
+                          maxChi2NDF,               // float maxChi2NDF,
+                          o2::constants::math::VeryBig,                          // float maxChi2PerCluster,
+                                                    // int maxIterations,
+                                                    // TrackingFrameInfo** trackingFrameInfo,
+                                                    // const o2::base::Propagator* propagator,
+                                                    // o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrLUT
+    );                                              // Debug print
+
+    if (!fitSuccess) {
+      continue;
+    }
+    temporaryTrack.getParamOut() = temporaryTrack;
+    temporaryTrack.resetCovariance();
+    temporaryTrack.setChi2(0);
+    fitSuccess = fitTrack(temporaryTrack, 6 /* NL - 1 */, -1, -1, Bz, maxChi2ClusterAttachment, maxChi2NDF, 50.);
+    if (!fitSuccess) {
+      continue;
+    }
   }
 }
 
@@ -1103,7 +1127,7 @@ void TrackerTraitsGPU<nLayers>::findRoadsHybrid(const int iteration)
 template <int nLayers>
 void TrackerTraitsGPU<nLayers>::findTracksHybrid(const int iteration)
 {
-  LOGP(info, "propagator device pointer: {}", (void*)mTimeFrameGPU->getDevicePropagator());
+  // LOGP(info, "propagator device pointer: {}", (void*)mTimeFrameGPU->getDevicePropagator());
   gpu::fitTracksKernel<<<1, 1>>>(mTimeFrameGPU->getDeviceArrayClusters(),          // Cluster** foundClusters,
                                  mTimeFrameGPU->getDeviceArrayUnsortedClusters(),  // Cluster** foundUnsortedClusters,
                                  mTimeFrameGPU->getDeviceArrayTrackingFrameInfo(), // TrackingFrameInfo** foundTrackingFrameInfo,
