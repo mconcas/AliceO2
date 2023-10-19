@@ -196,7 +196,7 @@ int GPURecoWorkflowSpec::runITSTracking(o2::framework::ProcessingContext& pc)
   float vertexerElapsedTime{0.f};
   if (mITSRunVertexer) {
     // Run seeding vertexer
-    vertexerElapsedTime = mITSVertexer->clustersToVertices(logger);
+    vertexerElapsedTime = mITSVertexer->clustersToVerticesHybrid(logger);
   } else { // cosmics
     mITSTimeFrame->resetRofPV();
   }
@@ -253,7 +253,7 @@ int GPURecoWorkflowSpec::runITSTracking(o2::framework::ProcessingContext& pc)
 
     mITSTimeFrame->setMultiplicityCutMask(processingMask);
     // Run CA tracker
-    mITSTracker->clustersToTracks(logger, errorLogger);
+    mITSTracker->clustersToTracksHybrid(logger, errorLogger);
     if (mITSTimeFrame->hasBogusClusters()) {
       LOG(warning) << fmt::format(" - The processed timeframe had {} clusters with wild z coordinates, check the dictionaries", mITSTimeFrame->hasBogusClusters());
     }
