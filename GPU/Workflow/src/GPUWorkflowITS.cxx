@@ -274,7 +274,7 @@ int GPURecoWorkflowSpec::runITSTracking(o2::framework::ProcessingContext& pc)
         irFrames.emplace_back(rof.getBCData(), rof.getBCData() + nBCPerTF - 1).info = tracks.size();
       }
 
-       allTrackLabels.reserve(mITSTimeFrame->getTracksLabel(iROF).size()); // should be 0 if not MC
+      allTrackLabels.reserve(mITSTimeFrame->getTracksLabel(iROF).size()); // should be 0 if not MC
       std::copy(mITSTimeFrame->getTracksLabel(iROF).begin(), mITSTimeFrame->getTracksLabel(iROF).end(), std::back_inserter(allTrackLabels));
       // Some conversions that needs to be moved in the tracker internals
       for (unsigned int iTrk{0}; iTrk < tracks.size(); ++iTrk) {
