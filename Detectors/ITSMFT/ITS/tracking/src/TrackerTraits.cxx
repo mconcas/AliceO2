@@ -29,6 +29,9 @@
 #include "ITStracking/Tracklet.h"
 #include "ReconstructionDataFormats/Track.h"
 
+#include "TrackParametrization.cxx"
+#include "TrackParametrizationWithError.cxx"
+
 #ifdef WITH_OPENMP
 #include <omp.h>
 #endif
@@ -333,7 +336,7 @@ void TrackerTraits::computeLayerCells(const int iteration)
               break;
             }
 
-            auto predChi2{track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
+            auto predChi2{track.getPredictedChi2<false>(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
             if (!track.o2::track::TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
               break;
             }
@@ -554,9 +557,9 @@ void TrackerTraits::findTracks()
     }
 
     TrackITSExt temporaryTrack{mTimeFrame->getCellSeeds()[lastCellLevel][lastCellIndex]};
-    if (ri < 5) {
-      temporaryTrack.print();
-    }
+    // if (ri < 5) {
+    //   temporaryTrack.print();
+    // }
     temporaryTrack.setChi2(mTimeFrame->getCellSeedsChi2()[lastCellLevel][lastCellIndex]);
     for (size_t iC = 0; iC < clusters.size(); ++iC) {
       temporaryTrack.setExternalClusterIndex(iC, clusters[iC], clusters[iC] != constants::its::UnusedIndex);
@@ -738,7 +741,7 @@ void TrackerTraits::findShortPrimaries()
       float pvRes{mTrkParams[0].PVres / std::sqrt(float(pvs[iV].getNContributors()))};
       const float posVtx[2]{0.f, pvs[iV].getZ()};
       const float covVtx[3]{pvRes, 0.f, pvRes};
-      float chi2 = temporaryTrack.getPredictedChi2(posVtx, covVtx);
+      float chi2 = temporaryTrack.getPredictedChi2<false>(posVtx, covVtx);
       if (chi2 < bestChi2) {
         if (!temporaryTrack.track::TrackParCov::update(posVtx, covVtx)) {
           continue;
@@ -794,7 +797,7 @@ bool TrackerTraits::fitTrack(TrackITSExt& track, int start, int end, int step, f
       }
     }
 
-    auto predChi2{track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
+    auto predChi2{track.getPredictedChi2<false>(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
     if ((nCl >= 3 && predChi2 > chi2clcut) || predChi2 < 0.f) {
       return false;
     }
@@ -889,7 +892,7 @@ bool TrackerTraits::trackFollowing(TrackITSExt* track, int rof, bool outward, co
             continue;
           }
 
-          auto predChi2{tbuParams.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
+          auto predChi2{tbuParams.getPredictedChi2<false>(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
           if (predChi2 >= track->getChi2() * mTrkParams[iteration].NSigmaCut) {
             continue;
           }
