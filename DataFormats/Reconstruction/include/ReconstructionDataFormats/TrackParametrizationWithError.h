@@ -48,8 +48,8 @@ class TrackParametrizationWithError : public TrackParametrization<value_T>
 
   GPUdDefault() TrackParametrizationWithError(const TrackParametrizationWithError& src) = default;
   GPUdDefault() TrackParametrizationWithError(TrackParametrizationWithError&& src) = default;
-  GPUdDefault() TrackParametrizationWithError& operator=(const TrackParametrizationWithError& src) = default;
-  GPUdDefault() TrackParametrizationWithError& operator=(TrackParametrizationWithError&& src) = default;
+  GPUhdDefault() TrackParametrizationWithError& operator=(const TrackParametrizationWithError& src) = default;
+  GPUhdDefault() TrackParametrizationWithError& operator=(TrackParametrizationWithError&& src) = default;
   GPUdDefault() ~TrackParametrizationWithError() = default;
   using TrackParametrization<value_T>::TrackParametrization;
 
@@ -141,9 +141,7 @@ class TrackParametrizationWithError : public TrackParametrization<value_T>
 
 //__________________________________________________________________________
 template <typename value_T>
-GPUdi() TrackParametrizationWithError<value_T>::TrackParametrizationWithError() : TrackParametrization<value_T>
-{
-}
+GPUdi() TrackParametrizationWithError<value_T>::TrackParametrizationWithError() : TrackParametrization<value_T>{}
 {
 }
 
@@ -151,10 +149,8 @@ GPUdi() TrackParametrizationWithError<value_T>::TrackParametrizationWithError() 
 template <typename value_T>
 GPUdi() TrackParametrizationWithError<value_T>::TrackParametrizationWithError(value_t x, value_t alpha, const params_t& par,
                                                                               const covMat_t& cov, int charge, const PID pid)
-  : TrackParametrization<value_T>
-{
-  x, alpha, par, charge, pid
-}
+  : TrackParametrization<value_T>{
+    x, alpha, par, charge, pid}
 {
   // explicit constructor
   for (int i = 0; i < kCovMatSize; i++) {
