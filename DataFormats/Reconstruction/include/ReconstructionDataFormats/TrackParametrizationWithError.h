@@ -150,7 +150,7 @@ template <typename value_T>
 GPUdi() TrackParametrizationWithError<value_T>::TrackParametrizationWithError(value_t x, value_t alpha, const params_t& par,
                                                                               const covMat_t& cov, int charge, const PID pid)
   : TrackParametrization<value_T>{
-    x, alpha, par, charge, pid}
+      x, alpha, par, charge, pid}
 {
   // explicit constructor
   for (int i = 0; i < kCovMatSize; i++) {
