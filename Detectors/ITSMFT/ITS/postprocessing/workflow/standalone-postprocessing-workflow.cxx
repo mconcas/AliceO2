@@ -16,12 +16,13 @@
 #include "Framework/CompletionPolicyHelpers.h"
 #include "GlobalTrackingWorkflowHelpers/InputHelper.h"
 #include "DetectorsRaw/HBFUtilsInitializer.h"
+#include "Steer/MCKinematicsReader.h"
 
 // Include studies hereafter
 #include "ITSStudies/ImpactParameter.h"
 #include "ITSStudies/AvgClusSize.h"
 #include "ITSStudies/TrackCheck.h"
-#include "Steer/MCKinematicsReader.h"
+#include "ITSStudies/ClusDistribution.h"
 
 using namespace o2::framework;
 using GID = o2::dataformats::GlobalTrackID;
@@ -37,10 +38,12 @@ void customize(std::vector<ConfigParamSpec>& workflowOptions)
 {
   // option allowing to set parameters
   std::vector<o2::framework::ConfigParamSpec> options{
+    {"input-from-upstream", VariantType::Bool, false, {"read clusters from the clusterer"}},
     {"track-sources", VariantType::String, std::string{"ITS,ITS-TPC-TRD-TOF,ITS-TPC-TOF,ITS-TPC,ITS-TPC-TRD"}, {"comma-separated list of track sources to use"}},
     {"cluster-sources", VariantType::String, std::string{"ITS"}, {"comma-separated list of cluster sources to use"}},
     {"disable-root-input", VariantType::Bool, false, {"disable root-files input reader"}},
     {"disable-mc", VariantType::Bool, false, {"disable MC propagation even if available"}},
+    {"cluster-dist-study", VariantType::Bool, false, {"Perform the cluster distributions study"}},
     {"cluster-size-study", VariantType::Bool, false, {"Perform the average cluster size study"}},
     {"track-study", VariantType::Bool, false, {"Perform the track study"}},
     {"impact-parameter-study", VariantType::Bool, false, {"Perform the impact parameter study"}},
@@ -64,27 +67,46 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
   srcTrc |= GID::getSourcesMask("ITS"); // guarantee that we will at least use ITS tracks
   GID::mask_t srcCls = allowedSourcesClus & GID::getSourcesMask(configcontext.options().get<std::string>("cluster-sources"));
 
-  o2::globaltracking::InputHelper::addInputSpecs(configcontext, specs, srcCls, srcTrc, srcTrc, useMC, srcCls, srcTrc);
-  o2::globaltracking::InputHelper::addInputSpecsPVertex(configcontext, specs, useMC);
-  o2::globaltracking::InputHelper::addInputSpecsSVertex(configcontext, specs);
-
   std::shared_ptr<o2::steer::MCKinematicsReader> mcKinematicsReader;
-  if (useMC) {
-    mcKinematicsReader = std::make_shared<o2::steer::MCKinematicsReader>("collisioncontext.root");
-  }
 
   bool anyStudy{false};
   // Declare specs related to studies hereafter
   if (configcontext.options().get<bool>("impact-parameter-study")) {
     anyStudy = true;
+    o2::globaltracking::InputHelper::addInputSpecs(configcontext, specs, srcCls, srcTrc, srcTrc, useMC, srcCls, srcTrc);
+    o2::globaltracking::InputHelper::addInputSpecsPVertex(configcontext, specs, useMC);
+    o2::globaltracking::InputHelper::addInputSpecsSVertex(configcontext, specs);
     specs.emplace_back(o2::its::study::getImpactParameterStudy(srcTrc, srcCls, useMC));
+  }
+  if (configcontext.options().get<bool>("cluster-dist-study")) {
+    anyStudy = true;
+    if (!configcontext.options().get<bool>("input-from-upstream")) {
+      o2::globaltracking::InputHelper::addInputSpecs(configcontext,
+                                                     specs,
+                                                     GID::getSourcesMask("ITS"),
+                                                     GID::getSourcesMask(""),
+                                                     GID::getSourcesMask(""),
+                                                     useMC,
+                                                     GID::getSourcesMask("ITS"),
+                                                     GID::getSourcesMask(""));
+    }
+    specs.emplace_back(o2::its::study::getClusDistributionStudy(GID::getSourcesMask("ITS"), useMC));
   }
   if (configcontext.options().get<bool>("cluster-size-study")) {
     anyStudy = true;
+    o2::globaltracking::InputHelper::addInputSpecs(configcontext, specs, srcCls, srcTrc, srcTrc, useMC, srcCls, srcTrc);
+    o2::globaltracking::InputHelper::addInputSpecsPVertex(configcontext, specs, useMC);
+    o2::globaltracking::InputHelper::addInputSpecsSVertex(configcontext, specs);
+    if (useMC) {
+      mcKinematicsReader = std::make_shared<o2::steer::MCKinematicsReader>("collisioncontext.root");
+    }
     specs.emplace_back(o2::its::study::getAvgClusSizeStudy(srcTrc, srcCls, useMC, mcKinematicsReader));
   }
   if (configcontext.options().get<bool>("track-study")) {
     anyStudy = true;
+    if (useMC) {
+      mcKinematicsReader = std::make_shared<o2::steer::MCKinematicsReader>("collisioncontext.root");
+    }
     specs.emplace_back(o2::its::study::getTrackCheckStudy(GID::getSourcesMask("ITS"), GID::getSourcesMask("ITS"), useMC, mcKinematicsReader));
   }
   if (!anyStudy) {

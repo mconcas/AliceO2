@@ -31,6 +31,12 @@ struct ITSCheckTracksParamConfig : public o2::conf::ConfigurableParamHelper<ITSC
   O2ParamDef(ITSCheckTracksParamConfig, "ITSCheckTracksParam");
 };
 
+struct ITSClusDistributionParamConfig : public o2::conf::ConfigurableParamHelper<ITSClusDistributionParamConfig> {
+  std::string outFileName = "its_ClusDistribution.root";
+
+  O2ParamDef(ITSClusDistributionParamConfig, "ITSClusDistributionParam");
+};
+
 struct ITSAvgClusSizeParamConfig : public o2::conf::ConfigurableParamHelper<ITSAvgClusSizeParamConfig> {
   // Data parameters
   double b = 5; // Solenoid field in kG (+/-)
