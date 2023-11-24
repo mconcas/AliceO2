@@ -433,7 +433,6 @@ void Detector::prepareOddLayout()
   }
 
   // Deploy central ring
-
 }
 } // namespace rich
 } // namespace o2
