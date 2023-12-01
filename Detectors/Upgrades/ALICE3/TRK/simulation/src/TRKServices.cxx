@@ -34,7 +34,7 @@ TRKServices::TRKServices(float rMin, float zLength, float thickness)
   mZLengthIRISVacV = 70.;
   mThicknessIRISVacV = 150.e-3;
   mRInIRISVacV = 0.48;
-  mROutIRISVacV = mRMin + mThickness;
+  mROutIRISVacV = mColdPlateRMin + mColdPlateThickness;
 }
 
 void TRKServices::createMaterials()
@@ -57,7 +57,6 @@ void TRKServices::createMaterials()
   float wCer[2] = {0.5294, 0.4706}; // Mass %, which makes sense. TODO: check if Mixture needs mass% or comp%
   float dCer = 3.97;
 
-<<<<<<< HEAD
   // AIR
   float aAir[4] = {12.0107, 14.0067, 15.9994, 39.948};
   float zAir[4] = {6., 7., 8., 18.};
@@ -71,7 +70,6 @@ void TRKServices::createMaterials()
   matmgr.Medium("TRKSERVICES", 1, "CER", 66, 0, ifield, fieldm, tmaxfd, stemax, deemax, epsil, stmin); // Ceramic for cold plate
   matmgr.Medium("TRKSERVICES", 2, "COP", 67, 0, ifield, fieldm, tmaxfd, stemax, deemax, epsil, stmin); // Copper for cables
   matmgr.Medium("TRKSERVICES", 3, "VAC", 68, 0, ifield, fieldm, tmaxfd, stemax, deemax, epsil, stmin); // Vacuum for placeholding cables
-=======
   matmgr.Mixture("COLDPLATE", 66, "CERAMIC$", aCer, zCer, dCer, 2, wCer); // Ceramic for cold plate
   matmgr.Medium("COLDPLATE", 66, "CER", 66, 0, ifield, fieldm, tmaxfd, stemax, deemax, epsil, stmin);
 
@@ -98,7 +96,6 @@ void TRKServices::createMaterials()
   float dAlBeMet = 2.071;
   matmgr.Mixture("IRISVACUUMVESSEL", 7, "ALUMINIUM-BERYLLIUM-METAL$", aAlBeMet, zAlBeMet, dAlBeMet, 2, wAlBeMet);
   matmgr.Medium("IRISVACUUMVESSEL", 7, "ALBEMET", 7, 0, ifield, fieldm, tmaxfd, stemax, deemax, epsil, stmin);
->>>>>>> 9bd689a75d (Improved beam pipe description)
 }
 
 void TRKServices::createServices(TGeoVolume* motherVolume)
@@ -141,7 +138,7 @@ void TRKServices::createColdplate(TGeoVolume* motherVolume)
   TGeoVolume* irisVacuumVesselVolume = new TGeoVolume("TRK_IRISVACUUMVESSEL", irisVacuumVesselComposite, medAl5083);
 
   irisVacuumVesselVolume->SetVisibility(1);
-  irisVacuumVesselVolume->SetLineColor(kYellow);
+  irisVacuumVesselVolume->SetLineColor(kOrange);
 
   LOGP(info, "Creating IRIS Tracker vacuum vessel");
   LOGP(info, "Inserting {} in {} ", irisVacuumVesselVolume->GetName(), motherVolume->GetName());
