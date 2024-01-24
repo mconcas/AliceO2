@@ -58,13 +58,29 @@ void TRKServices::createMaterials()
   float wAir[4] = {0.000124, 0.755267, 0.231781, 0.012827};
   float dAir = 1.20479E-3;
 
-  matmgr.Mixture("ALICE3_TRKSERVICES", 66, "CERAMIC$", aCer, zCer, dCer, 2, wCer);   // Ceramic for cold plate
-  matmgr.Material("ALICE3_TRKSERVICES", 67, "COPPER", 63.546, 29, 8.96, 1.43, 15.1); // Copper for cables
-  matmgr.Mixture("ALICE3_TRKSERVICES", 68, "VACUUM", aAir, zAir, dAir, 4, wAir);     // Vacuum for placeholding cables
+  // Polyethylene from alice 2 absorber
+  float aPolyethylene[2] = {12.01, 1.};
+  float zPolyethylene[2] = {6., 1.};
+  float wPolyethylene[2] = {.33, .67};
+
+  // Polyurethane [HN-CO-O] from alice 2 mft
+  int nPolyurethane = 4;
+  float aPolyurethane[4] = {1.00794, 14.010, 12.0107, 15.9994};
+  float zPolyurethane[4] = {1.0, 7.0, 6.0, 8.0};
+  float wPolyurethane[4] = {0.017077588, 0.237314387, 0.203327619, 0.542280405};
+  float dPolyurethane = 1.25;
+
+  matmgr.Mixture("ALICE3_TRKSERVICES", 66, "CERAMIC$", aCer, zCer, dCer, 2, wCer);                                                // Ceramic for cold plate
+  matmgr.Material("ALICE3_TRKSERVICES", 67, "COPPER", 63.546, 29, 8.96, 1.43, 15.1);                                              // Copper for cables
+  matmgr.Mixture("ALICE3_TRKSERVICES", 68, "VACUUM", aAir, zAir, dAir, 4, wAir);                                                  // Vacuum for placeholding cables
+  matmgr.Mixture("ALICE3_TRKSERVICES", 69, "POLYETHYLENE", aPolyethylene, zPolyethylene, .95, 2, wPolyethylene);                  // Polyethylene for fibers
+  o2::base::Detector::Mixture(matId, "Polyurethane$", aPolyurethane, zPolyurethane, dPolyurethane, nPolyurethane, wPolyurethane); // Polyurethane for cooling pipes
 
   matmgr.Medium("ALICE3_TRKSERVICES", 1, "CERAMIC", 66, 0, ifield, fieldm, tmaxfd, stemax, deemax, epsil, stmin); // Ceramic for cold plate
   matmgr.Medium("ALICE3_TRKSERVICES", 2, "COPPER", 67, 0, ifield, fieldm, tmaxfd, stemax, deemax, epsil, stmin);  // Copper for cables
   matmgr.Medium("ALICE3_TRKSERVICES", 3, "VACUUM", 68, 0, ifield, fieldm, tmaxfd, stemax, deemax, epsil, stmin);  // Vacuum for placeholding cables
+  matmgr.Medium("ALICE3_TRKSERVICES", 4, "POLYETHYLENE", 69, 0, ifield, fieldm, tmaxfd, stemax, deemax, epsil, stmin); // Polyethylene for fibers
+  matmgr.Medium("ALICE3_TRKSERVICES", 5, "POLYURETHANE", matId, 0, ifield, fieldm, tmaxfd, stemax, deemax, epsil, stmin); // Polyurethane for cooling pipes
 }
 
 void TRKServices::createServices(TGeoVolume* motherVolume)
