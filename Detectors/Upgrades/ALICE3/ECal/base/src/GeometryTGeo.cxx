@@ -59,7 +59,7 @@ GeometryTGeo* GeometryTGeo::Instance()
 
 const char* GeometryTGeo::composeSymNameSensor()
 {
-  return Form("%s/%s%d", composeSymNameECal(),0);
+  return Form("%s/%s%d", composeSymNameECal(), 0);
 }
 
 } // namespace ecal
