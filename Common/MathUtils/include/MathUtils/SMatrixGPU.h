@@ -675,7 +675,7 @@ GPUdi() SMatrixGPU<T, D1, D2, R>& SMatrixGPU<T, D1, D2, R>::operator=(const Expr
 
 template <class T, unsigned int D1, unsigned int D2, class R>
 template <class M>
-GPUdi() SMatrixGPU<T, D1, D2, R>& SMatrixGPU<T, D1, D2, R>::operator=(const M & rhs)
+GPUdi() SMatrixGPU<T, D1, D2, R>& SMatrixGPU<T, D1, D2, R>::operator=(const M& rhs)
 {
   mRep = rhs.mRep;
   return *this;
