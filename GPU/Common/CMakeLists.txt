@@ -46,17 +46,21 @@ if(ALIGPU_BUILD_TYPE STREQUAL "O2")
                 PUBLIC_LINK_LIBRARIES O2::${MODULE}
                 COMPONENT_NAME GPU
                 LABELS gpu)
-    o2_add_test(GPUSMatrixImp NAME test_GPUSMatrixImpCUDA
-                SOURCES test/testGPUSMatrixImp.cu
+    o2_add_test(SMatrixImpCUDA NAME test_SMatrixImpCUDA
+                SOURCES test/testSMatrixImp.cu
                 PUBLIC_LINK_LIBRARIES O2::${MODULE}
+                                      O2::MathUtils
+                                      ROOT::Core
                 COMPONENT_NAME GPU
                 LABELS gpu)
   endif()
   if (HIP_ENABLED)
-    o2_add_test(GPUSMatrixImpHIP NAME test_GPUSMatrixImpHIP
-                SOURCES test/testGPUSMatrixImp.cu
+    o2_add_test(SMatrixImpHIP NAME test_SMatrixImpHIP
+                SOURCES test/testSMatrixImp.cu
                 HIPIFIED test
                 PUBLIC_LINK_LIBRARIES O2::${MODULE}
+                                      O2::MathUtils
+                                      ROOT::Core
                 COMPONENT_NAME GPU
                 LABELS gpu)
   endif()
