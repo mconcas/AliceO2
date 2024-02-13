@@ -27,4 +27,4 @@ o2::framework::DataProcessorSpec getAnomalyStudy(mask_t srcClustersMask, bool us
 } // namespace study
 } // namespace o2::its
 
-#endif 
+#endif
