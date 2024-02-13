@@ -213,7 +213,7 @@ GPUconstexpr() DetID::mask_t sMasks[DetID::nDetectors] = ///< detectot masks
    DetID::mask_t(math_utils::bit2Mask(DetID::MID)), DetID::mask_t(math_utils::bit2Mask(DetID::ZDC)), DetID::mask_t(math_utils::bit2Mask(DetID::FT0)), DetID::mask_t(math_utils::bit2Mask(DetID::FV0)), DetID::mask_t(math_utils::bit2Mask(DetID::FDD)),
    DetID::mask_t(math_utils::bit2Mask(DetID::TST)), DetID::mask_t(math_utils::bit2Mask(DetID::CTP)), DetID::mask_t(math_utils::bit2Mask(DetID::FOC)), DetID::mask_t(math_utils::bit2Mask(DetID::FOP)), DetID::mask_t(math_utils::bit2Mask(DetID::FOH))
 #ifdef ENABLE_UPGRADES
-                                                                                                       ,
+                                                                                                                                                                                                         ,
    DetID::mask_t(math_utils::bit2Mask(DetID::IT3)), DetID::mask_t(math_utils::bit2Mask(DetID::TRK)), DetID::mask_t(math_utils::bit2Mask(DetID::FT3)), DetID::mask_t(math_utils::bit2Mask(DetID::FCT)), DetID::mask_t(math_utils::bit2Mask(DetID::TF3)),
    DetID::mask_t(math_utils::bit2Mask(DetID::RCH)), DetID::mask_t(math_utils::bit2Mask(DetID::MI3))
 #endif
