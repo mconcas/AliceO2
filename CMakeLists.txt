@@ -12,7 +12,7 @@
 # Preamble
 
 cmake_minimum_required(VERSION 3.27.1 FATAL_ERROR)
-
+set(GPUCA_NO_FAST_MATH 1)
 # it's important to specify accurately the list of languages. for instance C and
 # C++ as we _do_ have some C files to compile explicitely as C (e.g. gl3w.c)
 project(O2 LANGUAGES C CXX VERSION 1.2.0)

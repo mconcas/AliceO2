@@ -18,7 +18,7 @@
 #include "GPUCommonLogger.h"
 #include <TFile.h>
 #include "CommonUtils/TreeStreamRedirector.h"
-//#define _DBG_LOC_ // for local debugging only
+// #define _DBG_LOC_ // for local debugging only
 
 #endif // !GPUCA_ALIGPUCODE
 #undef NDEBUG
@@ -256,7 +256,7 @@ void MatLayerCylSet::print(bool data) const
          float(getFlatBufferSize()) / 1024 / 1024);
 }
 
-#endif //!GPUCA_ALIGPUCODE
+#endif //! GPUCA_ALIGPUCODE
 
 #ifndef GPUCA_GPUCODE
 //________________________________________________________________________________
@@ -326,9 +326,12 @@ GPUd() MatBudget MatLayerCylSet::getMatBudget(float x0, float y0, float z0, floa
         auto zIDLast = lr.getZBinID(ray.getZ(tEndPhi));
         // check if Zbins are crossed
 
-#ifdef _DBG_LOC_
-        printf("-- Zdiff (%3d : %3d) mode: t: %+e %+e\n", zID, zIDLast, tStartPhi, tEndPhi);
-#endif
+        // #ifdef _DBG_LOC_
+        // #ifdef __CUDACC__
+        //         if (!(blockIdx.x * blockDim.x + threadIdx.x))
+        // #endif
+        // printf("-- Zdiff (%3d : %3d) mode: t: %+e %+e\n", zID, zIDLast, tStartPhi, tEndPhi);
+        // #endif
 
         if (zID != zIDLast) {
           auto stepZID = zID < zIDLast ? 1 : -1;
@@ -354,11 +357,14 @@ GPUd() MatBudget MatLayerCylSet::getMatBudget(float x0, float y0, float z0, floa
 #ifdef _DBG_LOC_
             float pos0[3] = {ray.getPos(tStartZ, 0), ray.getPos(tStartZ, 1), ray.getPos(tStartZ, 2)};
             float pos1[3] = {ray.getPos(tEndZ, 0), ray.getPos(tEndZ, 1), ray.getPos(tEndZ, 2)};
-            printf(
-              "Lr#%3d / cross#%d : account %f<t<%f at phiSlice %d | Zbin: %3d (%3d) |[%+e %+e +%e]:[%+e %+e %+e] "
-              "Step: %.3e StrpCor: %.3e\n",
-              lrID, ic, tEndZ, tStartZ, phiID % nphiSlices, zID, zIDLast,
-              pos0[0], pos0[1], pos0[2], pos1[0], pos1[1], pos1[2], step, ray.getDist(step));
+#ifdef __CUDACC__
+            if (!(blockIdx.x * blockDim.x + threadIdx.x))
+#endif
+              printf(
+                "Lr#%3d / cross#%d : account %f<t<%f at phiSlice %d | Zbin: %3d (%3d) |[%+e %+e +%e]:[%+e %+e %+e] "
+                "Step: %.3e StrpCor: %.3e\n",
+                lrID, ic, tEndZ, tStartZ, phiID % nphiSlices, zID, zIDLast,
+                pos0[0], pos0[1], pos0[2], pos1[0], pos1[1], pos1[2], step, ray.getDist(step));
 #endif
 
             tStartZ = tEndZ;
@@ -374,11 +380,14 @@ GPUd() MatBudget MatLayerCylSet::getMatBudget(float x0, float y0, float z0, floa
 #ifdef _DBG_LOC_
           float pos0[3] = {ray.getPos(tStartPhi, 0), ray.getPos(tStartPhi, 1), ray.getPos(tStartPhi, 2)};
           float pos1[3] = {ray.getPos(tEndPhi, 0), ray.getPos(tEndPhi, 1), ray.getPos(tEndPhi, 2)};
-          printf(
-            "Lr#%3d / cross#%d : account %f<t<%f at phiSlice %d | Zbin: %3d ----- |[%+e %+e +%e]:[%+e %+e %+e]"
-            "Step: %.3e StrpCor: %.3e\n",
-            lrID, ic, tEndPhi, tStartPhi, phiID % nphiSlices, zID,
-            pos0[0], pos0[1], pos0[2], pos1[0], pos1[1], pos1[2], step, ray.getDist(step));
+#ifdef __CUDACC__
+          if (!(blockIdx.x * blockDim.x + threadIdx.x))
+#endif
+            printf(
+              "Lr#%3d / cross#%d : account %f<t<%f at phiSlice %d | Zbin: %3d ----- |[%+e %+e +%e]:[%+e %+e %+e]"
+              "Step: %.3e StrpCor: %.3e\n",
+              lrID, ic, tEndPhi, tStartPhi, phiID % nphiSlices, zID,
+              pos0[0], pos0[1], pos0[2], pos1[0], pos1[1], pos1[2], step, ray.getDist(step));
 #endif
         }
         //
@@ -391,14 +400,32 @@ GPUd() MatBudget MatLayerCylSet::getMatBudget(float x0, float y0, float z0, floa
   } // loop over layers
 
   if (rval.length != 0.f) {
-    rval.meanRho /= rval.length;                                       // average
-    rval.meanX2X0 *= ray.getDist();                                    // normalize
+    rval.meanRho /= rval.length;    // average
+    rval.meanX2X0 *= ray.getDist(); // normalize
   }
   rval.length = ray.getDist();
 
 #ifdef _DBG_LOC_
   printf("<rho> = %e, x2X0 = %e  | step = %e\n", rval.meanRho, rval.meanX2X0, rval.length);
 #endif
+  // #ifdef __CUDACC__
+  //   if (!(blockIdx.x * blockDim.x + threadIdx.x)) {
+  //     printf("<rho> = %x, x2X0 = %x  | step = %x\n",
+  //            __float_as_uint(rval.meanRho),
+  //            __float_as_uint(rval.meanX2X0),
+  //            __float_as_uint(rval.length));
+  //     printf("<rho> = %e, x2X0 = %e  | step = %e\n", rval.meanRho, rval.meanX2X0, rval.length);
+  //   }
+  // #else
+  //   float tmpX2X0 = rval.meanX2X0;
+  //   float tmpXRho = rval.meanRho;
+  //   float tmpStep = rval.length;
+  //   printf("<rho> = %x, x2X0 = %x  | step = %x\n",
+  //          reinterpret_cast<unsigned int&>(tmpX2X0),
+  //          reinterpret_cast<unsigned int&>(tmpXRho),
+  //          reinterpret_cast<unsigned int&>(tmpStep));
+  //   printf("<rho> = %e, x2X0 = %e  | step = %e\n", rval.meanRho, rval.meanX2X0, rval.length);
+  // #endif
   return rval;
 }
 

@@ -126,13 +126,11 @@ class PID
   GPUd() static float getMass2(ID id) { return pid_constants::sMasses2[id]; }
   GPUd() static float getMass2Z(ID id) { return pid_constants::sMasses2Z[id]; }
   GPUd() static int getCharge(ID id) { return pid_constants::sCharges[id]; }
-#ifndef GPUCA_GPUCODE_DEVICE
   GPUd() const char* getName() const
   {
     return getName(mID);
   }
   GPUd() static const char* getName(ID id) { return pid_constants::sNames[id]; }
-#endif
 
  private:
   ID mID = Pion;

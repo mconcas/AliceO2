@@ -70,7 +70,7 @@ struct TrackingFrameInfo {
   o2::gpu::gpustd::array<float, 3> covarianceTrackingFrame = {999., 999., 999.};
   GPUdi() void print() const
   {
-    printf("x: %f y: %f z: %f xTF: %f alphaTF: %f posTF: %f %f covTF: %f %f %f\n",
+    printf("x: %+.10e y: %+.10e z: %+.10e xTF: %+.10e alphaTF: %+.10e posTF: %+.10e %+.10e covTF: %e %e %e\n",
            xCoordinate, yCoordinate, zCoordinate, xTrackingFrame, alphaTrackingFrame,
            positionTrackingFrame[0], positionTrackingFrame[1],
            covarianceTrackingFrame[0], covarianceTrackingFrame[1], covarianceTrackingFrame[2]);
