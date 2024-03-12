@@ -262,8 +262,8 @@ void TRKServices::createMiddleServices(TGeoVolume* motherVolume)
   const float totalThickness = siO2FiberThick + peFiberThick + cuPowerThick + pePowerThick + puCoolingThick + h2oCoolingThick;
 
   // Carbon Fiber Cylinder support for the middle tracker
-  float rMinMiddleCarbonSupport = 34.8f;  // Arbitrary value
-  float rMaxMiddleCarbonSupport = 35.f; // 2 mm of carbon fiber
+  float rMinMiddleCarbonSupport = 34.8f; // Arbitrary value
+  float rMaxMiddleCarbonSupport = 35.f;  // 2 mm of carbon fiber
   const float zLengthMiddleCarbon = 62.f;
   TGeoTube* middleBarrelCarbonSupport = new TGeoTube("TRK_MID_CARBONSUPPORTsh", rMinMiddleCarbonSupport, rMaxMiddleCarbonSupport, zLengthMiddleCarbon);
   TGeoVolume* middleBarrelCarbonSupportVolume = new TGeoVolume("TRK_MID_CARBONSUPPORT", middleBarrelCarbonSupport, medCFiber);
