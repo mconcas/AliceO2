@@ -723,7 +723,7 @@ GPUd() auto TrackParametrizationWithError<value_T>::getPredictedChi2(const value
   }
 
   value_t d = this->getY() - p[0];
-  value_t z = this->getZ() - p[1];  
+  value_t z = this->getZ() - p[1];
   auto chi2 = (d * (szz * d - sdz * z) + z * (sdd * z - d * sdz)) / det;
   if (chi2 < 0.) {
 #ifndef GPUCA_ALIGPUCODE
