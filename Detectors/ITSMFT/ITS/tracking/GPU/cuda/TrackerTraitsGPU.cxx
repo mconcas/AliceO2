@@ -412,7 +412,7 @@ void TrackerTraitsGPU<nLayers>::findRoads(const int iteration)
       mTrkParams[0].MaxChi2NDF,                         // float maxChi2NDF,
       mTimeFrameGPU->getDevicePropagator(),             // const o2::base::Propagator* propagator
       mCorrType);                                       // o2::base::PropagatorImpl<float>::MatCorrType
-    LOGP(fatal, "breaking...");
+    // LOGP(fatal, "breaking...");
     mTimeFrameGPU->downloadTrackITSExtDevice(trackSeeds);
 
     auto& tracks = mTimeFrameGPU->getTrackITSExt();
