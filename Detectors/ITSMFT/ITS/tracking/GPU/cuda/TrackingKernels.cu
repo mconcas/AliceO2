@@ -128,13 +128,13 @@ GPUd() bool fitTrack(TrackITSExt& track,
     if (!track.o2::track::TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
       return false;
     }
-    if (!(blockIdx.x * blockDim.x + threadIdx.x)) {
-      // printf("after update:\n");
-      // track.printHexadecimal();
-    }
+    // if (!(blockIdx.x * blockDim.x + threadIdx.x)) {
+    //   // printf("after update:\n");
+    //   // track.printHexadecimal();
+    // }
     nCl++;
-    if (iLayer == 1)
-      return false;
+    // if (iLayer == 1)
+    //   return false;
   }
   return o2::gpu::GPUCommonMath::Abs(track.getQ2Pt()) < maxQoverPt && track.getChi2() < chi2ndfcut * (nCl * 2 - 5);
 }
@@ -156,11 +156,11 @@ GPUg() void fitTrackSeedsKernel(
     auto& seed = trackSeeds[iCurrentTrackSeedIndex];
 
     TrackITSExt temporaryTrack{seed};
-    if (!iCurrentTrackSeedIndex) {
-      // temporaryTrack.print();
-    } else {
-      continue;
-    }
+    // if (!iCurrentTrackSeedIndex) {
+    //   // temporaryTrack.print();
+    // } else {
+    //   continue;
+    // }
     temporaryTrack.resetCovariance();
     temporaryTrack.setChi2(0);
     int* clusters = seed.getClusters();

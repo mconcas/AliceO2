@@ -34,28 +34,28 @@ GPUd() int Ray::crossLayer(const MatLayerCyl& lr)
   float tCross0Max = mXDxPlusYDyRed + detMaxRed; // largest possible t
   float tmpsq = CAMath::Sqrt(detMax);
   float tmpRMax2 = lr.getRMax2();
-#ifdef __CUDACC__
-  if (!(blockIdx.x * blockDim.x + threadIdx.x))
-    printf("crossLayer debug: mXDxPlusYDy2 = %x mDistXY2 = %x mR02 = %x lr.getRMax2() = %x detMax = %x mDistXY2i = %x sqDetMax = %x detMaxRed = %x \n",
-           __float_as_uint(mXDxPlusYDy2),
-           __float_as_uint(mDistXY2),
-           __float_as_uint(mR02),
-           __float_as_uint(tmpRMax2),
-           __float_as_uint(detMax),
-           __float_as_uint(mDistXY2i),
-           __float_as_uint(tmpsq),
-           __float_as_uint(detMaxRed));
-#else
-  printf("crossLayer debug: mXDxPlusYDy2 = %x mDistXY2 = %x mR02 = %x lr.getRMax2() = %x detMax = %x mDistXY2i = %x sqDetMax = %x detMaxRed = %x \n",
-         reinterpret_cast<unsigned int&>(mXDxPlusYDy2),
-         reinterpret_cast<unsigned int&>(mDistXY2),
-         reinterpret_cast<unsigned int&>(mR02),
-         reinterpret_cast<unsigned int&>(tmpRMax2),
-         reinterpret_cast<unsigned int&>(detMax),
-         reinterpret_cast<unsigned int&>(mDistXY2i),
-         reinterpret_cast<unsigned int&>(tmpsq),
-         reinterpret_cast<unsigned int&>(detMaxRed));
-#endif
+// #ifdef __CUDACC__
+//   if (!(blockIdx.x * blockDim.x + threadIdx.x))
+//     printf("crossLayer debug: mXDxPlusYDy2 = %x mDistXY2 = %x mR02 = %x lr.getRMax2() = %x detMax = %x mDistXY2i = %x sqDetMax = %x detMaxRed = %x \n",
+//            __float_as_uint(mXDxPlusYDy2),
+//            __float_as_uint(mDistXY2),
+//            __float_as_uint(mR02),
+//            __float_as_uint(tmpRMax2),
+//            __float_as_uint(detMax),
+//            __float_as_uint(mDistXY2i),
+//            __float_as_uint(tmpsq),
+//            __float_as_uint(detMaxRed));
+// #else
+//   printf("crossLayer debug: mXDxPlusYDy2 = %x mDistXY2 = %x mR02 = %x lr.getRMax2() = %x detMax = %x mDistXY2i = %x sqDetMax = %x detMaxRed = %x \n",
+//          reinterpret_cast<unsigned int&>(mXDxPlusYDy2),
+//          reinterpret_cast<unsigned int&>(mDistXY2),
+//          reinterpret_cast<unsigned int&>(mR02),
+//          reinterpret_cast<unsigned int&>(tmpRMax2),
+//          reinterpret_cast<unsigned int&>(detMax),
+//          reinterpret_cast<unsigned int&>(mDistXY2i),
+//          reinterpret_cast<unsigned int&>(tmpsq),
+//          reinterpret_cast<unsigned int&>(detMaxRed));
+// #endif
   if (tCross0Max < 0) { // max t is outside of the limiting point -> other t's also
     return 0;
   }

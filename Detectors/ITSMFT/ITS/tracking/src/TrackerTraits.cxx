@@ -601,10 +601,10 @@ void TrackerTraits::findRoads(const int iteration)
     for (size_t seedId = 0; seedId < trackSeeds.size(); ++seedId) {
       const CellSeed& seed{trackSeeds[seedId]};
       TrackITSExt temporaryTrack{seed};
-      if (!seedId) {
-        // temporaryTrack.print();
-        // LOGP(fatal, "breaking");
-      }
+      // if (!seedId) {
+      //   // temporaryTrack.print();
+      //   // LOGP(fatal, "breaking");
+      // }
       temporaryTrack.resetCovariance();
       temporaryTrack.setChi2(0);
       for (int iL{0}; iL < 7; ++iL) {
@@ -612,11 +612,11 @@ void TrackerTraits::findRoads(const int iteration)
       }
       printf(" #### fit 1 ####\n");
       bool fitSuccess = fitTrack(temporaryTrack, 0, mTrkParams[0].NLayers, 1, mTrkParams[0].MaxChi2ClusterAttachment, mTrkParams[0].MaxChi2NDF);
-      if (!seedId) {
-        // temporaryTrack.print();
-        // printf("chi2: %f\n", temporaryTrack.getChi2());
-        // LOGP(fatal, "breaking...");
-      }
+      // if (!seedId) {
+      //   // temporaryTrack.print();
+      //   // printf("chi2: %f\n", temporaryTrack.getChi2());
+      //   // LOGP(fatal, "breaking...");
+      // }
       if (!fitSuccess) {
         continue;
       }
@@ -837,13 +837,13 @@ bool TrackerTraits::fitTrack(TrackITSExt& track, int start, int end, int step, f
       return false;
     }
 
-    // if (mCorrType == o2::base::PropagatorF::MatCorrType::USEMatCorrNONE) {
-    //   float radl = 9.36f; // Radiation length of Si [cm]
-    //   float rho = 2.33f;  // Density of Si [g/cm^3]
-    //   if (!track.correctForMaterial(mTrkParams[0].LayerxX0[iLayer], mTrkParams[0].LayerxX0[iLayer] * radl * rho, true)) {
-    //     continue;
-    //   }
-    // }
+    if (mCorrType == o2::base::PropagatorF::MatCorrType::USEMatCorrNONE) {
+      float radl = 9.36f; // Radiation length of Si [cm]
+      float rho = 2.33f;  // Density of Si [g/cm^3]
+      if (!track.correctForMaterial(mTrkParams[0].LayerxX0[iLayer], mTrkParams[0].LayerxX0[iLayer] * radl * rho, true)) {
+        continue;
+      }
+    }
 
     auto predChi2{track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
     // trackingHit.print();
@@ -860,8 +860,8 @@ bool TrackerTraits::fitTrack(TrackITSExt& track, int start, int end, int step, f
     // printf("after update:\n");
     // track.printHexadecimal();
     nCl++;
-    if (iLayer == 1)
-      return false;
+    // if (iLayer == 1)
+    //   return false;
   }
   return std::abs(track.getQ2Pt()) < maxQoverPt && track.getChi2() < chi2ndfcut * (nCl * 2 - 5);
 }

@@ -190,10 +190,10 @@ GPUdi() float Ray::crossRadial(float cs, float sn) const
 {
   // calculate t of crossing with radial line with inclination cosine and sine
   float den = mD[0] * sn - mD[1] * cs;
-#ifdef __CUDACC__
-  if (!(blockIdx.x * blockDim.x + threadIdx.x))
-#endif
-    printf("debug: Ray::crossRadial: cos: %e sin: %e den: %e ret: %e\n", cs, sn, den, den != 0. ? (mP[1] * cs - mP[0] * sn) / den : InvalidT);
+// #ifdef __CUDACC__
+//   if (!(blockIdx.x * blockDim.x + threadIdx.x))
+// #endif
+//     printf("debug: Ray::crossRadial: cos: %e sin: %e den: %e ret: %e\n", cs, sn, den, den != 0. ? (mP[1] * cs - mP[0] * sn) / den : InvalidT);
   return den != 0. ? (mP[1] * cs - mP[0] * sn) / den : InvalidT;
 }
 
