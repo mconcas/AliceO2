@@ -831,7 +831,7 @@ int GPUChainTracking::RunChainFinalize()
 
   PrintDebugOutput();
 
-  //PrintMemoryRelations();
+  // PrintMemoryRelations();
 
   if (GetProcessingSettings().eventDisplay) {
     if (!mDisplayRunning) {
