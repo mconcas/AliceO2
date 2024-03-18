@@ -49,6 +49,19 @@ using namespace o2::track;
 #include "TrackParametrizationWithError.cxx"
 #endif
 
+#define gpuCheckError(x)                \
+  {                                     \
+    gpuAssert((x), __FILE__, __LINE__); \
+  }
+inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true)
+{
+  if (code != cudaSuccess) {
+    LOGF(error, "GPUassert: %s %s %d", cudaGetErrorString(code), file, line);
+    if (abort)
+      throw std::runtime_error("GPU assert failed.");
+  }
+}
+
 namespace o2
 {
 namespace its
@@ -78,17 +91,11 @@ GPUd() bool fitTrack(TrackITSExt& track,
     if (!track.o2::track::TrackParCovF::rotate(trackingHit.alphaTrackingFrame)) {
       return false;
     }
-    // if (!(blockIdx.x * blockDim.x + threadIdx.x)) {
-    //   // printf("\t# layer %d, alpha %f\n", iLayer, trackingHit.alphaTrackingFrame);
-    // }
 #ifdef __HIPCC__
     if (!track.propagateTo(trackingHit.xTrackingFrame, Bz)) {
       return false;
     }
 #else
-    // printf("pre propagateToX\n");
-    // track.print();
-    // track.printHexadecimal();
     if (!prop->propagateToX(track,
                             trackingHit.xTrackingFrame,
                             Bz,
@@ -113,28 +120,14 @@ GPUd() bool fitTrack(TrackITSExt& track,
 
     auto predChi2{track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
 
-    // if (!(blockIdx.x * blockDim.x + threadIdx.x)) {
-    //   // trackingHit.print();
-    //   // printf("\t# layer %d, predicted chi2 %f track is:\n", iLayer, predChi2);
-    //   // track.printHexadecimal();
-    // }
     if ((nCl >= 3 && predChi2 > chi2clcut) || predChi2 < 0.f) {
-      // if (!(blockIdx.x * blockDim.x + threadIdx.x)) {
-      //   printf("exiting here...\n");
-      // }
       return false;
     }
     track.setChi2(track.getChi2() + predChi2);
     if (!track.o2::track::TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
       return false;
     }
-    // if (!(blockIdx.x * blockDim.x + threadIdx.x)) {
-    //   // printf("after update:\n");
-    //   // track.printHexadecimal();
-    // }
     nCl++;
-    // if (iLayer == 1)
-    //   return false;
   }
   return o2::gpu::GPUCommonMath::Abs(track.getQ2Pt()) < maxQoverPt && track.getChi2() < chi2ndfcut * (nCl * 2 - 5);
 }
@@ -156,18 +149,14 @@ GPUg() void fitTrackSeedsKernel(
     auto& seed = trackSeeds[iCurrentTrackSeedIndex];
 
     TrackITSExt temporaryTrack{seed};
-    // if (!iCurrentTrackSeedIndex) {
-    //   // temporaryTrack.print();
-    // } else {
-    //   continue;
-    // }
+
     temporaryTrack.resetCovariance();
     temporaryTrack.setChi2(0);
     int* clusters = seed.getClusters();
     for (int iL{0}; iL < 7; ++iL) {
       temporaryTrack.setExternalClusterIndex(iL, clusters[iL], clusters[iL] != constants::its::UnusedIndex);
     }
-    // printf(" #### fit 1 ####\n");
+
     bool fitSuccess = fitTrack(temporaryTrack,               // TrackITSExt& track,
                                0,                            // int lastLayer,
                                nLayers,                      // int firstLayer,
@@ -180,11 +169,6 @@ GPUg() void fitTrackSeedsKernel(
                                foundTrackingFrameInfo,       // TrackingFrameInfo** trackingFrameInfo,
                                propagator,                   // const o2::base::Propagator* propagator,
                                matCorrType);                 // o2::base::PropagatorF::MatCorrType matCorrType
-    if (!iCurrentTrackSeedIndex) {
-      // temporaryTrack.print();
-      // printf("chi2: %f\n", temporaryTrack.getChi2());
-    }
-    // /*
     if (!fitSuccess) {
       continue;
     }
@@ -208,7 +192,6 @@ GPUg() void fitTrackSeedsKernel(
       continue;
     }
     tracks[iCurrentTrackSeedIndex] = temporaryTrack;
-    // */
   }
 }
 
@@ -749,7 +732,7 @@ void trackSeedHandler(CellSeed* trackSeeds,
                       const o2::base::Propagator* propagator,
                       const o2::base::PropagatorF::MatCorrType matCorrType)
 {
-  gpu::fitTrackSeedsKernel<<<1, 1>>>(
+  gpu::fitTrackSeedsKernel<<<20, 256>>>(
     trackSeeds,               // CellSeed* trackSeeds,
     foundTrackingFrameInfo,   // TrackingFrameInfo** foundTrackingFrameInfo,
     tracks,                   // o2::its::TrackITSExt* tracks,
@@ -760,7 +743,9 @@ void trackSeedHandler(CellSeed* trackSeeds,
     maxChi2NDF,               // float maxChi2NDF,
     propagator,               // const o2::base::Propagator* propagator
     matCorrType);             // o2::base::PropagatorF::MatCorrType matCorrType
-  cudaDeviceSynchronize();
+
+  gpuCheckError(cudaPeekAtLastError()); // currently no multistream, no events, keeping it simple
+  gpuCheckError(cudaDeviceSynchronize());
 }
 } // namespace its
 } // namespace o2
