@@ -128,7 +128,7 @@ void Tracker::clustersToTracks(std::function<void(std::string s)> logger, std::f
 
 void Tracker::clustersToTracksHybrid(std::function<void(std::string s)> logger, std::function<void(std::string s)> error)
 {
-  double total{0};
+  double total{0.};
   mTraits->UpdateTrackingParameters(mTrkParams);
   int maxNvertices{-1};
   if (mTrkParams[0].PerPrimaryVertexProcessing) {

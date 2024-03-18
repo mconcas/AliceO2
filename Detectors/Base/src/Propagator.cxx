@@ -320,21 +320,6 @@ GPUd() bool PropagatorImpl<value_T>::propagateToX(TrackParCov_t& track, value_ty
       if (matCorr != MatCorrType::USEMatCorrNONE) {
         auto xyz1 = track.getXYZGlo();
         auto mb = this->getMatBudget(matCorr, xyz0, xyz1);
-// #ifdef __CUDACC__
-//         if (!(blockIdx.x * blockDim.x + threadIdx.x)) {
-//           printf("<><><> pre correction: x2x0: %x Xrho %x <><>\n",
-//                  __float_as_uint(mb.meanX2X0),
-//                  __float_as_uint(mb.getXRho(signCorr)));
-//           // track.printBinary();
-//         }
-// #else
-//         float tmpX2X0 = mb.meanX2X0;
-//         float tmpXRho = mb.getXRho(signCorr);
-//         printf("<><><> pre correction: x2x0: %x Xrho %x <><>\n",
-//                reinterpret_cast<unsigned int&>(tmpX2X0),
-//                reinterpret_cast<unsigned int&>(tmpXRho));
-//         // track.printBinary();
-// #endif
         if (!track.correctForMaterial(mb.meanX2X0, mb.getXRho(signCorr))) {
           res = false;
         }

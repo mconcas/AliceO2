@@ -601,22 +601,13 @@ void TrackerTraits::findRoads(const int iteration)
     for (size_t seedId = 0; seedId < trackSeeds.size(); ++seedId) {
       const CellSeed& seed{trackSeeds[seedId]};
       TrackITSExt temporaryTrack{seed};
-      // if (!seedId) {
-      //   // temporaryTrack.print();
-      //   // LOGP(fatal, "breaking");
-      // }
       temporaryTrack.resetCovariance();
       temporaryTrack.setChi2(0);
       for (int iL{0}; iL < 7; ++iL) {
         temporaryTrack.setExternalClusterIndex(iL, seed.getCluster(iL), seed.getCluster(iL) != constants::its::UnusedIndex);
       }
-      printf(" #### fit 1 ####\n");
+
       bool fitSuccess = fitTrack(temporaryTrack, 0, mTrkParams[0].NLayers, 1, mTrkParams[0].MaxChi2ClusterAttachment, mTrkParams[0].MaxChi2NDF);
-      // if (!seedId) {
-      //   // temporaryTrack.print();
-      //   // printf("chi2: %f\n", temporaryTrack.getChi2());
-      //   // LOGP(fatal, "breaking...");
-      // }
       if (!fitSuccess) {
         continue;
       }
@@ -829,10 +820,7 @@ bool TrackerTraits::fitTrack(TrackITSExt& track, int start, int end, int step, f
     if (!track.rotate(trackingHit.alphaTrackingFrame)) {
       return false;
     }
-    // printf("\t# layer %d, alpha %f\n", iLayer, trackingHit.alphaTrackingFrame);
-    // printf("pre propagateToX\n");
-    // track.print();
-    // track.printHexadecimal();
+
     if (!propInstance->propagateToX(track, trackingHit.xTrackingFrame, getBz(), o2::base::PropagatorImpl<float>::MAX_SIN_PHI, o2::base::PropagatorImpl<float>::MAX_STEP, mCorrType)) {
       return false;
     }
@@ -846,22 +834,14 @@ bool TrackerTraits::fitTrack(TrackITSExt& track, int start, int end, int step, f
     }
 
     auto predChi2{track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
-    // trackingHit.print();
-    // printf("\t# layer %d, predicted chi2 %f track is:\n", iLayer, predChi2);
-    // track.printHexadecimal();
     if ((nCl >= 3 && predChi2 > chi2clcut) || predChi2 < 0.f) {
-      // printf("exiting here...\n");
       return false;
     }
     track.setChi2(track.getChi2() + predChi2);
     if (!track.o2::track::TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
       return false;
     }
-    // printf("after update:\n");
-    // track.printHexadecimal();
     nCl++;
-    // if (iLayer == 1)
-    //   return false;
   }
   return std::abs(track.getQ2Pt()) < maxQoverPt && track.getChi2() < chi2ndfcut * (nCl * 2 - 5);
 }
