@@ -9,6 +9,9 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
+set(CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}} -fno-fast-math -ffp-contract=off")
+set(CMAKE_C_FLAGS_${CMAKE_BUILD_TYPE} "${CMAKE_C_FLAGS_${CMAKE_BUILD_TYPE}} -fno-fast-math -ffp-contract=off")
+
 o2_add_library(ITStracking
                TARGETVARNAME targetName
                SOURCES src/ClusterLines.cxx

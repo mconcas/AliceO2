@@ -134,36 +134,10 @@ GPUdi() Ray::Ray(float x0, float y0, float z0, float x1, float y1, float z1)
   mXDxPlusYDy2 = mXDxPlusYDy * mXDxPlusYDy;
   mR02 = x0 * x0 + y0 * y0;
   mR12 = x1 * x1 + y1 * y1;
-#ifdef GPUCA_GPUCODE_DEVICE
-  if (!(blockIdx.x * blockDim.x + threadIdx.x))
-    printf("x0 = %x y0 = %x z0 = %x x1 = %x y1 = %x z1 = %x\n",
-           __float_as_uint(x0),
-           __float_as_uint(y0),
-           __float_as_uint(z0),
-           __float_as_uint(x1),
-           __float_as_uint(y1),
-           __float_as_uint(z1));
-#else
-  printf("x0 = %x y0 = %x z0 = %x x1 = %x y1 = %x z1 = %x\n",
-         reinterpret_cast<unsigned int&>(x0),
-         reinterpret_cast<unsigned int&>(y0),
-         reinterpret_cast<unsigned int&>(z0),
-         reinterpret_cast<unsigned int&>(x1),
-         reinterpret_cast<unsigned int&>(y1),
-         reinterpret_cast<unsigned int&>(z1));
-#endif
-  mDistXY2 = mD[0] * mD[0] + mD[1] * mD[1];
-  mDistXY2i = mDistXY2 > Tiny ? 1.f / mDistXY2 : 0.f;
-  mDistXYZ = o2::gpu::CAMath::Sqrt(mDistXY2 + mD[2] * mD[2]);
-  mXDxPlusYDy = x0 * mD[0] + y0 * mD[1];
-  mXDxPlusYDyRed = -mXDxPlusYDy * mDistXY2i;
-  mXDxPlusYDy2 = mXDxPlusYDy * mXDxPlusYDy;
-  mR02 = x0 * x0 + y0 * y0;
-  mR12 = x1 * x1 + y1 * y1;
 
 #ifdef GPUCA_GPUCODE_DEVICE
   if (!(blockIdx.x * blockDim.x + threadIdx.x))
-    printf("x0 = %x y0 = %x z0 = %x x1 = %x y1 = %x z1 = %x mR02 = %x mR12 = %x\n",
+    printf("x0 = %x y0 = %x z0 = %x x1 = %x y1 = %x z1 = %x mR02 = %x mR12 = %x mDistXYZ = %x mDistXY2 = %x\n",
            __float_as_uint(x0),
            __float_as_uint(y0),
            __float_as_uint(z0),
@@ -171,9 +145,11 @@ GPUdi() Ray::Ray(float x0, float y0, float z0, float x1, float y1, float z1)
            __float_as_uint(y1),
            __float_as_uint(z1),
            __float_as_uint(mR02),
-           __float_as_uint(mR12));
+           __float_as_uint(mR12),
+           __float_as_uint(mDistXYZ),
+           __float_as_uint(mDistXY2));
 #else
-  printf("x0 = %x y0 = %x z0 = %x x1 = %x y1 = %x z1 = %x mR02 = %x mR12 = %x\n",
+  printf("x0 = %x y0 = %x z0 = %x x1 = %x y1 = %x z1 = %x mR02 = %x mR12 = %x mDistXYZ = %x mDistXY2 = %x\n",
          reinterpret_cast<unsigned int&>(x0),
          reinterpret_cast<unsigned int&>(y0),
          reinterpret_cast<unsigned int&>(z0),
@@ -181,7 +157,9 @@ GPUdi() Ray::Ray(float x0, float y0, float z0, float x1, float y1, float z1)
          reinterpret_cast<unsigned int&>(y1),
          reinterpret_cast<unsigned int&>(z1),
          reinterpret_cast<unsigned int&>(mR02),
-         reinterpret_cast<unsigned int&>(mR12));
+         reinterpret_cast<unsigned int&>(mR12),
+         reinterpret_cast<unsigned int&>(mDistXYZ),
+         reinterpret_cast<unsigned int&>(mDistXY2));
 #endif
 }
 

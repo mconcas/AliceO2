@@ -1003,20 +1003,20 @@ track::TrackParCov TrackerTraits::buildTrackSeed(const Cluster& cluster1, const 
   const float tgl12 = math_utils::computeTanDipAngle(x1, y1, x2, y2, z1, z2);
   const float tgl23 = math_utils::computeTanDipAngle(x2, y2, x3, y3, z2, z3);
   const float q2pt = zeroField ? 1.f / o2::track::kMostProbablePt : crv / (o2::base::Propagator::Instance()->getNominalBz() * o2::constants::math::B2C);
-  const float tmpBz = o2::base::Propagator::Instance()->getNominalBz();
-  const float tmpBz2 = getBz();
-  printf("q2pt: %x crv: %x x3: %x y3: %x x2: %x y2: %x x1: %x y1: %x bz: %x getBz(): %x b2C: %x\n",
-         reinterpret_cast<const unsigned int&>(q2pt),
-         reinterpret_cast<const unsigned int&>(crv),
-         reinterpret_cast<const unsigned int&>(x3),
-         reinterpret_cast<const unsigned int&>(y3),
-         reinterpret_cast<const unsigned int&>(x2),
-         reinterpret_cast<const unsigned int&>(y2),
-         reinterpret_cast<const unsigned int&>(x1),
-         reinterpret_cast<const unsigned int&>(y1),
-         reinterpret_cast<const unsigned int&>(tmpBz),
-         reinterpret_cast<const unsigned int&>(tmpBz2),
-         reinterpret_cast<const unsigned int&>(o2::constants::math::B2C));
+  // const float tmpBz = o2::base::Propagator::Instance()->getNominalBz();
+  // const float tmpBz2 = getBz();
+  // printf("q2pt: %x crv: %x x3: %x y3: %x x2: %x y2: %x x1: %x y1: %x bz: %x getBz(): %x b2C: %x\n",
+  //        reinterpret_cast<const unsigned int&>(q2pt),
+  //        reinterpret_cast<const unsigned int&>(crv),
+  //        reinterpret_cast<const unsigned int&>(x3),
+  //        reinterpret_cast<const unsigned int&>(y3),
+  //        reinterpret_cast<const unsigned int&>(x2),
+  //        reinterpret_cast<const unsigned int&>(y2),
+  //        reinterpret_cast<const unsigned int&>(x1),
+  //        reinterpret_cast<const unsigned int&>(y1),
+  //        reinterpret_cast<const unsigned int&>(tmpBz),
+  //        reinterpret_cast<const unsigned int&>(tmpBz2),
+  //        reinterpret_cast<const unsigned int&>(o2::constants::math::B2C));
 
   const float q2pt2 = crv * crv;
   const float sg2q2pt = track::kC1Pt2max * (q2pt2 > 0.0005 ? (q2pt2 < 1 ? q2pt2 : 1) : 0.0005);

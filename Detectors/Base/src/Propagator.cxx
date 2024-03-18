@@ -307,7 +307,19 @@ GPUd() bool PropagatorImpl<value_T>::propagateToX(TrackParCov_t& track, value_ty
   if (!signCorr) {
     signCorr = -dir; // sign of eloss correction is not imposed
   }
-
+#ifdef __CUDACC__
+        if (!(blockIdx.x * blockDim.x + threadIdx.x)) {
+          float bz = bZ;
+          printf("bZ passed to PropagateToX: %x %f\n",
+                 __float_as_uint(bz),
+                 bz);
+        }
+#else
+        float tmpBz = bZ;
+        printf("bZ passed to PropagateToX: %x %f\n",
+               reinterpret_cast<unsigned int&>(tmpBz),
+               tmpBz);
+#endif
   while (math_utils::detail::abs<value_type>(dx) > Epsilon) {
     auto step = math_utils::detail::min<value_type>(math_utils::detail::abs<value_type>(dx), maxStep);
     if (dir < 0) {
