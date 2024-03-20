@@ -209,9 +209,15 @@ GPUdi() float2 GPUCommonMath::MakeFloat2(float x, float y)
 
 GPUdi() float GPUCommonMath::Modf(float x, float y) { return CHOICE(fmodf(x, y), fmodf(x, y), fmod(x, y)); }
 #if !defined(GPUCA_GPUCODE) || defined(__OPENCL__) || defined(__OPENCL_HOST__)
-GPUdi() unsigned int GPUCommonMath::Float2UIntReint(const float& x) { return reinterpret_cast<const unsigned int&>(x); }
+GPUdi() unsigned int GPUCommonMath::Float2UIntReint(const float& x)
+{
+  return reinterpret_cast<const unsigned int&>(x);
+}
 #else
-GPUdi() unsigned int GPUCommonMath::Float2UIntReint(const float& x) { return __float_as_uint(x); }
+GPUdi() unsigned int GPUCommonMath::Float2UIntReint(const float& x)
+{
+  return __float_as_uint(x);
+}
 #endif
 
 GPUdi() unsigned int GPUCommonMath::Float2UIntRn(float x) { return (unsigned int)(int)(x + 0.5f); }
