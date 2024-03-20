@@ -32,8 +32,6 @@ GPUd() int Ray::crossLayer(const MatLayerCyl& lr)
   }
   float detMaxRed = CAMath::Sqrt(detMax) * mDistXY2i;
   float tCross0Max = mXDxPlusYDyRed + detMaxRed; // largest possible t
-  float tmpsq = CAMath::Sqrt(detMax);
-  float tmpRMax2 = lr.getRMax2();
 
   if (tCross0Max < 0) { // max t is outside of the limiting point -> other t's also
     return 0;

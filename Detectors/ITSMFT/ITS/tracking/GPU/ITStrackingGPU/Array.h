@@ -27,11 +27,6 @@ namespace its
 {
 namespace gpu
 {
-template <typename T1, typename T2>
-struct gpuPair {
-  T1 first;
-  T2 second;
-};
 template <typename T, size_t Size>
 struct ArrayTraits final {
   typedef T InternalArray[Size];

@@ -105,7 +105,9 @@ GPUd() bool fitTrack(TrackITSExt& track,
       return false;
     }
 #endif
+#ifndef __HIPCC__
     if (matCorrType == o2::base::PropagatorF::MatCorrType::USEMatCorrNONE) {
+#endif
       track.setChi2(track.getChi2() + track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame));
       if (!track.TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
         return false;
@@ -116,7 +118,9 @@ GPUd() bool fitTrack(TrackITSExt& track,
       if (!track.correctForMaterial(xx0, xx0 * radiationLength * density, true)) {
         return false;
       }
+#ifndef __HIPCC__
     }
+#endif
 
     auto predChi2{track.getPredictedChi2(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
 
