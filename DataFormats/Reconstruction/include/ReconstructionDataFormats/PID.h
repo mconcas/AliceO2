@@ -91,8 +91,8 @@ class PID
   static constexpr ID Alpha = 8;
 
   static constexpr ID First = Electron;
-  static constexpr ID Last = Alpha;     ///< if extra IDs added, update this !!!
-  static constexpr ID NIDs = Last + 1;  ///< number of defined IDs
+  static constexpr ID Last = Alpha;    ///< if extra IDs added, update this !!!
+  static constexpr ID NIDs = Last + 1; ///< number of defined IDs
 
   // PID for derived particles
   static constexpr ID PI0 = 9;
@@ -126,11 +126,16 @@ class PID
   GPUd() static float getMass2(ID id) { return pid_constants::sMasses2[id]; }
   GPUd() static float getMass2Z(ID id) { return pid_constants::sMasses2Z[id]; }
   GPUd() static int getCharge(ID id) { return pid_constants::sCharges[id]; }
+#ifndef __OPENCL__
   GPUd() const char* getName() const
   {
     return getName(mID);
   }
-  GPUd() static const char* getName(ID id) { return pid_constants::sNames[id]; }
+  GPUd() static const char* getName(ID id)
+  {
+    return pid_constants::sNames[id];
+  }
+#endif
 
  private:
   ID mID = Pion;
@@ -144,7 +149,8 @@ class PID
 #ifndef GPUCA_GPUCODE_DEVICE
   GPUdi() static constexpr ID nameToID(char const* name, ID id)
   {
-    return id > LastExt ? id : sameStr(name, pid_constants::sNames[id]) ? id : nameToID(name, id + 1);
+    return id > LastExt ? id : sameStr(name, pid_constants::sNames[id]) ? id
+                                                                        : nameToID(name, id + 1);
   }
 #endif
 
