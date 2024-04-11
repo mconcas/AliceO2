@@ -11,14 +11,15 @@
 //
 // Author: J. E. Munoz Mendez jesus.munoz@cern.ch
 
-std::function<void(const double *, double *)> field() {
-  return [](const double *x, double *b) {
+std::function<void(const double*, double*)> field()
+{
+  return [](const double* x, double* b) {
     double Rc;
     double R1;
     double R2;
     double B1;
     double B2;
-    double beamStart = 500.; //[cm]
+    double beamStart = 500.;    //[cm]
     double tokGauss = 1. / 0.1; // conversion from Tesla to kGauss
 
     bool isMagAbs = true;
