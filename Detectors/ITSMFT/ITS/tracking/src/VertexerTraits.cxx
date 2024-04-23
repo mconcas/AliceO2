@@ -44,16 +44,18 @@ float smallestAngleDifference(float a, float b)
   return (diff < -constants::math::Pi) ? diff + constants::math::TwoPi : ((diff > constants::math::Pi) ? diff - constants::math::TwoPi : diff);
 }
 
-template <TrackletMode Mode, bool DryRun>
+template <TrackletMode Mode, bool EvalRun>
 void trackleterKernelHost(
   const gsl::span<const Cluster>& clustersNextLayer,    // 0 2
   const gsl::span<const Cluster>& clustersCurrentLayer, // 1 1
+  gsl::span<unsigned char> usedClusters,
   int* indexTableNext,
   const float phiCut,
   std::vector<Tracklet>& tracklets,
   gsl::span<int> foundTracklets,
   const IndexTableUtils& utils,
-  const int rof,
+  const int pivotRof,
+  const int targetRof,
   const int rofFoundTrackletsOffset,
   const int maxTrackletsPerCluster = static_cast<int>(2e3))
 {
@@ -78,13 +80,17 @@ void trackleterKernelHost(
         // loop on clusters next layer
         for (int iNextLayerClusterIndex{firstRowClusterIndex}; iNextLayerClusterIndex < maxRowClusterIndex && iNextLayerClusterIndex < static_cast<int>(clustersNextLayer.size()); ++iNextLayerClusterIndex) {
           const Cluster& nextCluster{clustersNextLayer[iNextLayerClusterIndex]};
+          if (usedClusters[nextCluster.clusterId]) {
+            continue;
+          }
           if (o2::gpu::GPUCommonMath::Abs(smallestAngleDifference(currentCluster.phi, nextCluster.phi)) < phiCut) {
             if (storedTracklets < maxTrackletsPerCluster) {
-              if constexpr (!DryRun) {
+              if constexpr (!EvalRun) {
+                usedClusters[nextCluster.clusterId] = true;
                 if constexpr (Mode == TrackletMode::Layer0Layer1) {
-                  tracklets[rofFoundTrackletsOffset + cumulativeStoredTracklets + storedTracklets] = Tracklet{iNextLayerClusterIndex, iCurrentLayerClusterIndex, nextCluster, currentCluster, rof, rof};
+                  tracklets[rofFoundTrackletsOffset + cumulativeStoredTracklets + storedTracklets] = Tracklet{iNextLayerClusterIndex, iCurrentLayerClusterIndex, nextCluster, currentCluster, targetRof, pivotRof};
                 } else {
-                  tracklets[rofFoundTrackletsOffset + cumulativeStoredTracklets + storedTracklets] = Tracklet{iCurrentLayerClusterIndex, iNextLayerClusterIndex, currentCluster, nextCluster, rof, rof};
+                  tracklets[rofFoundTrackletsOffset + cumulativeStoredTracklets + storedTracklets] = Tracklet{iCurrentLayerClusterIndex, iNextLayerClusterIndex, currentCluster, nextCluster, pivotRof, targetRof};
                 }
               }
               ++storedTracklets;
@@ -93,7 +99,7 @@ void trackleterKernelHost(
         }
       }
     }
-    if constexpr (DryRun) {
+    if constexpr (EvalRun) {
       foundTracklets[iCurrentLayerClusterIndex] = storedTracklets;
     } else {
       cumulativeStoredTracklets += storedTracklets;
@@ -173,31 +179,40 @@ void VertexerTraits::computeTracklets()
 #pragma omp parallel num_threads(mNThreads)
   {
 #pragma omp for schedule(dynamic)
-    for (int rofId = 0; rofId < mTimeFrame->getNrof(); ++rofId) {
-      trackleterKernelHost<TrackletMode::Layer0Layer1, true>(
-        mTimeFrame->getClustersOnLayer(rofId, 0),
-        mTimeFrame->getClustersOnLayer(rofId, 1),
-        mTimeFrame->getIndexTable(rofId, 0).data(),
-        mVrtParams.phiCut,
-        mTimeFrame->getTracklets()[0],
-        mTimeFrame->getNTrackletsCluster(rofId, 0),
-        mIndexTableUtils,
-        rofId,
-        0,
-        mVrtParams.maxTrackletsPerCluster);
-      trackleterKernelHost<TrackletMode::Layer1Layer2, true>(
-        mTimeFrame->getClustersOnLayer(rofId, 2),
-        mTimeFrame->getClustersOnLayer(rofId, 1),
-        mTimeFrame->getIndexTable(rofId, 2).data(),
-        mVrtParams.phiCut,
-        mTimeFrame->getTracklets()[1],
-        mTimeFrame->getNTrackletsCluster(rofId, 1),
-        mIndexTableUtils,
-        rofId,
-        0,
-        mVrtParams.maxTrackletsPerCluster);
-      mTimeFrame->getNTrackletsROf(rofId, 0) = std::accumulate(mTimeFrame->getNTrackletsCluster(rofId, 0).begin(), mTimeFrame->getNTrackletsCluster(rofId, 0).end(), 0);
-      mTimeFrame->getNTrackletsROf(rofId, 1) = std::accumulate(mTimeFrame->getNTrackletsCluster(rofId, 1).begin(), mTimeFrame->getNTrackletsCluster(rofId, 1).end(), 0);
+    for (int pivotRofId = 0; pivotRofId < mTimeFrame->getNrof(); ++pivotRofId) { // Pivot rofId: the rof for which the tracklets are computed
+      int startROF{std::max(0, pivotRofId - mVrtParams.deltaRof)};
+      int endROF{std::min(mTimeFrame->getNrof(), pivotRofId + mVrtParams.deltaRof + 1)};
+      std::cout << "pivoting on: " << pivotRofId << " start: " << startROF << " end: " << endROF << std::endl;
+      for (auto targetRofId = startROF; targetRofId < endROF; ++targetRofId) {
+        trackleterKernelHost<TrackletMode::Layer0Layer1, true>(
+          mTimeFrame->getClustersOnLayer(targetRofId, 0), // Clusters to be matched with the next layer in target rof
+          mTimeFrame->getClustersOnLayer(pivotRofId, 1),  // Clusters to be matched with the current layer in pivot rof
+          mTimeFrame->getUsedClusters(0),
+          mTimeFrame->getIndexTable(targetRofId, 0).data(), // Index table to access the data on the next layer in target rof
+          mVrtParams.phiCut,
+          mTimeFrame->getTracklets()[0],                   // Flat tracklet buffer
+          mTimeFrame->getNTrackletsCluster(pivotRofId, 0), // Span of the number of tracklets per each cluster in pivot rof
+          mIndexTableUtils,
+          pivotRofId,
+          targetRofId,
+          0, // Offset in the tracklet buffer
+          mVrtParams.maxTrackletsPerCluster);
+        trackleterKernelHost<TrackletMode::Layer1Layer2, true>(
+          mTimeFrame->getClustersOnLayer(targetRofId, 2),
+          mTimeFrame->getClustersOnLayer(pivotRofId, 1),
+          mTimeFrame->getUsedClusters(2),
+          mTimeFrame->getIndexTable(targetRofId, 2).data(),
+          mVrtParams.phiCut,
+          mTimeFrame->getTracklets()[1],
+          mTimeFrame->getNTrackletsCluster(pivotRofId, 1), // Span of the number of tracklets per each cluster in pivot rof
+          mIndexTableUtils,
+          pivotRofId,
+          targetRofId,
+          0, // Offset in the tracklet buffer
+          mVrtParams.maxTrackletsPerCluster);
+        mTimeFrame->getNTrackletsROf(pivotRofId, 0) += std::accumulate(mTimeFrame->getNTrackletsCluster(pivotRofId, 0).begin(), mTimeFrame->getNTrackletsCluster(pivotRofId, 0).end(), 0);
+        mTimeFrame->getNTrackletsROf(pivotRofId, 1) += std::accumulate(mTimeFrame->getNTrackletsCluster(pivotRofId, 1).begin(), mTimeFrame->getNTrackletsCluster(pivotRofId, 1).end(), 0);
+      }
     }
 #pragma omp single
     mTimeFrame->computeTrackletsScans(mNThreads);
@@ -207,29 +222,37 @@ void VertexerTraits::computeTracklets()
     mTimeFrame->getTracklets()[1].resize(mTimeFrame->getTotalTrackletsTF(1));
 
 #pragma omp for schedule(dynamic)
-    for (int rofId = 0; rofId < mTimeFrame->getNrof(); ++rofId) {
-      trackleterKernelHost<TrackletMode::Layer0Layer1, false>(
-        mTimeFrame->getClustersOnLayer(rofId, 0),
-        mTimeFrame->getClustersOnLayer(rofId, 1),
-        mTimeFrame->getIndexTable(rofId, 0).data(),
-        mVrtParams.phiCut,
-        mTimeFrame->getTracklets()[0],
-        mTimeFrame->getNTrackletsCluster(rofId, 0),
-        mIndexTableUtils,
-        rofId,
-        mTimeFrame->getNTrackletsROf(rofId, 0),
-        mVrtParams.maxTrackletsPerCluster);
-      trackleterKernelHost<TrackletMode::Layer1Layer2, false>(
-        mTimeFrame->getClustersOnLayer(rofId, 2),
-        mTimeFrame->getClustersOnLayer(rofId, 1),
-        mTimeFrame->getIndexTable(rofId, 2).data(),
-        mVrtParams.phiCut,
-        mTimeFrame->getTracklets()[1],
-        mTimeFrame->getNTrackletsCluster(rofId, 1),
-        mIndexTableUtils,
-        rofId,
-        mTimeFrame->getNTrackletsROf(rofId, 1),
-        mVrtParams.maxTrackletsPerCluster);
+    for (int pivotRofId = 0; pivotRofId < mTimeFrame->getNrof(); ++pivotRofId) {
+      int startROF{std::max(0, pivotRofId - mVrtParams.deltaRof)};
+      int endROF{std::min(mTimeFrame->getNrof(), pivotRofId + mVrtParams.deltaRof + 1)};
+      for (auto targetRofId = startROF; targetRofId < endROF; ++targetRofId) {
+        trackleterKernelHost<TrackletMode::Layer0Layer1, false>(
+          mTimeFrame->getClustersOnLayer(targetRofId, 0),
+          mTimeFrame->getClustersOnLayer(pivotRofId, 1),
+          mTimeFrame->getUsedClusters(0),
+          mTimeFrame->getIndexTable(pivotRofId, 0).data(),
+          mVrtParams.phiCut,
+          mTimeFrame->getTracklets()[0],
+          mTimeFrame->getNTrackletsCluster(pivotRofId, 0),
+          mIndexTableUtils,
+          pivotRofId,
+          targetRofId,
+          mTimeFrame->getNTrackletsROf(pivotRofId, 0),
+          mVrtParams.maxTrackletsPerCluster);
+        trackleterKernelHost<TrackletMode::Layer1Layer2, false>(
+          mTimeFrame->getClustersOnLayer(targetRofId, 2),
+          mTimeFrame->getClustersOnLayer(pivotRofId, 1),
+          mTimeFrame->getUsedClusters(2),
+          mTimeFrame->getIndexTable(targetRofId, 2).data(),
+          mVrtParams.phiCut,
+          mTimeFrame->getTracklets()[1],
+          mTimeFrame->getNTrackletsCluster(pivotRofId, 1),
+          mIndexTableUtils,
+          pivotRofId,
+          targetRofId,
+          mTimeFrame->getNTrackletsROf(pivotRofId, 1),
+          mVrtParams.maxTrackletsPerCluster);
+      }
     }
   }
 
@@ -238,7 +261,7 @@ void VertexerTraits::computeTracklets()
     for (auto& trk : mTimeFrame->getTracklets()[0]) {
       MCCompLabel label;
       int sortedId0{mTimeFrame->getSortedIndex(trk.rof[0], 0, trk.firstClusterIndex)};
-      int sortedId1{mTimeFrame->getSortedIndex(trk.rof[0], 1, trk.secondClusterIndex)};
+      int sortedId1{mTimeFrame->getSortedIndex(trk.rof[1], 1, trk.secondClusterIndex)};
       for (auto& lab0 : mTimeFrame->getClusterLabels(0, mTimeFrame->getClusters()[0][sortedId0].clusterId)) {
         for (auto& lab1 : mTimeFrame->getClusterLabels(1, mTimeFrame->getClusters()[1][sortedId1].clusterId)) {
           if (lab0 == lab1 && lab0.isValid()) {
