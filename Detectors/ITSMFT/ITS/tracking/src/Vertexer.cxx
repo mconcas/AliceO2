@@ -71,6 +71,7 @@ void Vertexer::getGlobalConfiguration()
   auto& grc = o2::its::GpuRecoParamConfig::Instance();
 
   VertexingParameters verPar;
+  verPar.deltaRof = vc.deltaRof;
   verPar.allowSingleContribClusters = vc.allowSingleContribClusters;
   verPar.zCut = vc.zCut;
   verPar.phiCut = vc.phiCut;

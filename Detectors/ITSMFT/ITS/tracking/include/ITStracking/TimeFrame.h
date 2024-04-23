@@ -151,6 +151,7 @@ class TimeFrame
 
   bool isClusterUsed(int layer, int clusterId) const;
   void markUsedCluster(int layer, int clusterId);
+  gsl::span<unsigned char> getUsedClusters(const int layer);
 
   std::vector<std::vector<Tracklet>>& getTracklets();
   std::vector<std::vector<int>>& getTrackletsLookupTable();
@@ -517,6 +518,11 @@ inline bool TimeFrame::hasMCinformation() const
 inline bool TimeFrame::isClusterUsed(int layer, int clusterId) const
 {
   return mUsedClusters[layer][clusterId];
+}
+
+inline gsl::span<unsigned char> TimeFrame::getUsedClusters(const int layer)
+{
+  return {&mUsedClusters[layer][0], static_cast<gsl::span<unsigned char>::size_type>(mUsedClusters[layer].size())};
 }
 
 inline void TimeFrame::markUsedCluster(int layer, int clusterId) { mUsedClusters[layer][clusterId] = true; }
