@@ -21,6 +21,10 @@
 #include "GPUCommonMath.h"
 #include "GPUCommonDef.h"
 
+#ifndef GPUCA_GPUCODE_DEVICE
+#include <string>
+#endif
+
 namespace o2
 {
 namespace its
@@ -42,6 +46,13 @@ struct Tracklet final {
   GPUhdi() void dump(const int, const int);
   GPUhdi() void dump(const int, const int) const;
   GPUhdi() unsigned char operator<(const Tracklet&) const;
+#ifndef GPUCA_GPUCODE_DEVICE
+  std::string asString() const
+  {
+    return "fClIdx: " + std::to_string(firstClusterIndex) + " sClIdx: " + std::to_string(secondClusterIndex) +
+           " rof1: " + std::to_string(rof[0]) + " rof2: " + std::to_string(rof[1]);
+  }
+#endif
 
   int firstClusterIndex;
   int secondClusterIndex;
@@ -104,26 +115,6 @@ GPUhdi() unsigned char Tracklet::operator<(const Tracklet & t) const
   }
   return true;
 }
-
-// GPUhdi() void Tracklet::dump()
-// {
-//   printf("fClIdx: %d sClIdx: %d  rof1: %hu rof2: %hu phi: %f tl: %f \n", firstClusterIndex, secondClusterIndex, rof[0], rof[1], phi, tanLambda);
-// }
-
-// GPUhdi() void Tracklet::dump() const
-// {
-//   printf("fClIdx: %d sClIdx: %d  rof1: %hu rof2: %hu phi: %f tl: %f \n", firstClusterIndex, secondClusterIndex, rof[0], rof[1], phi, tanLambda);
-// }
-
-// GPUhdi() void Tracklet::dump(const int offsetFirst, const int offsetSecond)
-// {
-//   printf("fClIdx: %d sClIdx: %d  rof1: %hu rof2: %hu phi: %f tl: %f \n", firstClusterIndex + offsetFirst, secondClusterIndex + offsetSecond, rof[0], rof[1], phi, tanLambda);
-// }
-
-// GPUhdi() void Tracklet::dump(const int offsetFirst, const int offsetSecond) const
-// {
-//   printf("fClIdx: %d sClIdx: %d  rof1: %hu rof2: %hu phi: %f tl: %f \n", firstClusterIndex + offsetFirst, secondClusterIndex + offsetSecond, rof[0], rof[1], phi, tanLambda);
-// }
 
 GPUhdi() void Tracklet::dump(const int offsetFirst, const int offsetSecond)
 {
