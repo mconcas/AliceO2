@@ -226,7 +226,7 @@ class TimeFrame
     }
   }
 
-  virtual void setDevicePropagator(const o2::base::PropagatorImpl<float>*) {};
+  virtual void setDevicePropagator(const o2::base::PropagatorImpl<float>*){};
   const o2::base::PropagatorImpl<float>* getDevicePropagator() const { return mPropagatorDevice; }
 
   template <typename... T>

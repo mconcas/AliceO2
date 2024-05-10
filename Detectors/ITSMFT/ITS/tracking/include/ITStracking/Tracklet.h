@@ -90,7 +90,7 @@ GPUhdi() Tracklet::Tracklet(const int idx0, const int idx1, float tanL, float ph
   // Nothing to do
 }
 
-GPUhdi() bool Tracklet::operator==(const Tracklet & rhs) const
+GPUhdi() bool Tracklet::operator==(const Tracklet& rhs) const
 {
   return this->firstClusterIndex == rhs.firstClusterIndex &&
          this->secondClusterIndex == rhs.secondClusterIndex &&
@@ -100,7 +100,7 @@ GPUhdi() bool Tracklet::operator==(const Tracklet & rhs) const
          this->rof[1] == rhs.rof[1];
 }
 
-GPUhdi() bool Tracklet::operator!=(const Tracklet & rhs) const
+GPUhdi() bool Tracklet::operator!=(const Tracklet& rhs) const
 {
   return this->firstClusterIndex != rhs.firstClusterIndex ||
          this->secondClusterIndex != rhs.secondClusterIndex ||
@@ -108,7 +108,7 @@ GPUhdi() bool Tracklet::operator!=(const Tracklet & rhs) const
          this->phi != rhs.phi;
 }
 
-GPUhdi() unsigned char Tracklet::operator<(const Tracklet & t) const
+GPUhdi() unsigned char Tracklet::operator<(const Tracklet& t) const
 {
   if (isEmpty()) {
     return false;
