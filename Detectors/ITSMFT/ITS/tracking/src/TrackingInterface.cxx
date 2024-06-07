@@ -232,7 +232,7 @@ void ITSTrackingInterface::run(framework::ProcessingContext& pc)
       for (auto& v : vtxVecLoc) {
         vertices.push_back(v);
       }
-      mTimeFrame->addPrimaryVertices(vtxVecLoc);
+      mTimeFrame->addPrimaryVertices(vtxVecLoc, iRof);
     }
   }
   LOG(info) << fmt::format(" - rejected {}/{} ROFs: random/mult.sel:{} (seed {}), vtx.sel:{}, upc.sel:{}", cutRandomMult + cutVertexMult + cutUPCVertex, rofspan.size(), cutRandomMult, multEst.lastRandomSeed, cutVertexMult, cutUPCVertex);
