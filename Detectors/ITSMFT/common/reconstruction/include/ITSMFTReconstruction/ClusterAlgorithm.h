@@ -42,18 +42,18 @@ class ClusterAlgorithm
   ClusterAlgorithm() = default;
 
   /**
-  * \brief Identifies clusters within specified regions of pixel data.
-  *
-  * This function processes the given regions of pixel data, along with corresponding chip IDs and region coordinates,
-  * to identify clusters. The identified clusters are represented by bounding boxes and their corresponding pixel data.
-  *
-  * \param regions A 3D vector representing the pixel data in different precomputed regions. Each element is an integer representing the pixel value.
-  * \param chipIds A vector of integers representing the chip IDs for each region.
-  * \param regionCoordinates A vector of (row, column) pairs representing the top-left corner coordinates of each region.
-  * \param clusterBBoxes Output vector to be populated with the bounding boxes of identified clusters.
-  * \param clusterPixels Output vector to be populated with the pixel data of identified clusters.
-  */
-  void clusterize(const std::vector<std::vector<std::vector<int>>>& regions, const std::vector<int>& chipIds, const std::vector<std::pair<int,int>>& regionCoordinates,
+   * \brief Identifies clusters within specified regions of pixel data.
+   *
+   * This function processes the given regions of pixel data, along with corresponding chip IDs and region coordinates,
+   * to identify clusters. The identified clusters are represented by bounding boxes and their corresponding pixel data.
+   *
+   * \param regions A 3D vector representing the pixel data in different precomputed regions. Each element is an integer representing the pixel value.
+   * \param chipIds A vector of integers representing the chip IDs for each region.
+   * \param regionCoordinates A vector of (row, column) pairs representing the top-left corner coordinates of each region.
+   * \param clusterBBoxes Output vector to be populated with the bounding boxes of identified clusters.
+   * \param clusterPixels Output vector to be populated with the pixel data of identified clusters.
+   */
+  void clusterize(const std::vector<std::vector<std::vector<int>>>& regions, const std::vector<int>& chipIds, const std::vector<std::pair<int, int>>& regionCoordinates,
                   std::vector<BoundingBox>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels);
 };
 

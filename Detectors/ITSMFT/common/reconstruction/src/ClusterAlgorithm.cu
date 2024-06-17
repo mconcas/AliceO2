@@ -234,18 +234,17 @@ std::vector<int> flatten(const std::vector<std::vector<std::vector<int>>>& data)
   return flatData;
 }
 
-std::vector<int> flattenCoordinates(const std::vector<std::pair<int,int>>& coordinates)
+std::vector<int> flattenCoordinates(const std::vector<std::pair<int, int>>& coordinates)
 {
   std::vector<int> flatCoordinates;
-  for (const auto& p : coordinates)
-  {
+  for (const auto& p : coordinates) {
     flatCoordinates.push_back(p.first);
     flatCoordinates.push_back(p.second);
   }
   return flatCoordinates;
 }
 
-void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>>>& data, const std::vector<int>& chipIds, const std::vector<std::pair<int,int>>& coordinates,
+void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>>>& data, const std::vector<int>& chipIds, const std::vector<std::pair<int, int>>& coordinates,
                                   std::vector<BoundingBox>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels)
 {
   auto start_all = std::chrono::high_resolution_clock::now();

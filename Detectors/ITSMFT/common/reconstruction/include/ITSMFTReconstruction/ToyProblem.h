@@ -44,7 +44,6 @@ namespace itsmft
 class ToyProblem
 {
  public:
-
   /**
    * \brief Constructor that initializes ToyProblem with a specific region extractor implementation.
    * \param regionExtractor A unique pointer to the region extraction algorithm to be used.
@@ -69,7 +68,7 @@ class ToyProblem
    */
   void addChip(ChipPixelData* chipData);
 
-    /**
+  /**
    * \brief Adds chip data to the ToyProblem environment.
    *
    * In contrast to regular version, this version does not initiate preprocessing.
@@ -99,10 +98,10 @@ class ToyProblem
 
  private:
   std::vector<std::vector<std::vector<int>>> extractedRegions; ///< Stores the preclustered regions for further computation.
-  std::vector<std::pair<int,int>> coordinates; ///< Coordinates within chip for each region.
-  std::vector<int> chipIds; ///< Chip ID for each region.
-  std::unique_ptr<RegionExtractor> regionExtractor; ///< Region extraction strategy.
-  std::vector<std::function<void()>> extractionTasks; ///< Stores function calls for addChip operation to measure overhead of region extraction.
+  std::vector<std::pair<int, int>> coordinates;                ///< Coordinates within chip for each region.
+  std::vector<int> chipIds;                                    ///< Chip ID for each region.
+  std::unique_ptr<RegionExtractor> regionExtractor;            ///< Region extraction strategy.
+  std::vector<std::function<void()>> extractionTasks;          ///< Stores function calls for addChip operation to measure overhead of region extraction.
 
   /**
    * \brief Performs preprocessing on chips added using addChipAsync.
@@ -138,7 +137,7 @@ class Timer
   }
 
  private:
-  std::string name; ///< Name of the timer.
+  std::string name;                                     ///< Name of the timer.
   std::chrono::high_resolution_clock::time_point start; ///< Start time of the timer.
 };
 
