@@ -9,8 +9,9 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file PlayneClusterAlgorithm.cu
+/// \file ClusterAlgorithm.cu
 /// \brief Implementation of the Playne CCL Algorithm for Clustering on the GPU
+/// \author Nikolaus Draeger [https://cds.cern.ch/record/2879828]
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -32,8 +33,8 @@ using namespace o2::itsmft;
 namespace o2::itsmft::gpu
 {
 using Point = o2::itsmft::Point;
+using MinimalistBoundingBox = o2::itsmft::MinimalistBoundingBox;
 using BoundingBox = o2::itsmft::BoundingBox;
-using BoundingBox2 = o2::itsmft::BoundingBox2;
 
 __device__ void print(int* data, int* labels, int* parent, int* rank, int nrow, int ncol)
 {
@@ -97,8 +98,8 @@ __device__ int unify(int x, int y, int* parent, int* rank)
 
 __global__ void ccl_kernel(int N, int* data, int* coordinates, int* regionSizes, int* regionHeights, int* regionWidths,
                            int* startIndices, int* labels, int* parent, int* rank, int* numClusters,
-                           int* clusterSizes, Point* scratchMemory, int* scratchMemIndex, int* stridedSizes, 
-                           int* stridedPositions, int stride, BoundingBox* boxes, BoundingBox* stridedBoxes, 
+                           int* clusterSizes, Point* scratchMemory, int* scratchMemIndex, int* stridedSizes,
+                           int* stridedPositions, int stride, MinimalistBoundingBox* boxes, MinimalistBoundingBox* stridedBoxes,
                            int* chipIds, int* stridedChipIds)
 {
   int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
@@ -191,7 +192,7 @@ __global__ void ccl_kernel(int N, int* data, int* coordinates, int* regionSizes,
 
           if (idx == rootIdx) {
             int currentClusterSize = clusterSizes[idx];
-            BoundingBox currentClusterBox = boxes[idx];
+            MinimalistBoundingBox currentClusterBox = boxes[idx];
 
             // global scratch memory index
             int reservedIndex = atomicAdd(scratchMemIndex, currentClusterSize);
@@ -229,29 +230,28 @@ std::vector<int> flatten(const std::vector<std::vector<std::vector<int>>>& data)
   for (const auto& region : data)
     for (const auto& row : region)
       for (const auto& pixel : row)
-        flatData.push_back(pixel);  
+        flatData.push_back(pixel);
   return flatData;
 }
 
-std::vector<int> flattenCoordinates(const std::vector<std::pair<int,int>>& coordinates)
+std::vector<int> flattenCoordinates(const std::vector<std::pair<int, int>>& coordinates)
 {
   std::vector<int> flatCoordinates;
-  for (const auto& p : coordinates)
-  {
-    flatCoordinates.push_back(p.first);  
-    flatCoordinates.push_back(p.second); 
-  } 
+  for (const auto& p : coordinates) {
+    flatCoordinates.push_back(p.first);
+    flatCoordinates.push_back(p.second);
+  }
   return flatCoordinates;
 }
 
-void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>>>& data, const std::vector<int>& chipIds, const std::vector<std::pair<int,int>>& coordinates, 
-                                  std::vector<BoundingBox2>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels)
+void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>>>& data, const std::vector<int>& chipIds, const std::vector<std::pair<int, int>>& coordinates,
+                                  std::vector<BoundingBox>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels)
 {
   auto start_all = std::chrono::high_resolution_clock::now();
   auto start_pre = std::chrono::high_resolution_clock::now();
 
   std::vector<int> flatData = flatten(data);
-  std::vector<int> flatCoordinates = flattenCoordinates(coordinates); 
+  std::vector<int> flatCoordinates = flattenCoordinates(coordinates);
 
   int totalNumPixels = flatData.size();
   int numRegions = data.size();
@@ -268,10 +268,9 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
   int* stridedSizes = new int[numRegions * stride]();
   int* stridedPositions = new int[numRegions * stride]();
   int scratchMemIndex = 0;
-  BoundingBox* boxes = new BoundingBox[totalNumPixels]();
-  BoundingBox* stridedBoxes = new BoundingBox[numRegions * stride]();
+  MinimalistBoundingBox* boxes = new MinimalistBoundingBox[totalNumPixels]();
+  MinimalistBoundingBox* stridedBoxes = new MinimalistBoundingBox[numRegions * stride]();
   int* stridedChipIds = new int[numRegions * stride]();
-
 
   auto start_dataprep = std::chrono::high_resolution_clock::now();
 
@@ -311,8 +310,8 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
   int* deviceStridedSizes;
   int* deviceStridedPositions;
   int* deviceStridedChipIds;
-  BoundingBox* deviceBoxes;
-  BoundingBox* deviceStridedBoxes;
+  MinimalistBoundingBox* deviceBoxes;
+  MinimalistBoundingBox* deviceStridedBoxes;
 
   auto start_malloc = std::chrono::high_resolution_clock::now();
 
@@ -333,11 +332,12 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
   CHECK_CUDA_ERROR(cudaMalloc((void**)&deviceStridedSizes, stride * numRegions * sizeof(int)));
   CHECK_CUDA_ERROR(cudaMalloc((void**)&deviceStridedPositions, stride * numRegions * sizeof(int)));
   CHECK_CUDA_ERROR(cudaMalloc((void**)&deviceStridedChipIds, stride * numRegions * sizeof(int)));
-  CHECK_CUDA_ERROR(cudaMalloc((void**)&deviceBoxes, totalNumPixels * sizeof(BoundingBox)));
-  CHECK_CUDA_ERROR(cudaMalloc((void**)&deviceStridedBoxes, stride * numRegions * sizeof(BoundingBox)));
+  CHECK_CUDA_ERROR(cudaMalloc((void**)&deviceBoxes, totalNumPixels * sizeof(MinimalistBoundingBox)));
+  CHECK_CUDA_ERROR(cudaMalloc((void**)&deviceStridedBoxes, stride * numRegions * sizeof(MinimalistBoundingBox)));
 
   auto stop_malloc = std::chrono::high_resolution_clock::now();
 
+  // Add corresponding amount of bytes for each of the cudaMallocs from above
   int totalMallocBytes = 0;
   totalMallocBytes += flatCoordinates.size() * sizeof(int);
   totalMallocBytes += totalNumPixels * sizeof(int);
@@ -356,8 +356,8 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
   totalMallocBytes += stride * numRegions * sizeof(int);
   totalMallocBytes += stride * numRegions * sizeof(int);
   totalMallocBytes += stride * numRegions * sizeof(int);
-  totalMallocBytes += totalNumPixels * sizeof(BoundingBox);
-  totalMallocBytes += stride * numRegions * sizeof(BoundingBox);
+  totalMallocBytes += totalNumPixels * sizeof(MinimalistBoundingBox);
+  totalMallocBytes += stride * numRegions * sizeof(MinimalistBoundingBox);
 
   auto start_memcpy = std::chrono::high_resolution_clock::now();
 
@@ -372,8 +372,9 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
 
   auto stop_memcpy = std::chrono::high_resolution_clock::now();
 
+  // Add corresponding amount of bytes for each of the cudaMemcpys from above
   int totalMemcpyBytes = 0;
-  totalMallocBytes += flatCoordinates.size() * sizeof(int);
+  totalMemcpyBytes += flatCoordinates.size() * sizeof(int);
   totalMemcpyBytes += totalNumPixels * sizeof(int);
   totalMemcpyBytes += numRegions * sizeof(int);
   totalMemcpyBytes += regionSizes.size() * sizeof(int);
@@ -393,11 +394,12 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
   CHECK_CUDA_ERROR(cudaMemset(deviceStridedSizes, 0, stride * numRegions * sizeof(int)));
   CHECK_CUDA_ERROR(cudaMemset(deviceStridedPositions, 0, stride * numRegions * sizeof(int)));
   CHECK_CUDA_ERROR(cudaMemset(deviceStridedChipIds, 0, stride * numRegions * sizeof(int)));
-  CHECK_CUDA_ERROR(cudaMemset(deviceBoxes, 0, totalNumPixels * sizeof(BoundingBox)));
-  CHECK_CUDA_ERROR(cudaMemset(deviceStridedBoxes, 0, stride * numRegions * sizeof(BoundingBox)));
+  CHECK_CUDA_ERROR(cudaMemset(deviceBoxes, 0, totalNumPixels * sizeof(MinimalistBoundingBox)));
+  CHECK_CUDA_ERROR(cudaMemset(deviceStridedBoxes, 0, stride * numRegions * sizeof(MinimalistBoundingBox)));
 
   auto stop_memset = std::chrono::high_resolution_clock::now();
 
+  // Add corresponding amount of bytes for each of the cudaMemsets from above
   int totalMemsetBytes = 0;
   totalMemsetBytes += totalNumPixels * sizeof(int);
   totalMemsetBytes += totalNumPixels * sizeof(int);
@@ -408,8 +410,8 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
   totalMemsetBytes += stride * numRegions * sizeof(int);
   totalMemsetBytes += stride * numRegions * sizeof(int);
   totalMemsetBytes += stride * numRegions * sizeof(int);
-  totalMemsetBytes += totalNumPixels * sizeof(BoundingBox);
-  totalMemsetBytes += stride * numRegions * sizeof(BoundingBox);
+  totalMemsetBytes += totalNumPixels * sizeof(MinimalistBoundingBox);
+  totalMemsetBytes += stride * numRegions * sizeof(MinimalistBoundingBox);
 
   const int threadsPerBlock = 256;
   const int numBlocks = (numRegions + threadsPerBlock - 1) / threadsPerBlock;
@@ -424,18 +426,17 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
   gpu::ccl_kernel<<<numBlocks, threadsPerBlock>>>(numRegions, deviceData, deviceCoordinates, deviceSizes, deviceHeights,
                                                   deviceWidths, deviceStartIndices, deviceLabels, deviceParents, deviceRanks,
                                                   deviceNumClusters, deviceClusterSizes, deviceScratchMemory, deviceScratchMemIndex,
-                                                  deviceStridedSizes, deviceStridedPositions, stride, deviceBoxes, deviceStridedBoxes, 
+                                                  deviceStridedSizes, deviceStridedPositions, stride, deviceBoxes, deviceStridedBoxes,
                                                   deviceChipIds, deviceStridedChipIds);
   cudaEventRecord(stop);
 
   auto start_post = std::chrono::high_resolution_clock::now();
 
-  // CHECK_CUDA_ERROR(cudaMemcpy(labels, deviceLabels, totalNumPixels * sizeof(int), cudaMemcpyDeviceToHost));
   CHECK_CUDA_ERROR(cudaMemcpy(scratchMemory, deviceScratchMemory, scratchMemLength * sizeof(int), cudaMemcpyDeviceToHost)); // copying can be shortened for tiny optimization
   CHECK_CUDA_ERROR(cudaMemcpy(stridedSizes, deviceStridedSizes, stride * numRegions * sizeof(int), cudaMemcpyDeviceToHost));
   CHECK_CUDA_ERROR(cudaMemcpy(stridedPositions, deviceStridedPositions, stride * numRegions * sizeof(int), cudaMemcpyDeviceToHost));
   CHECK_CUDA_ERROR(cudaMemcpy(stridedChipIds, deviceStridedChipIds, stride * numRegions * sizeof(int), cudaMemcpyDeviceToHost));
-  CHECK_CUDA_ERROR(cudaMemcpy(stridedBoxes, deviceStridedBoxes, stride * numRegions * sizeof(BoundingBox), cudaMemcpyDeviceToHost));
+  CHECK_CUDA_ERROR(cudaMemcpy(stridedBoxes, deviceStridedBoxes, stride * numRegions * sizeof(MinimalistBoundingBox), cudaMemcpyDeviceToHost));
 
   cudaEventSynchronize(stop);
   float milliseconds = 0;
@@ -451,8 +452,8 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
     int clusterStartPosition = stridedPositions[clusterIdx];
     int chipId = stridedChipIds[clusterIdx];
 
-    const BoundingBox& sBox = stridedBoxes[clusterIdx];
-    BoundingBox2 bBox(chipId);
+    const MinimalistBoundingBox& sBox = stridedBoxes[clusterIdx];
+    BoundingBox bBox(chipId);
     bBox.rowMin = static_cast<uint16_t>(sBox.min_r);
     bBox.colMin = static_cast<uint16_t>(sBox.min_c);
     bBox.rowMax = static_cast<uint16_t>(sBox.max_r);
@@ -464,20 +465,33 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
     }
   }
 
-  // for (int i = 0; i < std::min(static_cast<int>(clusterPixels.size()), 20); i++) {
-  //   for (const PixelData& pixel : clusterPixels[i]) {
-  //     std::cout << "(" << pixel.getRow() << "," << pixel.getCol() << ") ";
-  //   }
-  //   std::cout << std::endl;
-  // }
+  delete[] parent;
+  delete[] scratchMemory;
+  delete[] stridedSizes;
+  delete[] stridedPositions;
+  delete[] stridedChipIds;
+  delete[] boxes;
+  delete[] stridedBoxes;
 
-  // for (int i = 0; i < std::min(static_cast<int>(clusterBBoxes.size()), 20); i++) {
-  //   std::cout << "(" << clusterBBoxes[i].chipID << "," << clusterBBoxes[i].rowMin << "," << clusterBBoxes[i].rowMax << "," << clusterBBoxes[i].colMin << "," << clusterBBoxes[i].colMax << ") "; 
-  //   std::cout << std::endl;
-  // }
-
-  // TODO: MEMORY CLEANUP
-
+  CHECK_CUDA_ERROR(cudaFree(deviceData));
+  CHECK_CUDA_ERROR(cudaFree(deviceCoordinates));
+  CHECK_CUDA_ERROR(cudaFree(deviceChipIds));
+  CHECK_CUDA_ERROR(cudaFree(deviceSizes));
+  CHECK_CUDA_ERROR(cudaFree(deviceHeights));
+  CHECK_CUDA_ERROR(cudaFree(deviceWidths));
+  CHECK_CUDA_ERROR(cudaFree(deviceStartIndices));
+  CHECK_CUDA_ERROR(cudaFree(deviceLabels));
+  CHECK_CUDA_ERROR(cudaFree(deviceParents));
+  CHECK_CUDA_ERROR(cudaFree(deviceRanks));
+  CHECK_CUDA_ERROR(cudaFree(deviceClusterSizes));
+  CHECK_CUDA_ERROR(cudaFree(deviceNumClusters));
+  CHECK_CUDA_ERROR(cudaFree(deviceScratchMemory));
+  CHECK_CUDA_ERROR(cudaFree(deviceScratchMemIndex));
+  CHECK_CUDA_ERROR(cudaFree(deviceStridedSizes));
+  CHECK_CUDA_ERROR(cudaFree(deviceStridedPositions));
+  CHECK_CUDA_ERROR(cudaFree(deviceStridedChipIds));
+  CHECK_CUDA_ERROR(cudaFree(deviceBoxes));
+  CHECK_CUDA_ERROR(cudaFree(deviceStridedBoxes));
 
   auto end_post = std::chrono::high_resolution_clock::now();
   auto end_all = std::chrono::high_resolution_clock::now();
@@ -485,10 +499,8 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_all - start_all);
   std::cout << "Time taken for all: " << duration.count() / 1000 << " ms" << std::endl;
 
-
   duration = std::chrono::duration_cast<std::chrono::microseconds>(end_pre - start_pre);
   std::cout << "Time taken for pre: " << duration.count() / 1000 << " ms" << std::endl;
-
 
   duration = std::chrono::duration_cast<std::chrono::microseconds>(end_post - start_post);
   std::cout << "Time taken for post: " << duration.count() / 1000 << " ms" << std::endl;
@@ -505,14 +517,12 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
   std::cout << "Resulting Throughput (GB/s): " << throughput_malloc << std::endl;
   std::cout << std::endl;
 
-
   auto memcpytime = std::chrono::duration_cast<std::chrono::microseconds>(stop_memcpy - start_memcpy);
   std::cout << "Time taken for MEMCPY: " << memcpytime.count() << " us" << std::endl;
   std::cout << "Bytes set using MEMCPY: " << totalMemcpyBytes << std::endl;
   double throughput_memcpy = static_cast<double>(totalMemcpyBytes) / (memcpytime.count() / 1e6) / 1e9;
   std::cout << "Resulting Throughput (GB/s): " << throughput_memcpy << std::endl;
   std::cout << std::endl;
-
 
   auto memsettime = std::chrono::duration_cast<std::chrono::microseconds>(stop_memset - start_memset);
   std::cout << "Time taken for MEMSET: " << memsettime.count() << " us" << std::endl;
