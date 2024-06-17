@@ -98,8 +98,8 @@ __device__ int unify(int x, int y, int* parent, int* rank)
 
 __global__ void ccl_kernel(int N, int* data, int* coordinates, int* regionSizes, int* regionHeights, int* regionWidths,
                            int* startIndices, int* labels, int* parent, int* rank, int* numClusters,
-                           int* clusterSizes, Point* scratchMemory, int* scratchMemIndex, int* stridedSizes, 
-                           int* stridedPositions, int stride, MinimalistBoundingBox* boxes, MinimalistBoundingBox* stridedBoxes, 
+                           int* clusterSizes, Point* scratchMemory, int* scratchMemIndex, int* stridedSizes,
+                           int* stridedPositions, int stride, MinimalistBoundingBox* boxes, MinimalistBoundingBox* stridedBoxes,
                            int* chipIds, int* stridedChipIds)
 {
   int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
@@ -230,7 +230,7 @@ std::vector<int> flatten(const std::vector<std::vector<std::vector<int>>>& data)
   for (const auto& region : data)
     for (const auto& row : region)
       for (const auto& pixel : row)
-        flatData.push_back(pixel);  
+        flatData.push_back(pixel);
   return flatData;
 }
 
@@ -239,20 +239,20 @@ std::vector<int> flattenCoordinates(const std::vector<std::pair<int,int>>& coord
   std::vector<int> flatCoordinates;
   for (const auto& p : coordinates)
   {
-    flatCoordinates.push_back(p.first);  
-    flatCoordinates.push_back(p.second); 
-  } 
+    flatCoordinates.push_back(p.first);
+    flatCoordinates.push_back(p.second);
+  }
   return flatCoordinates;
 }
 
-void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>>>& data, const std::vector<int>& chipIds, const std::vector<std::pair<int,int>>& coordinates, 
+void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>>>& data, const std::vector<int>& chipIds, const std::vector<std::pair<int,int>>& coordinates,
                                   std::vector<BoundingBox>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels)
 {
   auto start_all = std::chrono::high_resolution_clock::now();
   auto start_pre = std::chrono::high_resolution_clock::now();
 
   std::vector<int> flatData = flatten(data);
-  std::vector<int> flatCoordinates = flattenCoordinates(coordinates); 
+  std::vector<int> flatCoordinates = flattenCoordinates(coordinates);
 
   int totalNumPixels = flatData.size();
   int numRegions = data.size();
@@ -427,7 +427,7 @@ void ClusterAlgorithm::clusterize(const std::vector<std::vector<std::vector<int>
   gpu::ccl_kernel<<<numBlocks, threadsPerBlock>>>(numRegions, deviceData, deviceCoordinates, deviceSizes, deviceHeights,
                                                   deviceWidths, deviceStartIndices, deviceLabels, deviceParents, deviceRanks,
                                                   deviceNumClusters, deviceClusterSizes, deviceScratchMemory, deviceScratchMemIndex,
-                                                  deviceStridedSizes, deviceStridedPositions, stride, deviceBoxes, deviceStridedBoxes, 
+                                                  deviceStridedSizes, deviceStridedPositions, stride, deviceBoxes, deviceStridedBoxes,
                                                   deviceChipIds, deviceStridedChipIds);
   cudaEventRecord(stop);
 

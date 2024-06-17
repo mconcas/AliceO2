@@ -62,25 +62,25 @@ class ToyProblem
 
   /**
    * \brief Adds chip data to the ToyProblem environment and initiates preprocessing.
-   * 
+   *
    * In contrast to async version, preprocessing is immediately executed.
-   * 
+   *
    * \param chipData Pointer to the chip data to be added.
    */
   void addChip(ChipPixelData* chipData);
 
     /**
    * \brief Adds chip data to the ToyProblem environment.
-   * 
+   *
    * In contrast to regular version, this version does not initiate preprocessing.
-   * 
+   *
    * \param chipData Pointer to the chip data to be added.
    */
   void addChipAsync(ChipPixelData* chipData);
 
   /**
    * \brief Performs clustering on the fully preprocessed chip data.
-   * 
+   *
    * \param clusterBBoxes Output vector to be populated with bounding boxes of identified clusters.
    * \param clusterPixels Output vector to be populated with pixel data of identified clusters.
    */
@@ -88,10 +88,10 @@ class ToyProblem
 
   /**
    * \brief Executes the toy problem. This includes region extraction/preprocessing and clustering.
-   * 
-   * Any chips added using addChipAsync will be preprocessed 
+   *
+   * Any chips added using addChipAsync will be preprocessed
    * before the actual clustering is performed using performClustering.
-   * 
+   *
    * \param clusterBBoxes Output vector to be populated with bounding boxes of identified clusters.
    * \param clusterPixels Output vector to be populated with pixel data of identified clusters.
    */

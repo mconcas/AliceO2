@@ -44,7 +44,7 @@ class ClusterAlgorithm
   /**
   * \brief Identifies clusters within specified regions of pixel data.
   *
-  * This function processes the given regions of pixel data, along with corresponding chip IDs and region coordinates, 
+  * This function processes the given regions of pixel data, along with corresponding chip IDs and region coordinates,
   * to identify clusters. The identified clusters are represented by bounding boxes and their corresponding pixel data.
   *
   * \param regions A 3D vector representing the pixel data in different precomputed regions. Each element is an integer representing the pixel value.

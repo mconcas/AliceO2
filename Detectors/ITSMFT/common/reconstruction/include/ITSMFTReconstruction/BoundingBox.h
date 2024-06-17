@@ -32,7 +32,7 @@ struct MinimalistBoundingBox {
 };
 
 /**
- * \brief BoundingBox represents a box around clusters and includes functionality used in their computation 
+ * \brief BoundingBox represents a box around clusters and includes functionality used in their computation
  *        as well as meta information such as the chip ID.
  */
 struct BoundingBox {
@@ -51,10 +51,10 @@ struct BoundingBox {
      * \param col Column index of the point.
      * \return True if the point is inside the bounding box, false otherwise.
      */
-    bool isInside(uint16_t row, uint16_t col) const { 
-      return row >= rowMin && row <= rowMax && col >= colMin && col <= colMax; 
+    bool isInside(uint16_t row, uint16_t col) const {
+      return row >= rowMin && row <= rowMax && col >= colMin && col <= colMax;
     }
-    
+
     /**
      * \brief Get the span of rows covered by the bounding box.
      * \return Number of rows covered by the bounding box.
@@ -80,7 +80,7 @@ struct BoundingBox {
      * \brief Adjust the bounding box such that the given point (row, col) is within bounds.
      * \param row Row index of the point.
      * \param col Column index of the point.
-     */    
+     */
     void adjust(uint16_t row, uint16_t col)
     {
       if (row < rowMin) {

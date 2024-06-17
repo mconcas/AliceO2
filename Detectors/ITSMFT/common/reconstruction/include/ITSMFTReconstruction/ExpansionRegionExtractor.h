@@ -37,7 +37,7 @@ public:
     /**
     * \brief Preprocess the chip data by extracting subregions using the expansion method.
     *
-    * This function preprocesses the given chip data to identify subregions containing pixel data using an expansion method. 
+    * This function preprocesses the given chip data to identify subregions containing pixel data using an expansion method.
     * It scans the maximum allowed distances in x and y directions to form a set of subregions.
     * This step is used to reduce load on the CUDA kernel.
     *
@@ -74,10 +74,10 @@ private:
     * \return True if the region was successfully expanded, false otherwise.
     */
     bool expandRegion(std::vector<std::vector<int>>& fullRegion,
-                                                Region& regionInfo, 
+                                                Region& regionInfo,
                                                 const int maxdist_x,
                                                 const int maxdist_y,
-                                                std::set<PixelData>& pixelSet, 
+                                                std::set<PixelData>& pixelSet,
                                                 std::vector<std::vector<PixelData*>>& pixelDataPointers);
 
     /**

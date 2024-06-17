@@ -38,15 +38,15 @@ struct ExtractedRegionsWrapper {
 class RegionExtractor
 {
 public:
-    
+
     using ChipPixelData = o2::itsmft::ChipPixelData;
-    
+
     virtual ~RegionExtractor() = default;
 
     /**
     * \brief Pure virtual function to preprocess the chip data and extract subregions.
     *
-    * This function needs to be implemented by derived classes to preprocess the given chip data and extract regions 
+    * This function needs to be implemented by derived classes to preprocess the given chip data and extract regions
     * based on the specified maximum distances in x and y directions.
     * This step is used to reduce load on the CUDA kernel.
     *
