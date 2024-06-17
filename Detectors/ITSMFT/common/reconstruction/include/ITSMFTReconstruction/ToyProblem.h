@@ -10,7 +10,8 @@
 // or submit itself to any jurisdiction.
 
 /// \file ToyProblem.h
-/// \brief Preparation for GPU algorithm testing suitef
+/// \brief Creates environment for testing GPU implementation of clusterer in a (for now) minimal and controlled manner.
+/// \author Nikolaus Draeger [https://cds.cern.ch/record/2879828]
 #ifndef ALICEO2_ITS_TOYPROBLEM_H
 #define ALICEO2_ITS_TOYPROBLEM_H
 
@@ -30,7 +31,6 @@
 #include <functional>
 #include "ITSMFTReconstruction/PixelData.h"
 #include "ITSMFTReconstruction/RegionExtractor.h"
-// #include "ITSMFTReconstruction/ClusterAlgorithm.h"
 #include "ITSMFTReconstruction/BoundingBox.h"
 
 #ifdef _PERFORM_TIMING_
@@ -44,44 +44,92 @@ namespace itsmft
 class ToyProblem
 {
  public:
+
+  /**
+   * \brief Constructor that initializes ToyProblem with a specific region extractor implementation.
+   * \param regionExtractor A unique pointer to the region extraction algorithm to be used.
+   */
   ToyProblem(std::unique_ptr<RegionExtractor> regionExtractor);
+
   ~ToyProblem() = default;
   ToyProblem(const ToyProblem&) = delete;
 
+  /**
+   * \brief Sets a new region extractor.
+   * \param newRegionExtractor A unique pointer to the new region extractor.
+   */
   void setRegionExtractor(std::unique_ptr<RegionExtractor> newRegionExtractor);
-  // void setClusterAlgorithm(std::unique_ptr<ClusterAlgorithm> newClusterAlgorithm);
 
+  /**
+   * \brief Adds chip data to the ToyProblem environment and initiates preprocessing.
+   * 
+   * In contrast to async version, preprocessing is immediately executed.
+   * 
+   * \param chipData Pointer to the chip data to be added.
+   */
   void addChip(ChipPixelData* chipData);
+
+    /**
+   * \brief Adds chip data to the ToyProblem environment.
+   * 
+   * In contrast to regular version, this version does not initiate preprocessing.
+   * 
+   * \param chipData Pointer to the chip data to be added.
+   */
   void addChipAsync(ChipPixelData* chipData);
-  void performClustering(std::vector<BoundingBox2>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels);
-  void executeToyProblem(std::vector<BoundingBox2>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels);
+
+  /**
+   * \brief Performs clustering on the fully preprocessed chip data.
+   * 
+   * \param clusterBBoxes Output vector to be populated with bounding boxes of identified clusters.
+   * \param clusterPixels Output vector to be populated with pixel data of identified clusters.
+   */
+  void performClustering(std::vector<BoundingBox>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels);
+
+  /**
+   * \brief Executes the toy problem. This includes region extraction/preprocessing and clustering.
+   * 
+   * Any chips added using addChipAsync will be preprocessed 
+   * before the actual clustering is performed using performClustering.
+   * 
+   * \param clusterBBoxes Output vector to be populated with bounding boxes of identified clusters.
+   * \param clusterPixels Output vector to be populated with pixel data of identified clusters.
+   */
+  void executeToyProblem(std::vector<BoundingBox>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels);
 
  private:
-  // stores the "preclustered" regions that will be used for further computation with some algorithm of choice
-  std::vector<std::vector<std::vector<int>>> extractedRegions;
-  // store coordinate within chip for each region
-  std::vector<std::pair<int,int>> coordinates;
-  // store chip ID for each region
-  std::vector<int> chipIds;
-  // region extraction strategy
-  std::unique_ptr<RegionExtractor> regionExtractor;
-  // clustering strategy
-  // std::unique_ptr<ClusterAlgorithm> clusterAlgorithm;
-  // stores function calls for addChip operation to measure overhead of region extraction
-  std::vector<std::function<void()>> extractionTasks;
+  std::vector<std::vector<std::vector<int>>> extractedRegions; ///< Stores the preclustered regions for further computation.
+  std::vector<std::pair<int,int>> coordinates; ///< Coordinates within chip for each region.
+  std::vector<int> chipIds; ///< Chip ID for each region.
+  std::unique_ptr<RegionExtractor> regionExtractor; ///< Region extraction strategy.
+  std::vector<std::function<void()>> extractionTasks; ///< Stores function calls for addChip operation to measure overhead of region extraction.
 
+  /**
+   * \brief Performs preprocessing on chips added using addChipAsync.
+   */
   void executeExtractionAsync();
+
+  /**
+   * \brief Any postprocessing steps to be executed after the main ToyProblem execution.
+   */
   void postProcess();
 };
 
 class Timer
 {
  public:
+  /**
+   * \brief Constructor that starts the timer.
+   * \param name Name of the timer.
+   */
   Timer(const std::string& name)
     : name(name), start(std::chrono::high_resolution_clock::now())
   {
   }
 
+  /**
+   * \brief Destructor that stops the timer and prints the elapsed time.
+   */
   ~Timer()
   {
     auto end = std::chrono::high_resolution_clock::now();
@@ -90,8 +138,8 @@ class Timer
   }
 
  private:
-  std::string name;
-  std::chrono::high_resolution_clock::time_point start;
+  std::string name; ///< Name of the timer.
+  std::chrono::high_resolution_clock::time_point start; ///< Start time of the timer.
 };
 
 } // namespace itsmft

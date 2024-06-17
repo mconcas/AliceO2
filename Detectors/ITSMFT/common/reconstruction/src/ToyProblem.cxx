@@ -11,6 +11,7 @@
 
 /// \file ToyProblem.cxx
 /// \brief Implementation of the ITS cluster finder toy problem
+/// \author Nikolaus Draeger [https://cds.cern.ch/record/2879828]
 
 #include "ITSMFTReconstruction/RegionExtractor.h"
 #include "ITSMFTReconstruction/BoundingBox.h"
@@ -32,7 +33,6 @@ void ToyProblem::addChip(ChipPixelData* chipData)
   ExtractedRegionsWrapper chipRegionsWrapped = regionExtractor->preprocess(chipData, MAX_DIST_X, MAX_DIST_Y);
   std::vector<std::vector<std::vector<int>>> chipRegions = chipRegionsWrapped.regions;
   std::vector<std::pair<int, int>> chipRegionCoordinates = chipRegionsWrapped.coordinates;
-  // std::cout << "Added chip " << extractedRegions.size() + 1 << " of " << extractionTasks.size() << std::endl;
   extractedRegions.insert(extractedRegions.end(), chipRegions.begin(), chipRegions.end());
   chipIds.push_back(chipData->getChipID());
   coordinates.insert(coordinates.end(), chipRegionCoordinates.begin(), chipRegionCoordinates.end());
@@ -54,21 +54,15 @@ void ToyProblem::executeExtractionAsync()
   }
 }
 
-void ToyProblem::executeToyProblem(std::vector<BoundingBox2>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels)
+void ToyProblem::executeToyProblem(std::vector<BoundingBox>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels)
 {
   Timer timer("executeToyProblem");
-  std::cout << "starting extraction" << std::endl;
   executeExtractionAsync();
-  std::cout << "extraction done, starting clustering" << std::endl;
   performClustering(clusterBBoxes, clusterPixels);
-  std::cout << "clustering done" << std::endl;
 }
 
-void ToyProblem::performClustering(std::vector<BoundingBox2>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels)
+void ToyProblem::performClustering(std::vector<BoundingBox>& clusterBBoxes, std::vector<std::vector<PixelData>>& clusterPixels)
 {
-  // if (!clusterAlgorithm) {
-  //   throw std::runtime_error("Clustering stragegy is not set");
-  // }
   Timer timer("performClustering");
   ClusterAlgorithm algo;
   algo.clusterize(extractedRegions, chipIds, coordinates, clusterBBoxes, clusterPixels);
@@ -76,5 +70,5 @@ void ToyProblem::performClustering(std::vector<BoundingBox2>& clusterBBoxes, std
 
 void ToyProblem::postProcess()
 {
-  //Timer timer("postProcess");
+  Timer timer("postProcess");
 }

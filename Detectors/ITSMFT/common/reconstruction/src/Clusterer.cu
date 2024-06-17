@@ -13,8 +13,6 @@
 /// \brief Implementation of the ITS cluster finder
 #include <algorithm>
 #include <TTree.h>
-// #include "Framework/Logger.h"
-// #include "ITSMFTBase/GeometryTGeo.h"
 #include "ITSMFTReconstruction/Clusterer.h"
 #include "SimulationDataFormat/MCTruthContainer.h"
 #include "CommonDataFormat/InteractionRecord.h"
@@ -52,13 +50,8 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
     ChipPixelData* curChipData = nullptr;
     mFiredChipsPtr.clear();
 
-    // NOTE: should be total number of pixels fired in ROF
     size_t nPix = 0;
 
-    // NOTE: cycle until no more chips fired in ROF 
-
-    // NOTE: not really sure how getNextChipData works tbh. should not matter for now
-    // NOTE: does it only return chips that fired?
     while ((curChipData = reader.getNextChipData(mChips))) {
       mFiredChipsPtr.push_back(curChipData);
       nPix += curChipData->getData().size();
@@ -67,14 +60,12 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
     auto& rof = vecROFRec->emplace_back(reader.getInteractionRecord(), vecROFRec->size(), compClus->size(), 0); // create new ROF
 
     uint16_t nFired = mFiredChipsPtr.size();
-    // std::cout << "FIRED CHIPS: " << nFired << std::endl;
     if (!nFired) {
       if (autoDecode) {
         continue;
       }
       break; // just 1 ROF was asked to be processed
     }
-    // NOTE: probably start (at least) one thread per chip. less threads needed if less chips fired
     if (nFired < nThreads) {
       nThreads = nFired;
     }
@@ -167,12 +158,13 @@ void Clusterer::process(int nThreads, PixelReader& reader, CompClusCont* compClu
   mTimer.Stop();
   LOGP(info, "Time to finish: {}s", mTimer.RealTime());
 #endif
-  std::vector<BoundingBox2> outClusterBBoxes;
+  std::vector<BoundingBox> outClusterBBoxes;
   std::vector<std::vector<PixelData>> outClusterPixels;
   mToyProblem.executeToyProblem(outClusterBBoxes, outClusterPixels);
   std::cout << "TOY PROBLEM PRODUCED: " << outClusterBBoxes.size() << " BOUNDING BOXES." << std::endl;
   std::cout << "TOY PROBLEM PRODUCED: " << outClusterPixels.size() << " PIXEL LISTS." << std::endl;
 
+  // The BoundingBox objects from the ToyProblem need to be converted to original BBox objects
   std::vector<BBox> originalClusterBBoxes;
 
   for (const auto& outBox : outClusterBBoxes) {
