@@ -108,7 +108,7 @@ void TimeFrame::addPrimaryVertices(const gsl::span<const Vertex>& vertices, cons
       }
     }
     mPrimaryVertices.emplace_back(vertex); // put a copy in the present
-    if (!isBeamPositionOverridden) { // beam position is updated only at first occurrence of the vertex. A bit sketchy if we have past/future vertices, it should not impact too much.
+    if (!isBeamPositionOverridden) {       // beam position is updated only at first occurrence of the vertex. A bit sketchy if we have past/future vertices, it should not impact too much.
       const int w{vertex.getNContributors()};
       mBeamPos[0] = (mBeamPos[0] * mBeamPosWeight + vertex.getX() * w) / (mBeamPosWeight + w);
       mBeamPos[1] = (mBeamPos[1] * mBeamPosWeight + vertex.getY() * w) / (mBeamPosWeight + w);
