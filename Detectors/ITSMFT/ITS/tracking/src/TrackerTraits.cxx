@@ -76,8 +76,13 @@ void TrackerTraits::computeLayerTracklets(const int iteration, int iROFslice, in
     gsl::span<const Vertex> primaryVertices = mTrkParams[iteration].UseDiamond ? diamondSpan : tf->getPrimaryVertices(rof0);
     const int startVtx{iVertex >= 0 ? iVertex : 0};
     const int endVtx{iVertex >= 0 ? std::min(iVertex + 1, static_cast<int>(primaryVertices.size())) : static_cast<int>(primaryVertices.size())};
-    int minRof = std::max(startROF, rof0 - mTrkParams[iteration].DeltaROF);
-    int maxRof = std::min(endROF - 1, rof0 + mTrkParams[iteration].DeltaROF);
+
+    // In a ROF If I have a vertex, I want to check its flag to disable the deltaRof if != 0.
+    // If one vertex has the flag set, all the vertices in the ROF will have it.
+    // So we can disable the deltaRof for the whole ROF.
+    bool skipDeltaRof = primaryVertices.size() ? primaryVertices[0].getFlags() == 1 : false;
+    int minRof = std::max(startROF, rof0 - skipDeltaRof ? 0 : mTrkParams[iteration].DeltaROF);
+    int maxRof = std::min(endROF - 1, rof0 + skipDeltaRof ? 0 : mTrkParams[iteration].DeltaROF);
 #pragma omp parallel for num_threads(mNThreads)
     for (int iLayer = 0; iLayer < mTrkParams[iteration].TrackletsPerRoad(); ++iLayer) {
       gsl::span<const Cluster> layer0 = tf->getClustersOnLayer(rof0, iLayer);
