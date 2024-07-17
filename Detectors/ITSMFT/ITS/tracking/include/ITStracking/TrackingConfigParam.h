@@ -22,8 +22,8 @@ namespace its
 
 struct VertexerParamConfig : public o2::conf::ConfigurableParamHelper<VertexerParamConfig> {
 
-  int nIterations = 1; // Number of vertexing passes to perform
-  int vertPerRofThreshold = 0; // Maximum number of vertices per ROF to trigger second a round 
+  int nIterations = 1;         // Number of vertexing passes to perform
+  int vertPerRofThreshold = 0; // Maximum number of vertices per ROF to trigger second a round
   bool allowSingleContribClusters = false;
 
   // geometrical cuts
