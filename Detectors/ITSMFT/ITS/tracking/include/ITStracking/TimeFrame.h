@@ -226,7 +226,7 @@ class TimeFrame
     }
   }
 
-  virtual void setDevicePropagator(const o2::base::PropagatorImpl<float>*) {};
+  virtual void setDevicePropagator(const o2::base::PropagatorImpl<float>*){};
   const o2::base::PropagatorImpl<float>* getDevicePropagator() const { return mPropagatorDevice; }
 
   template <typename... T>
@@ -289,7 +289,7 @@ class TimeFrame
   }
 
  private:
-  void prepareClusters(const TrackingParameters& trkParam,const int maxLayers);
+  void prepareClusters(const TrackingParameters& trkParam, const int maxLayers);
   float mBz = 5.;
   unsigned int mNTotalLowPtVertices = 0;
   int mBeamPosWeight = 0;
