@@ -63,6 +63,7 @@ void ITSTrackingInterface::initialise()
     vertParams[1].phiCut = 0.015f;
     vertParams[1].tanLambdaCut = 0.015f;
     vertParams[1].vertPerRofThreshold = 0;
+    vertParams[1].deltaRof = 0;
   } else if (mMode == TrackingMode::Sync) {
     trackParams.resize(1);
     trackParams[0].ZBins = 64;
@@ -235,8 +236,8 @@ void ITSTrackingInterface::run(framework::ProcessingContext& pc)
       mTimeFrame->addPrimaryVertices(vtxVecLoc, iRof);
     }
   }
-  LOG(info) << fmt::format(" - rejected {}/{} ROFs: random/mult.sel:{} (seed {}), vtx.sel:{}, upc.sel:{}", cutRandomMult + cutVertexMult + cutUPCVertex, rofspan.size(), cutRandomMult, multEst.lastRandomSeed, cutVertexMult, cutUPCVertex);
-  LOG(info) << fmt::format(" - Vertex seeding total elapsed time: {} ms for {} ({} + {}) vertices found in {}/{} ROFs",
+  LOG(info) << fmt::format(" - FastMultEst: rejected {}/{} ROFs: random/mult.sel:{} (seed {}), vtx.sel:{}, upc.sel:{}", cutRandomMult + cutVertexMult + cutUPCVertex, rofspan.size(), cutRandomMult, multEst.lastRandomSeed, cutVertexMult, cutUPCVertex);
+  LOG(info) << fmt::format(" - Seeding vertexer total elapsed time: {} ms for {} ({} + {}) vertices found in {}/{} ROFs",
                            vertexerElapsedTime,
                            mTimeFrame->getPrimaryVerticesNum(),
                            mTimeFrame->getTotVertIteration()[0],
