@@ -27,6 +27,11 @@
 #include <Math/SMatrix.h>
 #include <random>
 
+using MatSym3DGPU = o2::math_utils::SMatrixGPU<float, 3, 3, o2::math_utils::MatRepSymGPU<float, 3>>;
+using MatSym3D = ROOT::Math::SMatrix<float, 3, 3, ROOT::Math::MatRepSym<float, 3>>;
+using Mat3DGPU = o2::math_utils::SMatrixGPU<float, 3, 3, o2::math_utils::MatRepStdGPU<float, 3, 3>>;
+using Mat3D = ROOT::Math::SMatrix<float, 3, 3, ROOT::Math::MatRepStd<float, 3, 3>>;
+
 // Macro for checking CUDA errors
 #define CUDA_CHECK(call)                                                                     \
   do {                                                                                       \
@@ -76,10 +81,11 @@ void prologue()
   }
 }
 
-using MatSym3DGPU = o2::math_utils::SMatrixGPU<float, 3, 3, o2::math_utils::MatRepSymGPU<float, 3>>;
-using MatSym3D = ROOT::Math::SMatrix<float, 3, 3, ROOT::Math::MatRepSym<float, 3>>;
-using Mat3DGPU = o2::math_utils::SMatrixGPU<float, 3, 3, o2::math_utils::MatRepStdGPU<float, 3, 3>>;
-using Mat3D = ROOT::Math::SMatrix<float, 3, 3, ROOT::Math::MatRepStd<float, 3, 3>>;
+enum PrintMode {
+  Decimal,
+  Binary,
+  Hexadecimal
+};
 
 __device__ void floatToBinaryString(float number, char* buffer)
 {
@@ -94,20 +100,28 @@ __device__ void floatToBinaryString(float number, char* buffer)
 }
 
 template <typename MatrixType>
-__device__ void printMatrix(const MatrixType& matrix, const char* name, const bool IsBinary)
+__device__ void printMatrix(const MatrixType& matrix, const char* name, const PrintMode mode)
 {
-  char buffer[33];
-  if (IsBinary) {
+  if (mode == PrintMode::Binary) {
+    char buffer[33];
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
         floatToBinaryString(matrix(i, j), buffer);
         printf("%s(%d,%d) = %s\n", name, i, j, buffer);
       }
     }
-  } else {
+  }
+  if (mode == PrintMode::Decimal) {
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
         printf("%s(%i,%i) = %f\n", name, i, j, matrix(i, j));
+      }
+    }
+  }
+  if (mode == PrintMode::Hexadecimal) {
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        printf("%s(%d,%d) = %x\n", name, i, j, o2::gpu::CAMath::Float2UIntReint(matrix(i, j)));
       }
     }
   }
@@ -115,7 +129,7 @@ __device__ void printMatrix(const MatrixType& matrix, const char* name, const bo
 
 // Function to compare two matrices element-wise with a specified tolerance
 template <typename MatrixType>
-void compareMatrices(const MatrixType& mat1, const MatrixType& mat2, float tolerance)
+void compareMatricesElementWise(const MatrixType& mat1, const MatrixType& mat2, float tolerance)
 {
   auto tol = boost::test_tools::tolerance(tolerance);
 
@@ -128,60 +142,60 @@ void compareMatrices(const MatrixType& mat1, const MatrixType& mat2, float toler
 
 // Invert test for symmetric matrix
 template <typename T, int D>
-__global__ void invertSymMatrixKernel(MatSym3DGPU* matrix)
+__global__ void invertSymMatrixKernel(MatSym3DGPU* matrix,
+                                      const PrintMode mode = PrintMode::Decimal)
 {
-  const bool IsBinary = true;
   printf("\nStart inverting symmetric matrix\n");
   MatSym3DGPU smat2 = *matrix;
 
-  printMatrix(*matrix, "A", IsBinary);
-  printMatrix(smat2, "B", IsBinary);
+  printMatrix(*matrix, "A", mode);
+  printMatrix(smat2, "B", mode);
 
   printf("\nInverting A...\n");
   matrix->Invert();
 
-  printMatrix(*matrix, "A", IsBinary);
+  printMatrix(*matrix, "A", mode);
 
   printf("\nC = (A^-1) * B...\n");
   auto smat3 = (*matrix) * smat2;
 
-  printMatrix(smat3, "C", IsBinary);
+  printMatrix(smat3, "C", mode);
 
   printf("\nEvaluating...\n");
   MatSym3DGPU tmp;
   o2::math_utils::AssignSym::Evaluate(tmp, smat3);
 
-  printMatrix(tmp, "A", IsBinary);
+  printMatrix(tmp, "A", mode);
   *matrix = tmp;
   printf("\n-------------------------------------------------------\n");
 }
 
 // Invert test for general matrix
 template <typename T, int D>
-__global__ void invertMatrixKernel(Mat3DGPU* matrix)
+__global__ void invertMatrixKernel(Mat3DGPU* matrix,
+                                   const PrintMode mode = PrintMode::Decimal)
 {
-  const bool IsBinary = true;
   printf("\nStart inverting general matrix\n");
   Mat3DGPU smat2 = *matrix;
 
-  printMatrix(*matrix, "A", IsBinary);
-  printMatrix(smat2, "B", IsBinary);
+  printMatrix(*matrix, "A", mode);
+  printMatrix(smat2, "B", mode);
 
   printf("\nInverting A...\n");
   matrix->Invert();
 
-  printMatrix(*matrix, "A", IsBinary);
+  printMatrix(*matrix, "A", mode);
 
   printf("\nC = (A^-1) * B...\n");
   auto smat3 = (*matrix) * smat2;
 
-  printMatrix(smat3, "C", IsBinary);
+  printMatrix(smat3, "C", mode);
 
   printf("\nEvaluating...\n");
   Mat3DGPU tmp;
   o2::math_utils::Assign<float, 3, 3, decltype(smat3), o2::math_utils::MatRepStdGPU<float, 3, 3>, o2::math_utils::MatRepStdGPU<float, 3, 3>>::Evaluate(tmp, smat3);
 
-  printMatrix(tmp, "A", IsBinary);
+  printMatrix(tmp, "A", mode);
   *matrix = tmp;
   printf("\n-------------------------------------------------------\n");
 }
@@ -195,7 +209,6 @@ struct GPUSMatrixImplFixtureSolo {
   }
 
   ~GPUSMatrixImplFixtureSolo() = default;
-
   void initializeMatrices()
   {
     std::random_device rd;
@@ -217,10 +230,10 @@ struct GPUSMatrixImplFixtureSolo {
 
   void printMatrixSizes() const
   {
-    printf("sizeof(MatSym3DGPU) = %zu\n", sizeof(MatSym3DGPU));
-    printf("sizeof(MatSym3D) = %zu\n", sizeof(MatSym3D));
-    printf("sizeof(Mat3DGPU) = %zu\n", sizeof(Mat3DGPU));
-    printf("sizeof(Mat3D) = %zu\n", sizeof(Mat3D));
+    printf("sizeof(MatSym3DGPU) = %zu bytes\n", sizeof(MatSym3DGPU));
+    printf("sizeof(MatSym3D) = %zu bytes\n", sizeof(MatSym3D));
+    printf("sizeof(Mat3DGPU) = %zu bytes\n", sizeof(Mat3DGPU));
+    printf("sizeof(Mat3D) = %zu bytes\n", sizeof(Mat3D));
   }
 
   int i;
@@ -235,7 +248,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInversion, GPUSMatrixImplFixtureSolo)
   float tolerance = 0.00001f;
 
   invertSymMatrixKernel<float, 3><<<1, 1>>>(static_cast<MatSym3DGPU*>(SMatrixSym3D_d.get()));
-  cudaDeviceSynchronize();
+  discardResult(cudaDeviceSynchronize());
   CUDA_CHECK(cudaGetLastError());
 
   CUDA_CHECK(cudaMemcpy(&SMatrixSym3D_h, SMatrixSym3D_d.get(), sizeof(MatSym3DGPU), cudaMemcpyDeviceToHost));
@@ -244,10 +257,10 @@ BOOST_FIXTURE_TEST_CASE(MatrixInversion, GPUSMatrixImplFixtureSolo)
   identitySym(0, 0) = 1;
   identitySym(1, 1) = 1;
   identitySym(2, 2) = 1;
-  compareMatrices(SMatrixSym3D_h, identitySym, tolerance);
+  compareMatricesElementWise(SMatrixSym3D_h, identitySym, tolerance);
 
   invertMatrixKernel<float, 3><<<1, 1>>>(static_cast<Mat3DGPU*>(SMatrix3D_d.get()));
-  cudaDeviceSynchronize();
+  discardResult(cudaDeviceSynchronize());
   CUDA_CHECK(cudaGetLastError());
 
   CUDA_CHECK(cudaMemcpy(&SMatrix3D_h, SMatrix3D_d.get(), sizeof(Mat3DGPU), cudaMemcpyDeviceToHost));
@@ -256,7 +269,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInversion, GPUSMatrixImplFixtureSolo)
   identity(0, 0) = 1;
   identity(1, 1) = 1;
   identity(2, 2) = 1;
-  compareMatrices(SMatrix3D_h, identity, tolerance);
+  compareMatricesElementWise(SMatrix3D_h, identity, tolerance);
 }
 
 struct GPUSMatrixImplFixtureDuo {
@@ -320,16 +333,16 @@ struct GPUSMatrixImplFixtureDuo {
 template <typename T>
 __global__ void copySymMatrixKernel(
   MatSym3DGPU* srcMatrix,
-  MatSym3DGPU* dstMatrix)
+  MatSym3DGPU* dstMatrix,
+  const PrintMode mode = PrintMode::Decimal)
 {
-  const bool IsBinary = true;
   printf("\nStart copying general matrix\n");
-  printMatrix(*dstMatrix, "Before copying: ", IsBinary);
+  printMatrix(*dstMatrix, "Before copying: ", mode);
   printf("\nCopied values:\n");
-  printMatrix(*srcMatrix, "Copied values: ", IsBinary);
+  printMatrix(*srcMatrix, "Copied values: ", mode);
   printf("\nResult:\n");
   *dstMatrix = *srcMatrix;
-  printMatrix(*dstMatrix, "After copying: ", IsBinary);
+  printMatrix(*dstMatrix, "After copying: ", mode);
   printf("\n-------------------------------------------------------\n");
 }
 
@@ -337,34 +350,34 @@ __global__ void copySymMatrixKernel(
 template <typename T>
 __global__ void copyMatrixKernel(
   Mat3DGPU* srcMatrix,
-  Mat3DGPU* dstMatrix)
+  Mat3DGPU* dstMatrix,
+  const PrintMode mode = PrintMode::Decimal)
 {
-  const bool IsBinary = true;
   printf("\nStart copying general matrix\n");
-  printMatrix(*dstMatrix, "Before copying: ", IsBinary);
+  printMatrix(*dstMatrix, "Before copying: ", mode);
   printf("\nCopied values:\n");
-  printMatrix(*srcMatrix, "Copied values: ", IsBinary);
+  printMatrix(*srcMatrix, "Copied values: ", mode);
   printf("\nResult:\n");
   *dstMatrix = *srcMatrix;
-  printMatrix(*dstMatrix, "After copying: ", IsBinary);
+  printMatrix(*dstMatrix, "After copying: ", mode);
   printf("\n-------------------------------------------------------\n");
 }
 
 BOOST_FIXTURE_TEST_CASE(TestMatrixCopyingAndComparison, GPUSMatrixImplFixtureDuo)
 {
   copySymMatrixKernel<float><<<1, 1>>>(static_cast<MatSym3DGPU*>(SMatrixSym3D_d_A.get()), static_cast<MatSym3DGPU*>(SMatrixSym3D_d_B.get()));
-  cudaDeviceSynchronize();
+  discardResult(cudaDeviceSynchronize());
   CUDA_CHECK(cudaGetLastError());
 
   CUDA_CHECK(cudaMemcpy(&SMatrixSym3D_h_B, SMatrixSym3D_d_B.get(), sizeof(MatSym3DGPU), cudaMemcpyDeviceToHost));
 
-  compareMatrices(SMatrixSym3D_h_A, SMatrixSym3D_h_B, 0.0);
+  compareMatricesElementWise(SMatrixSym3D_h_A, SMatrixSym3D_h_B, 0.0);
 
   copyMatrixKernel<float><<<1, 1>>>(static_cast<Mat3DGPU*>(SMatrix3D_d_A.get()), static_cast<Mat3DGPU*>(SMatrix3D_d_B.get()));
-  cudaDeviceSynchronize();
+  discardResult(cudaDeviceSynchronize());
   CUDA_CHECK(cudaGetLastError());
 
   CUDA_CHECK(cudaMemcpy(&SMatrix3D_h_B, SMatrix3D_d_B.get(), sizeof(Mat3DGPU), cudaMemcpyDeviceToHost));
 
-  compareMatrices(SMatrix3D_h_A, SMatrix3D_h_B, 0.0);
+  compareMatricesElementWise(SMatrix3D_h_A, SMatrix3D_h_B, 0.0);
 }
