@@ -256,7 +256,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixInversion, GPUSMatrixImplFixtureSolo)
   ROOT::Math::AssignSym::Evaluate(resultSym, operationSym);
   compareMatricesElementWise(resultSym, identitySym, tolerance);
 
-benchmark.start();
+  benchmark.start();
   gpu::invertMatrixKernel<Mat3DGPU, 3><<<1, 1>>>(static_cast<Mat3DGPU*>(SMatrix_d.get()));
   benchmark.stop();
   benchmark.printDuration();
