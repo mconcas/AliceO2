@@ -260,7 +260,7 @@ inline T Dot(const SVector<T, D>& lhs, const SVector<T, D>& rhs)
 }
 
 template <class T, unsigned int D1, unsigned int D2, class R>
-inline SMatrix<T,D1,D1,MatRepSym<T,D1> > Similarity(const SMatrix<T,D1,D2,R>& lhs, const SMatrix<T,D2,D2,MatRepSym<T,D2> >& rhs)
+inline SMatrix<T, D1, D1, MatRepSym<T, D1>> Similarity(const SMatrix<T, D1, D2, R>& lhs, const SMatrix<T, D2, D2, MatRepSym<T, D2>>& rhs)
 {
   return ROOT::Math::Similarity(lhs, rhs);
 }

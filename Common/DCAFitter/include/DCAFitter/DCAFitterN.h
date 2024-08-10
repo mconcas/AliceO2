@@ -517,7 +517,7 @@ GPUd() void DCAFitterN<N, Args...>::calcResidDerivatives()
         dr2[2] += trDx.d2zdx2;
       }
     } // track over which we differentiate
-  } // residual being differentiated
+  }   // residual being differentiated
 }
 
 //__________________________________________________________________________
@@ -567,7 +567,7 @@ GPUd() void DCAFitterN<N, Args...>::calcResidDerivativesNoErr()
       dr2ji[2] = -trDxi.d2zdx2 * NInv;
 
     } // track over which we differentiate
-  } // residual being differentiated
+  }   // residual being differentiated
 }
 
 //__________________________________________________________________________
