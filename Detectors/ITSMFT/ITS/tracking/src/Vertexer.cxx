@@ -80,7 +80,7 @@ float Vertexer::clustersToVerticesHybrid(std::function<void(std::string s)> logg
     trkPars.PhiBins = mTraits->getVertexingParameters()[0].PhiBins;
     trkPars.ZBins = mTraits->getVertexingParameters()[0].ZBins;
     auto timeInitIteration = evaluateTask(&Vertexer::initialiseVertexerHybrid, "Hybrid Vertexer initialisation", [](std::string) {}, trkPars, iteration);
-    auto timeSelectionIteration = evaluateTask(&Vertexer::findTrackletsHybrid, "Hybrid Vertexer tracklet finding", [](std::string) {}, iteration);
+    auto timeTrackletIteration = evaluateTask(&Vertexer::findTrackletsHybrid, "Hybrid Vertexer tracklet finding", [](std::string) {}, iteration);
     nTracklets01 = mTimeFrame->getTotalTrackletsTF(0);
     nTracklets12 = mTimeFrame->getTotalTrackletsTF(1);
     auto timeSelectionIteration = evaluateTask(&Vertexer::validateTrackletsHybrid, "Hybrid Vertexer adjacent tracklets validation", [](std::string) {}, iteration);
