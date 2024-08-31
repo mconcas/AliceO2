@@ -147,7 +147,7 @@ TLorentzVector generate(Vec3D& vtx, std::vector<o2::track::TrackParCov>& vctr, f
 
 BOOST_AUTO_TEST_CASE(DCAFitterNProngs)
 {
-  constexpr int NTest = 1/*10000*/;
+  constexpr int NTest = 1 /*10000*/;
   o2::utils::TreeStreamRedirector outStream("dcafitterNTest.root");
 
   TGenPhaseSpace genPHS;

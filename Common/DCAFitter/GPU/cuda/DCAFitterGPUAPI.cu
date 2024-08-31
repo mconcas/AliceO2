@@ -29,7 +29,7 @@
 inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true)
 {
   if (code != cudaSuccess) {
-    std::cout<< "GPUassert: " << cudaGetErrorString(code) <<" "<< file <<" "<< line <<std::endl;
+    std::cout << "GPUassert: " << cudaGetErrorString(code) << " " << file << " " << line << std::endl;
     if (abort) {
       throw std::runtime_error("GPU assert failed.");
     }
