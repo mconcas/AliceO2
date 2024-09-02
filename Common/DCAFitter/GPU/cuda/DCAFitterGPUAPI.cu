@@ -82,4 +82,4 @@ int doProcessOnDevice(o2::vertexing::DCAFitterN<2>* ft, o2::track::TrackParCov* 
 
   return result;
 }
-} // namespace o2::vertexing
+} // namespace o2::vertexing::gpu

@@ -16,5 +16,5 @@ namespace o2::vertexing::gpu
 {
 void doPrintOnDevice(o2::vertexing::DCAFitterN<2>* ft);
 int doProcessOnDevice(o2::vertexing::DCAFitterN<2>* ft, o2::track::TrackParCov* t1, o2::track::TrackParCov* t2);
-} // namespace o2::vertexing
+} // namespace o2::vertexing::gpu
 #endif
