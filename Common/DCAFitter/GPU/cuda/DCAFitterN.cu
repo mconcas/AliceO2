@@ -32,7 +32,7 @@ inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort =
     }
   }
 }
-namespace o2::vertexing::gpu
+namespace o2::vertexing::device
 {
 namespace kernel
 {
@@ -51,7 +51,7 @@ GPUg() void processKernel(o2::vertexing::DCAFitterN<2>* ft, o2::track::TrackParC
 }
 } // namespace kernel
 
-void printOnDevice(o2::vertexing::DCAFitterN<2>* ft,
+void print(o2::vertexing::DCAFitterN<2>* ft,
                    const int nBlocks,
                    const int nThreads)
 {
@@ -65,7 +65,7 @@ void printOnDevice(o2::vertexing::DCAFitterN<2>* ft,
   gpuCheckError(cudaDeviceSynchronize());
 }
 
-int processOnDevice(o2::vertexing::DCAFitterN<2>* fitter,
+int process(o2::vertexing::DCAFitterN<2>* fitter,
                     o2::track::TrackParCov& track1,
                     o2::track::TrackParCov& track2,
                     const int nBlocks,
@@ -103,4 +103,4 @@ int processOnDevice(o2::vertexing::DCAFitterN<2>* fitter,
   return result;
 }
 
-} // namespace o2::vertexing::gpu
+} // namespace o2::vertexing::device
