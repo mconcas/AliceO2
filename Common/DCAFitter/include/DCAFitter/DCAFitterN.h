@@ -1132,14 +1132,14 @@ GPUg() void processKernel(o2::vertexing::DCAFitterN<2>* ft, o2::track::TrackParC
 namespace device
 {
 void print(o2::vertexing::DCAFitterN<2>*,
-                   const int nBlocks = 1,
-                   const int nThreads = 1);
+           const int nBlocks = 1,
+           const int nThreads = 1);
 int process(o2::vertexing::DCAFitterN<2>*,
-                    o2::track::TrackParCov&,
-                    o2::track::TrackParCov&,
-                    const int nBlocks = 1,
-                    const int nThreads = 1);
-} // namespace gpu
+            o2::track::TrackParCov&,
+            o2::track::TrackParCov&,
+            const int nBlocks = 1,
+            const int nThreads = 1);
+} // namespace device
 } // namespace vertexing
 } // namespace o2
 #endif // _ALICEO2_DCA_FITTERN_

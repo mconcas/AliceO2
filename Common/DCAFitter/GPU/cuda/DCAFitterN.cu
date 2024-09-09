@@ -52,8 +52,8 @@ GPUg() void processKernel(o2::vertexing::DCAFitterN<2>* ft, o2::track::TrackParC
 } // namespace kernel
 
 void print(o2::vertexing::DCAFitterN<2>* ft,
-                   const int nBlocks,
-                   const int nThreads)
+           const int nBlocks,
+           const int nThreads)
 {
   DCAFitterN<2>* ft_device;
   gpuCheckError(cudaMalloc(reinterpret_cast<void**>(&ft_device), sizeof(o2::vertexing::DCAFitterN<2>)));
@@ -66,10 +66,10 @@ void print(o2::vertexing::DCAFitterN<2>* ft,
 }
 
 int process(o2::vertexing::DCAFitterN<2>* fitter,
-                    o2::track::TrackParCov& track1,
-                    o2::track::TrackParCov& track2,
-                    const int nBlocks,
-                    const int nThreads)
+            o2::track::TrackParCov& track1,
+            o2::track::TrackParCov& track2,
+            const int nBlocks,
+            const int nThreads)
 {
   DCAFitterN<2>* ft_device;
   o2::track::TrackParCov* t1_device;
