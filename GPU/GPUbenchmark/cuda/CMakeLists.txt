@@ -9,7 +9,6 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-if(CUDA_ENABLED)
 message(STATUS "Building GPU CUDA benchmark")
 set(CMAKE_CXX_LINKER   ${HIP_HIPCC_EXECUTABLE})
   o2_add_executable(gpu-memory-benchmark-cuda
@@ -19,4 +18,3 @@ set(CMAKE_CXX_LINKER   ${HIP_HIPCC_EXECUTABLE})
                                         ROOT::Tree
                   TARGETVARNAME targetName)
                   set_target_properties(${targeName} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-endif()
