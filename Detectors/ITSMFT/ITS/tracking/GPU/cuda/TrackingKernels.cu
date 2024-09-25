@@ -721,6 +721,10 @@ void trackSeedHandler(CellSeed* trackSeeds,
                       const int nBlocks,
                       const int nThreads)
 {
+  cudaEvent_t start, stop;
+  gpuCheckError(cudaEventCreate(&start));
+  gpuCheckError(cudaEventCreate(&stop));
+  gpuCheckError(cudaEventRecord(start));
   gpu::fitTrackSeedsKernel<<<nBlocks, nThreads>>>(
     trackSeeds,               // CellSeed* trackSeeds,
     foundTrackingFrameInfo,   // TrackingFrameInfo** foundTrackingFrameInfo,
@@ -732,8 +736,13 @@ void trackSeedHandler(CellSeed* trackSeeds,
     maxChi2NDF,               // float maxChi2NDF,
     propagator,               // const o2::base::Propagator* propagator
     matCorrType);             // o2::base::PropagatorF::MatCorrType matCorrType
-
+  gpuCheckError(cudaEventRecord(stop));
   gpuCheckError(cudaPeekAtLastError());
   gpuCheckError(cudaDeviceSynchronize());
+  gpuCheckError(cudaEventSynchronize(stop));
+  float milliseconds = 0;
+  gpuCheckError(cudaEventElapsedTime(&milliseconds, start, stop));
+
+  LOGP(info, "Parallel fit took: {} ms", milliseconds);
 }
 } // namespace o2::its

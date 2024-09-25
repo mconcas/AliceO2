@@ -30,6 +30,8 @@
 #include "ITStracking/Tracklet.h"
 #include "ReconstructionDataFormats/Track.h"
 
+#include <TStopwatch.h>
+
 #ifdef WITH_OPENMP
 #include <omp.h>
 #endif
@@ -600,6 +602,8 @@ void TrackerTraits::findRoads(const int iteration)
 
     std::vector<TrackITSExt> tracks(trackSeeds.size());
     std::atomic<size_t> trackIndex{0};
+    TStopwatch timer;
+    timer.Start();
 #pragma omp parallel for num_threads(mNThreads)
     for (size_t seedId = 0; seedId < trackSeeds.size(); ++seedId) {
       const CellSeed& seed{trackSeeds[seedId]};
@@ -623,7 +627,8 @@ void TrackerTraits::findRoads(const int iteration)
       }
       tracks[trackIndex++] = temporaryTrack;
     }
-
+    timer.Stop();
+    LOGP(info, "Parallel fit took: {:2.3} ms", timer.RealTime() * 1000);
     tracks.resize(trackIndex);
     std::sort(tracks.begin(), tracks.end(), [](const TrackITSExt& a, const TrackITSExt& b) {
       return a.getChi2() < b.getChi2();
