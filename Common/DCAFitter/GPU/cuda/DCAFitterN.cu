@@ -239,7 +239,7 @@ void processBulk(const int nBlocks,
   LOGP(info, "Total I/O time: Up {} ms Avg {} ms, Down {} ms Avg {} ms", totalUp, totalUp / float(nBatches), totalDown, totalDown / (float)nBatches);
   LOGP(info, "Total Kernel time: {} ms Avg {} ms", totalKernels, totalKernels / (float)nBatches);
 
-    for (int iBatch{0}; iBatch < nBatches; ++iBatch) {
+  for (int iBatch{0}; iBatch < nBatches; ++iBatch) {
     gpuCheckError(cudaEventDestroy(startIOUp[iBatch]));
     gpuCheckError(cudaEventDestroy(endIOUp[iBatch]));
     gpuCheckError(cudaEventDestroy(startIODown[iBatch]));
