@@ -581,8 +581,11 @@ void TrackerTraits::findRoads(const int iteration)
       CA_DEBUGGER(std::cout << "\t\t > Starting processing layer " << startLayer << std::endl);
       std::vector<int> lastCellId, updatedCellId;
       std::vector<CellSeed> lastCellSeed, updatedCellSeed;
-
+      TStopwatch timer2;
+      timer2.Start();
       processNeighbours(startLayer, startLevel, mTimeFrame->getCells()[startLayer], lastCellId, updatedCellSeed, updatedCellId);
+      timer2.Stop();
+      LOGP(info, "processneigh took: {:2.3} ms", timer2.RealTime() * 1000);
 
       int level = startLevel;
       for (int iLayer{startLayer - 1}; iLayer > 0 && level > 2; --iLayer) {
