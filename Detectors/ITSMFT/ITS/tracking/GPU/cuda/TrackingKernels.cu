@@ -130,6 +130,72 @@ GPUd() bool fitTrack(TrackITSExt& track,
   return o2::gpu::GPUCommonMath::Abs(track.getQ2Pt()) < maxQoverPt && track.getChi2() < chi2ndfcut * (nCl * 2 - 5);
 }
 
+GPUd() o2::track::TrackParCov buildTrackSeed(const Cluster& cluster1,
+                                             const Cluster& cluster2,
+                                             const TrackingFrameInfo& tf3,
+                                             const float bz)
+{
+  const float ca = o2::gpu::CAMath::Cos(tf3.alphaTrackingFrame), sa = o2::gpu::CAMath::Sin(tf3.alphaTrackingFrame);
+  const float x1 = cluster1.xCoordinate * ca + cluster1.yCoordinate * sa;
+  const float y1 = -cluster1.xCoordinate * sa + cluster1.yCoordinate * ca;
+  const float z1 = cluster1.zCoordinate;
+  const float x2 = cluster2.xCoordinate * ca + cluster2.yCoordinate * sa;
+  const float y2 = -cluster2.xCoordinate * sa + cluster2.yCoordinate * ca;
+  const float z2 = cluster2.zCoordinate;
+  const float x3 = tf3.xTrackingFrame;
+  const float y3 = tf3.positionTrackingFrame[0];
+  const float z3 = tf3.positionTrackingFrame[1];
+
+  const bool zeroField{o2::gpu::GPUCommonMath::Abs(bz) < o2::constants::math::Almost0};
+  const float tgp = zeroField ? o2::gpu::CAMath::ATan2(y3 - y1, x3 - x1) : 1.f;
+  const float crv = zeroField ? 1.f : math_utils::computeCurvature(x3, y3, x2, y2, x1, y1);
+  const float snp = zeroField ? tgp / o2::gpu::CAMath::Sqrt(1.f + tgp * tgp) : crv * (x3 - math_utils::computeCurvatureCentreX(x3, y3, x2, y2, x1, y1));
+  const float tgl12 = math_utils::computeTanDipAngle(x1, y1, x2, y2, z1, z2);
+  const float tgl23 = math_utils::computeTanDipAngle(x2, y2, x3, y3, z2, z3);
+  const float q2pt = zeroField ? 1.f / o2::track::kMostProbablePt : crv / (bz * o2::constants::math::B2C);
+  const float q2pt2 = crv * crv;
+  const float sg2q2pt = o2::track::kC1Pt2max * (q2pt2 > 0.0005 ? (q2pt2 < 1 ? q2pt2 : 1) : 0.0005);
+  return track::TrackParCov(tf3.xTrackingFrame, tf3.alphaTrackingFrame,
+                            {y3, z3, snp, 0.5f * (tgl12 + tgl23), q2pt},
+                            {tf3.covarianceTrackingFrame[0],
+                             tf3.covarianceTrackingFrame[1], tf3.covarianceTrackingFrame[2],
+                             0.f, 0.f, track::kCSnp2max,
+                             0.f, 0.f, 0.f, track::kCTgl2max,
+                             0.f, 0.f, 0.f, 0.f, sg2q2pt});
+}
+
+template <typename T1, typename T2>
+struct pair_to_first : public thrust::unary_function<gpuPair<T1, T2>, T1> {
+  GPUhd() int operator()(const gpuPair<T1, T2>& a) const
+  {
+    return a.first;
+  }
+};
+
+template <typename T1, typename T2>
+struct pair_to_second : public thrust::unary_function<gpuPair<T1, T2>, T2> {
+  GPUhd() int operator()(const gpuPair<T1, T2>& a) const
+  {
+    return a.second;
+  }
+};
+
+template <typename T1, typename T2>
+struct is_invalid_pair {
+  GPUhd() bool operator()(const gpuPair<T1, T2>& p) const
+  {
+    return p.first == -1 && p.second == -1;
+  }
+};
+
+template <typename T1, typename T2>
+struct is_valid_pair {
+  GPUhd() bool operator()(const gpuPair<T1, T2>& p) const
+  {
+    return !(p.first == -1 && p.second == -1);
+  }
+};
+
 template <int nLayers>
 GPUg() void fitTrackSeedsKernel(
   CellSeed* trackSeeds,
@@ -243,37 +309,90 @@ GPUg() void computeLayerCellNeighboursKernel(
   }
 }
 
-template <typename T1, typename T2>
-struct pair_to_first : public thrust::unary_function<gpuPair<T1, T2>, T1> {
-  GPUhd() int operator()(const gpuPair<T1, T2>& a) const
-  {
-    return a.first;
-  }
-};
+template <bool initRun, int nLayers = 7>
+GPUg() void computeLayerCellsKernel(
+  const Cluster** sortedClusters,
+  const Cluster** unsortedClusters,
+  const TrackingFrameInfo** tfInfo,
+  const Tracklet** tracklets,
+  const int** trackletsLUT,
+  const int nTrackletsCurrent,
+  const int layer,
+  CellSeed* cells,
+  int* cellsLUTs,
+  const float bz,
+  const float maxChi2ClusterAttachment,
+  const float cellDeltaTanLambdaCut,
+  const float nSigmaCut)
+{
+  constexpr float radl = 9.36f;                                                           // Radiation length of Si [cm].
+  constexpr float rho = 2.33f;                                                            // Density of Si [g/cm^3].
+  constexpr float layerxX0[7] = {5.e-3f, 5.e-3f, 5.e-3f, 1.e-2f, 1.e-2f, 1.e-2f, 1.e-2f}; // Hardcoded here for the moment.
+  for (int iCurrentTrackletIndex = blockIdx.x * blockDim.x + threadIdx.x; iCurrentTrackletIndex < nTrackletsCurrent; iCurrentTrackletIndex += blockDim.x * gridDim.x) {
+    const Tracklet& currentTracklet = tracklets[layer][iCurrentTrackletIndex];
+    const int nextLayerClusterIndex{currentTracklet.secondClusterIndex};
+    const int nextLayerFirstTrackletIndex{trackletsLUT[layer][nextLayerClusterIndex]};
+    const int nextLayerLastTrackletIndex{trackletsLUT[layer][nextLayerClusterIndex + 1]};
+    if (nextLayerFirstTrackletIndex == nextLayerLastTrackletIndex) {
+      continue;
+    }
+    int foundCells{0};
+    for (int iNextTrackletIndex{nextLayerFirstTrackletIndex}; iNextTrackletIndex < nextLayerLastTrackletIndex; ++iNextTrackletIndex) {
+      if (tracklets[layer + 1][iNextTrackletIndex].firstClusterIndex != nextLayerClusterIndex) {
+        break;
+      }
+      const Tracklet& nextTracklet = tracklets[layer + 1][iNextTrackletIndex];
+      const float deltaTanLambda{o2::gpu::GPUCommonMath::Abs(currentTracklet.tanLambda - nextTracklet.tanLambda)};
 
-template <typename T1, typename T2>
-struct pair_to_second : public thrust::unary_function<gpuPair<T1, T2>, T2> {
-  GPUhd() int operator()(const gpuPair<T1, T2>& a) const
-  {
-    return a.second;
-  }
-};
+      if (deltaTanLambda / cellDeltaTanLambdaCut < nSigmaCut) {
+        const int clusId[3]{
+          sortedClusters[layer][currentTracklet.firstClusterIndex].clusterId,
+          sortedClusters[layer + 1][nextTracklet.firstClusterIndex].clusterId,
+          sortedClusters[layer + 2][nextTracklet.secondClusterIndex].clusterId};
 
-template <typename T1, typename T2>
-struct is_invalid_pair {
-  GPUhd() bool operator()(const gpuPair<T1, T2>& p) const
-  {
-    return p.first == -1 && p.second == -1;
-  }
-};
+        const auto& cluster1_glo = unsortedClusters[layer][clusId[0]];
+        const auto& cluster2_glo = unsortedClusters[layer + 1][clusId[1]];
+        const auto& cluster3_tf = tfInfo[layer + 2][clusId[2]];
+        auto track{buildTrackSeed(cluster1_glo, cluster2_glo, cluster3_tf, bz)};
+        float chi2{0.f};
+        bool good{false};
+        for (int iC{2}; iC--;) {
+          const TrackingFrameInfo& trackingHit = tfInfo[layer + iC][clusId[iC]];
+          if (!track.rotate(trackingHit.alphaTrackingFrame)) {
+            break;
+          }
+          if (!track.propagateTo(trackingHit.xTrackingFrame, bz)) {
+            break;
+          }
 
-template <typename T1, typename T2>
-struct is_valid_pair {
-  GPUhd() bool operator()(const gpuPair<T1, T2>& p) const
-  {
-    return !(p.first == -1 && p.second == -1);
+          if (!track.correctForMaterial(layerxX0[layer + iC], layerxX0[layer] * radl * rho, true)) {
+            break;
+          }
+
+          const auto predChi2{track.getPredictedChi2Quiet(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)};
+          if (!track.o2::track::TrackParCov::update(trackingHit.positionTrackingFrame, trackingHit.covarianceTrackingFrame)) {
+            break;
+          }
+          if (!iC && predChi2 > maxChi2ClusterAttachment) {
+            break;
+          }
+          good = !iC;
+          chi2 += predChi2;
+        }
+        if (!good) {
+          continue;
+        }
+        if constexpr (!initRun) {
+          new (cells + cellsLUTs[iCurrentTrackletIndex] + foundCells) CellSeed{layer, clusId[0], clusId[1], clusId[2], iCurrentTrackletIndex, iNextTrackletIndex, track, chi2};
+        }
+        ++foundCells;
+        if constexpr (initRun) {
+          cellsLUTs[iCurrentTrackletIndex] = foundCells;
+        }
+      }
+    }
   }
-};
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Legacy Kernels, to possibly take inspiration from
@@ -642,99 +761,40 @@ GPUg() void removeDuplicateTrackletsEntriesLUTKernel(
   }
 }
 
-// Compute cells kernel
-template <bool initRun, int nLayers = 7>
-GPUg() void computeLayerCellsKernel(
-  const Tracklet* trackletsCurrentLayer,
-  const Tracklet* trackletsNextLayer,
-  const int* trackletsCurrentLayerLUT,
+} // namespace gpu
+
+void countCellsHandler(
+  const Cluster** sortedClusters,
+  const Cluster** unsortedClusters,
+  const TrackingFrameInfo** tfInfo,
+  const Tracklet** tracklets,
+  const int** trackletsCurrentLayerLUT,
   const int nTrackletsCurrent,
+  const int layer,
   CellSeed* cells,
   int* cellsLUTs,
-  const StaticTrackingParameters<nLayers>* trkPars)
+  const float bz,
+  const float maxChi2ClusterAttachment,
+  const float cellDeltaTanLambdaCut,
+  const float nSigmaCut,
+  const int nBlocks,
+  const int nThreads)
 {
-  for (int iCurrentTrackletIndex = blockIdx.x * blockDim.x + threadIdx.x; iCurrentTrackletIndex < nTrackletsCurrent; iCurrentTrackletIndex += blockDim.x * gridDim.x) {
-    const Tracklet& currentTracklet = trackletsCurrentLayer[iCurrentTrackletIndex];
-    const int nextLayerClusterIndex{currentTracklet.secondClusterIndex};
-    const int nextLayerFirstTrackletIndex{trackletsCurrentLayerLUT[nextLayerClusterIndex]};
-    const int nextLayerLastTrackletIndex{trackletsCurrentLayerLUT[nextLayerClusterIndex + 1]};
-    if (nextLayerFirstTrackletIndex == nextLayerLastTrackletIndex) {
-      continue;
-    }
-    int foundCells{0};
-    for (int iNextTrackletIndex{nextLayerFirstTrackletIndex}; iNextTrackletIndex < nextLayerLastTrackletIndex; ++iNextTrackletIndex) {
-      if (trackletsNextLayer[iNextTrackletIndex].firstClusterIndex != nextLayerClusterIndex) {
-        break;
-      }
-      const Tracklet& nextTracklet = trackletsNextLayer[iNextTrackletIndex];
-      const float deltaTanLambda{o2::gpu::GPUCommonMath::Abs(currentTracklet.tanLambda - nextTracklet.tanLambda)};
-
-      if (deltaTanLambda / trkPars->CellDeltaTanLambdaSigma < trkPars->NSigmaCut) {
-        if constexpr (!initRun) {
-          new (cells + cellsLUTs[iCurrentTrackletIndex] + foundCells) Cell{currentTracklet.firstClusterIndex, nextTracklet.firstClusterIndex,
-                                                                           nextTracklet.secondClusterIndex,
-                                                                           iCurrentTrackletIndex,
-                                                                           iNextTrackletIndex};
-        }
-        ++foundCells;
-      }
-    }
-    if constexpr (initRun) {
-      // Fill cell Lookup table
-      cellsLUTs[iCurrentTrackletIndex] = foundCells;
-    }
-  }
+  gpu::computeLayerCellsKernel<true><<<nBlocks, nThreads>>>(
+    sortedClusters,           // const Cluster** sortedClusters,
+    unsortedClusters,         // const Cluster** unsortedClusters,
+    tfInfo,                   // const TrackingFrameInfo** tfInfo,
+    tracklets,                // const Tracklets* tracklets,
+    trackletsCurrentLayerLUT, // const int* trackletsCurrentLayerLUT,
+    nTrackletsCurrent,        // const int nTrackletsCurrent,
+    layer,                    // const int layer,
+    cells,                    // CellSeed* cells,
+    cellsLUTs,                // int* cellsLUTs,
+    bz,                       // const float bz,
+    maxChi2ClusterAttachment, // const float maxChi2ClusterAttachment,
+    cellDeltaTanLambdaCut,    // const float cellDeltaTanLambdaCut,
+    nSigmaCut);               // const float nSigmaCut
 }
-
-template <bool dryRun, int nLayers = 7>
-GPUg() void computeLayerRoadsKernel(
-  const int level,
-  const int layerIndex,
-  CellSeed** cells,
-  const int* nCells,
-  int** neighbours,
-  int** neighboursLUT,
-  Road<nLayers - 2>* roads,
-  int* roadsLookupTable)
-{
-  for (int iCurrentCellIndex = blockIdx.x * blockDim.x + threadIdx.x; iCurrentCellIndex < nCells[layerIndex]; iCurrentCellIndex += blockDim.x * gridDim.x) {
-    auto& currentCell{cells[layerIndex][iCurrentCellIndex]};
-    if (currentCell.getLevel() != level) {
-      continue;
-    }
-    int nRoadsCurrentCell{0};
-    if constexpr (dryRun) {
-      roadsLookupTable[iCurrentCellIndex]++;
-    } else {
-      roads[roadsLookupTable[iCurrentCellIndex] + nRoadsCurrentCell++] = Road<nLayers - 2>{layerIndex, iCurrentCellIndex};
-    }
-    if (level == 1) {
-      continue;
-    }
-
-    const auto currentCellNeighOffset{neighboursLUT[layerIndex - 1][iCurrentCellIndex]};
-    const int cellNeighboursNum{neighboursLUT[layerIndex - 1][iCurrentCellIndex + 1] - currentCellNeighOffset};
-    bool isFirstValidNeighbour{true};
-    for (int iNeighbourCell{0}; iNeighbourCell < cellNeighboursNum; ++iNeighbourCell) {
-      const int neighbourCellId = neighbours[layerIndex - 1][currentCellNeighOffset + iNeighbourCell];
-      const CellSeed& neighbourCell = cells[layerIndex - 1][neighbourCellId];
-      if (level - 1 != neighbourCell.getLevel()) {
-        continue;
-      }
-      if (isFirstValidNeighbour) {
-        isFirstValidNeighbour = false;
-      } else {
-        if constexpr (dryRun) {
-          roadsLookupTable[iCurrentCellIndex]++; // dry run we just count the number of roads
-        } else {
-          roads[roadsLookupTable[iCurrentCellIndex] + nRoadsCurrentCell++] = Road<nLayers - 2>{layerIndex, iCurrentCellIndex};
-        }
-      }
-      // traverseCellsTreeDevice<dryRun>(neighbourCellId, layerIndex - 1, iCurrentCellIndex, nRoadsCurrentCell, roadsLookupTable, cells, roads);
-    }
-  }
-}
-} // namespace gpu
 
 void countCellNeighboursHandler(CellSeed** cellsLayersDevice,
                                 int* neighboursLUT,
