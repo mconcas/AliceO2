@@ -200,7 +200,7 @@ template <int nLayers>
 void TimeFrameGPU<nLayers>::createCellsLUTDevice() // this and loadCellsLUTDevice() are mutually exclusive.
 {
   START_GPU_STREAM_TIMER(mGpuStreams[0].get(), "loading cells LUTs");
-  for (auto iLayer{0}; iLayer < nLayers - 3; ++iLayer) {
+  for (auto iLayer{0}; iLayer < nLayers - 2; ++iLayer) {
     LOGP(info, "gpu-transfer: creating cell LUT for {} elements on layer {}, for {} MB.", mTrackletsLookupTable[iLayer + 1].size() + 1, iLayer, (mTrackletsLookupTable[iLayer + 1].size() + 1) * sizeof(int) / MB);
     allocMemAsync(reinterpret_cast<void**>(&mCellsLUTDevice[iLayer]), sizeof(int) * mTrackletsLookupTable[iLayer + 1].size() + 1, nullptr, getExtAllocator());
   }
@@ -217,7 +217,7 @@ void TimeFrameGPU<nLayers>::loadCellsLUTDevice()
   for (auto iLayer{0}; iLayer < nLayers - 3; ++iLayer) {
     LOGP(info, "gpu-transfer: loading cell LUT for {} elements on layer {}, for {} MB.", mCellsLookupTable[iLayer].size(), iLayer, mCellsLookupTable[iLayer].size() * sizeof(int) / MB);
     checkGPUError(cudaHostRegister(mCellsLookupTable[iLayer].data(), mCellsLookupTable[iLayer].size() * sizeof(int), cudaHostRegisterPortable));
-    checkGPUError(cudaMemcpyAsync(mCellsLUTDevice[iLayer], mCellsLookupTable[iLayer].data(), mCellsLookupTable[iLayer].size() * sizeof(int), cudaMemcpyHostToDevice, mGpuStreams[0].get()));
+    checkGPUError(cudaMemcpyAsync(mCellsLUTDevice[iLayer + 1], mCellsLookupTable[iLayer].data(), mCellsLookupTable[iLayer].size() * sizeof(int), cudaMemcpyHostToDevice, mGpuStreams[0].get()));
   }
   STOP_GPU_STREAM_TIMER(mGpuStreams[0].get());
 }

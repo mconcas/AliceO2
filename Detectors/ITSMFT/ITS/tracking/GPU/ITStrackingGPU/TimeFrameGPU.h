@@ -102,9 +102,10 @@ class TimeFrameGPU : public TimeFrame
   gpuPair<int, int>* getDeviceNeighbours(const int layer) { return mNeighboursDevice[layer]; }
   TrackingFrameInfo* getDeviceTrackingFrameInfo(const int);
   const TrackingFrameInfo** getDeviceArrayTrackingFrameInfo() const { return mTrackingFrameInfoDeviceArray; }
-  Cluster** getDeviceArrayClusters() const { return mClustersDeviceArray; }
-  Cluster** getDeviceArrayUnsortedClusters() const { return mUnsortedClustersDeviceArray; }
-  Tracklet** getDeviceArrayTracklets() const { return mTrackletsDeviceArray; }
+  const Cluster** getDeviceArrayClusters() const { return mClustersDeviceArray; }
+  const Cluster** getDeviceArrayUnsortedClusters() const { return mUnsortedClustersDeviceArray; }
+  const Tracklet** getDeviceArrayTracklets() const { return mTrackletsDeviceArray; }
+  const int** getDeviceArrayTrackletsLUT() const { return mTrackletsLUTDeviceArray; }
   int** getDeviceArrayCellsLUT() const { return mCellsLUTDeviceArray; }
   int** getDeviceArrayNeighboursCellLUT() const { return mNeighboursCellLUTDeviceArray; }
   CellSeed** getDeviceArrayCells() const { return mCellsDeviceArray; }
@@ -137,11 +138,11 @@ class TimeFrameGPU : public TimeFrame
   // Hybrid pref
   std::array<Cluster*, nLayers> mClustersDevice;
   std::array<Cluster*, nLayers> mUnsortedClustersDevice;
-  Cluster** mClustersDeviceArray;
-  Cluster** mUnsortedClustersDeviceArray;
+  const Cluster** mClustersDeviceArray;
+  const Cluster** mUnsortedClustersDeviceArray;
   std::array<Tracklet*, nLayers - 1> mTrackletsDevice;
-  Tracklet** mTrackletsDeviceArray;
-  int** mTrackletsLUTDeviceArray;
+  const Tracklet** mTrackletsDeviceArray;
+  const int** mTrackletsLUTDeviceArray;
   std::array<int*, nLayers - 2> mTrackletsLUTDevice;
   std::array<int*, nLayers - 2> mCellsLUTDevice;
   std::array<int*, nLayers - 3> mNeighboursLUTDevice;

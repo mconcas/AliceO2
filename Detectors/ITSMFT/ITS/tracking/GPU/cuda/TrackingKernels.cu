@@ -274,8 +274,8 @@ GPUg() void computeLayerCellNeighboursKernel(
   for (int iCurrentCellIndex = blockIdx.x * blockDim.x + threadIdx.x; iCurrentCellIndex < nCells; iCurrentCellIndex += blockDim.x * gridDim.x) {
     const auto& currentCellSeed{cellSeedArray[layerIndex][iCurrentCellIndex]};
     const int nextLayerTrackletIndex{currentCellSeed.getSecondTrackletIndex()};
-    const int nextLayerFirstCellIndex{cellsLUTs[layerIndex][nextLayerTrackletIndex]};
-    const int nextLayerLastCellIndex{cellsLUTs[layerIndex][nextLayerTrackletIndex + 1]};
+    const int nextLayerFirstCellIndex{cellsLUTs[layerIndex + 1][nextLayerTrackletIndex]};
+    const int nextLayerLastCellIndex{cellsLUTs[layerIndex + 1][nextLayerTrackletIndex + 1]};
     int foundNeighbours{0};
     for (int iNextCell{nextLayerFirstCellIndex}; iNextCell < nextLayerLastCellIndex; ++iNextCell) {
       CellSeed nextCellSeed{cellSeedArray[layerIndex + 1][iNextCell]};      // Copy
@@ -319,10 +319,10 @@ GPUg() void computeLayerCellsKernel(
   const int nTrackletsCurrent,
   const int layer,
   CellSeed* cells,
-  int* cellsLUTs,
+  int** cellsLUTs,
   const float bz,
   const float maxChi2ClusterAttachment,
-  const float cellDeltaTanLambdaCut,
+  const float cellDeltaTanLambdaSigma,
   const float nSigmaCut)
 {
   constexpr float radl = 9.36f;                                                           // Radiation length of Si [cm].
@@ -344,7 +344,7 @@ GPUg() void computeLayerCellsKernel(
       const Tracklet& nextTracklet = tracklets[layer + 1][iNextTrackletIndex];
       const float deltaTanLambda{o2::gpu::GPUCommonMath::Abs(currentTracklet.tanLambda - nextTracklet.tanLambda)};
 
-      if (deltaTanLambda / cellDeltaTanLambdaCut < nSigmaCut) {
+      if (deltaTanLambda / cellDeltaTanLambdaSigma < nSigmaCut) {
         const int clusId[3]{
           sortedClusters[layer][currentTracklet.firstClusterIndex].clusterId,
           sortedClusters[layer + 1][nextTracklet.firstClusterIndex].clusterId,
@@ -383,11 +383,11 @@ GPUg() void computeLayerCellsKernel(
           continue;
         }
         if constexpr (!initRun) {
-          new (cells + cellsLUTs[iCurrentTrackletIndex] + foundCells) CellSeed{layer, clusId[0], clusId[1], clusId[2], iCurrentTrackletIndex, iNextTrackletIndex, track, chi2};
+          new (cells + cellsLUTs[layer][iCurrentTrackletIndex] + foundCells) CellSeed{layer, clusId[0], clusId[1], clusId[2], iCurrentTrackletIndex, iNextTrackletIndex, track, chi2};
         }
         ++foundCells;
         if constexpr (initRun) {
-          cellsLUTs[iCurrentTrackletIndex] = foundCells;
+          cellsLUTs[layer][iCurrentTrackletIndex] = foundCells;
         }
       }
     }
@@ -768,32 +768,48 @@ void countCellsHandler(
   const Cluster** unsortedClusters,
   const TrackingFrameInfo** tfInfo,
   const Tracklet** tracklets,
-  const int** trackletsCurrentLayerLUT,
-  const int nTrackletsCurrent,
+  const int** trackletsLUT,
+  const int nTracklets,
   const int layer,
   CellSeed* cells,
-  int* cellsLUTs,
+  int** cellsLUTs,
   const float bz,
   const float maxChi2ClusterAttachment,
-  const float cellDeltaTanLambdaCut,
+  const float cellDeltaTanLambdaSigma,
   const float nSigmaCut,
   const int nBlocks,
   const int nThreads)
 {
   gpu::computeLayerCellsKernel<true><<<nBlocks, nThreads>>>(
-    sortedClusters,           // const Cluster** sortedClusters,
-    unsortedClusters,         // const Cluster** unsortedClusters,
-    tfInfo,                   // const TrackingFrameInfo** tfInfo,
-    tracklets,                // const Tracklets* tracklets,
-    trackletsCurrentLayerLUT, // const int* trackletsCurrentLayerLUT,
-    nTrackletsCurrent,        // const int nTrackletsCurrent,
-    layer,                    // const int layer,
-    cells,                    // CellSeed* cells,
-    cellsLUTs,                // int* cellsLUTs,
-    bz,                       // const float bz,
-    maxChi2ClusterAttachment, // const float maxChi2ClusterAttachment,
-    cellDeltaTanLambdaCut,    // const float cellDeltaTanLambdaCut,
-    nSigmaCut);               // const float nSigmaCut
+    sortedClusters,           // const Cluster**
+    unsortedClusters,         // const Cluster**
+    tfInfo,                   // const TrackingFrameInfo**
+    tracklets,                // const Tracklets**
+    trackletsLUT,             // const int**
+    nTracklets,               // const int
+    layer,                    // const int
+    cells,                    // CellSeed*
+    cellsLUTs,                // int*
+    bz,                       // const float
+    maxChi2ClusterAttachment, // const float
+    cellDeltaTanLambdaSigma,    // const float
+    nSigmaCut);               // const float
+    void *d_temp_storage = nullptr;
+    size_t temp_storage_bytes = 0;
+  //   gpuCheckError(cub::DeviceScan::ExclusiveSum(d_temp_storage,     // d_temp_storage
+  //                                             temp_storage_bytes, // temp_storage_bytes
+  //                                             cellsLUTs, // d_in
+  //                                             cellsLUTs, // d_out
+  //                                             nCells + 1,           // num_items
+  //                                             0));
+  // discardResult(cudaMalloc(&d_temp_storage, temp_storage_bytes));
+  // gpuCheckError(cub::DeviceScan::ExclusiveSum(d_temp_storage,     // d_temp_storage
+  //                                             temp_storage_bytes, // temp_storage_bytes
+  //                                             cellsLUTs, // d_in
+  //                                             cellsLUTs, // d_out
+  //                                             nCells + 1,           // num_items
+  //                                             0));
+  // gpuCheckError(cudaFree(d_temp_storage));
 }
 
 void countCellNeighboursHandler(CellSeed** cellsLayersDevice,
@@ -926,16 +942,16 @@ void trackSeedHandler(CellSeed* trackSeeds,
                       const int nThreads)
 {
   gpu::fitTrackSeedsKernel<<<nBlocks, nThreads>>>(
-    trackSeeds,               // CellSeed* trackSeeds,
-    foundTrackingFrameInfo,   // TrackingFrameInfo** foundTrackingFrameInfo,
-    tracks,                   // o2::its::TrackITSExt* tracks,
-    nSeeds,                   // const unsigned int nSeeds,
-    Bz,                       // const float Bz,
-    startLevel,               // const int startLevel,
-    maxChi2ClusterAttachment, // float maxChi2ClusterAttachment,
-    maxChi2NDF,               // float maxChi2NDF,
-    propagator,               // const o2::base::Propagator* propagator
-    matCorrType);             // o2::base::PropagatorF::MatCorrType matCorrType
+    trackSeeds,               // CellSeed*
+    foundTrackingFrameInfo,   // TrackingFrameInfo**
+    tracks,                   // TrackITSExt*
+    nSeeds,                   // const unsigned int
+    Bz,                       // const float
+    startLevel,               // const int
+    maxChi2ClusterAttachment, // float
+    maxChi2NDF,               // float
+    propagator,               // const o2::base::Propagator*
+    matCorrType);             // o2::base::PropagatorF::MatCorrType
 
   gpuCheckError(cudaPeekAtLastError());
   gpuCheckError(cudaDeviceSynchronize());

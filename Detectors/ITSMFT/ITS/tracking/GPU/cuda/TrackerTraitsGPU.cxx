@@ -322,6 +322,7 @@ void TrackerTraitsGPU<nLayers>::computeCellsHybrid(const int iteration)
   mTimeFrameGPU->loadTrackletsDevice();
   mTimeFrameGPU->loadTrackletsLUTDevice();
   mTimeFrameGPU->createCellsLUTDevice();
+  auto& conf = o2::its::ITSGpuTrackingParamConfig::Instance();
   TrackerTraits::computeLayerCells(iteration);
 
   // for (int iLayer = 0; iLayer < mTrkParams[iteration].CellsPerRoad(); ++iLayer) {
@@ -331,22 +332,30 @@ void TrackerTraitsGPU<nLayers>::computeCellsHybrid(const int iteration)
   //     mTimeFrame->getCellsLookupTable()[iLayer - 1].clear();
   //   }
   // }
-  // // #pragma omp parallel for num_threads(nLayers)
-  // for (int iLayer = 0; iLayer < mTrkParams[iteration].CellsPerRoad(); ++iLayer) {
-  //   if (tf->getTracklets()[iLayer + 1].empty() ||
-  //       tf->getTracklets()[iLayer].empty()) {
-  //     continue;
-  //   }
+  // #pragma omp parallel for num_threads(nLayers)
+  for (int iLayer = 0; iLayer < mTrkParams[iteration].CellsPerRoad(); ++iLayer) {
+    if (mTimeFrameGPU->getTracklets()[iLayer + 1].empty() ||
+        mTimeFrameGPU->getTracklets()[iLayer].empty()) {
+      continue;
+    }
 
-  //   const int currentLayerTrackletsNum{static_cast<int>(tf->getTracklets()[iLayer].size())};
-  //   countCellsHandler(mTimeFrameGPU->getDeviceArrayClusters(),
-  //                     mTimeFrameGPU->getDeviceArrayUnsortedClusters(),
-  //                     mTimeFrameGPU->getDeviceArrayTrackingFrameInfo(),
-  //                     mTimeFrameGPU->getDeviceArrayTracklets(),
-  //                     mTimeFrameGPU->getTracklets()[iLayer].size(),
-  //                     nullptr,
-  //                     );
-  // }
+    const int currentLayerTrackletsNum{static_cast<int>(mTimeFrameGPU->getTracklets()[iLayer].size())};
+    countCellsHandler(mTimeFrameGPU->getDeviceArrayClusters(),
+                      mTimeFrameGPU->getDeviceArrayUnsortedClusters(),
+                      mTimeFrameGPU->getDeviceArrayTrackingFrameInfo(),
+                      mTimeFrameGPU->getDeviceArrayTracklets(),
+                      mTimeFrameGPU->getDeviceArrayTrackletsLUT(),
+                      mTimeFrameGPU->getTracklets()[iLayer].size(),
+                      iLayer,
+                      nullptr,
+                      mTimeFrameGPU->getDeviceArrayCellsLUT(),
+                      mBz,
+                      mTrkParams[iteration].MaxChi2ClusterAttachment,
+                      mTrkParams[iteration].CellDeltaTanLambdaSigma,
+                      mTrkParams[iteration].NSigmaCut,
+                      conf.nBlocks,
+                      conf.nThreads);
+  }
 }
 
 template <int nLayers>
@@ -444,19 +453,18 @@ void TrackerTraitsGPU<nLayers>::findRoads(const int iteration)
     mTimeFrameGPU->createTrackITSExtDevice(trackSeeds);
     mTimeFrameGPU->loadTrackSeedsDevice(trackSeeds);
     auto& conf = o2::its::ITSGpuTrackingParamConfig::Instance();
-    trackSeedHandler(
-      mTimeFrameGPU->getDeviceTrackSeeds(),             // CellSeed* trackSeeds,
-      mTimeFrameGPU->getDeviceArrayTrackingFrameInfo(), // TrackingFrameInfo** foundTrackingFrameInfo,
-      mTimeFrameGPU->getDeviceTrackITSExt(),            // o2::its::TrackITSExt* tracks,
-      trackSeeds.size(),                                // const size_t nSeeds,
-      mBz,                                              // const float Bz,
-      startLevel,                                       // const int startLevel,
-      mTrkParams[0].MaxChi2ClusterAttachment,           // float maxChi2ClusterAttachment,
-      mTrkParams[0].MaxChi2NDF,                         // float maxChi2NDF,
-      mTimeFrameGPU->getDevicePropagator(),             // const o2::base::Propagator* propagator
-      mCorrType,                                        // o2::base::PropagatorImpl<float>::MatCorrType
-      conf.nBlocks,
-      conf.nThreads);
+    trackSeedHandler(mTimeFrameGPU->getDeviceTrackSeeds(),             // CellSeed* trackSeeds,
+                     mTimeFrameGPU->getDeviceArrayTrackingFrameInfo(), // TrackingFrameInfo** foundTrackingFrameInfo,
+                     mTimeFrameGPU->getDeviceTrackITSExt(),            // o2::its::TrackITSExt* tracks,
+                     trackSeeds.size(),                                // const size_t nSeeds,
+                     mBz,                                              // const float Bz,
+                     startLevel,                                       // const int startLevel,
+                     mTrkParams[0].MaxChi2ClusterAttachment,           // float maxChi2ClusterAttachment,
+                     mTrkParams[0].MaxChi2NDF,                         // float maxChi2NDF,
+                     mTimeFrameGPU->getDevicePropagator(),             // const o2::base::Propagator* propagator
+                     mCorrType,                                        // o2::base::PropagatorImpl<float>::MatCorrType
+                     conf.nBlocks,
+                     conf.nThreads);
 
     mTimeFrameGPU->downloadTrackITSExtDevice(trackSeeds);
 
