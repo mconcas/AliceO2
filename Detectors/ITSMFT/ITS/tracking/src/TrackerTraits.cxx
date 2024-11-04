@@ -13,6 +13,7 @@
 /// \brief
 ///
 
+// #define CA_DEBUG
 #include "ITStracking/TrackerTraits.h"
 
 #include <algorithm>
@@ -477,6 +478,7 @@ void TrackerTraits::processNeighbours(int iLayer, int iLevel, const std::vector<
     exit(1);
   }
   CA_DEBUGGER(std::cout << "Processing neighbours layer " << iLayer << " level " << iLevel << ", size of the cell seeds: " << currentCellSeed.size() << std::endl);
+  CA_DEBUGGER(std::cout << " resizing: " << mTimeFrame->getCellsNeighboursLUT()[iLayer - 1].size() << std::endl);
   updatedCellSeeds.reserve(mTimeFrame->getCellsNeighboursLUT()[iLayer - 1].size()); /// This is not the correct value, we could do a loop to count the number of neighbours
   updatedCellsIds.reserve(updatedCellSeeds.size());
   auto propagator = o2::base::Propagator::Instance();
@@ -488,6 +490,7 @@ void TrackerTraits::processNeighbours(int iLayer, int iLevel, const std::vector<
   for (unsigned int iCell = 0; iCell < currentCellSeed.size(); ++iCell) {
     const CellSeed& currentCell{currentCellSeed[iCell]};
     if (currentCell.getLevel() != iLevel) {
+      CA_DEBUGGER(std::cout << " continuing." << std::endl);
       continue;
     }
     if (currentCellId.empty() && (mTimeFrame->isClusterUsed(iLayer, currentCell.getFirstClusterIndex()) ||

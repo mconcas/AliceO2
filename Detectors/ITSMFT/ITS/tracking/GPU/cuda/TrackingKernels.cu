@@ -772,7 +772,8 @@ void countCellsHandler(
   const int nTracklets,
   const int layer,
   CellSeed* cells,
-  int** cellsLUTs,
+  int** cellsLUTsArrayDevice,
+  int* cellsLUTsHost,
   const float bz,
   const float maxChi2ClusterAttachment,
   const float cellDeltaTanLambdaSigma,
@@ -789,27 +790,62 @@ void countCellsHandler(
     nTracklets,               // const int
     layer,                    // const int
     cells,                    // CellSeed*
-    cellsLUTs,                // int*
+    cellsLUTsArrayDevice,     // int**
     bz,                       // const float
     maxChi2ClusterAttachment, // const float
-    cellDeltaTanLambdaSigma,    // const float
+    cellDeltaTanLambdaSigma,  // const float
     nSigmaCut);               // const float
-    void *d_temp_storage = nullptr;
-    size_t temp_storage_bytes = 0;
-  //   gpuCheckError(cub::DeviceScan::ExclusiveSum(d_temp_storage,     // d_temp_storage
-  //                                             temp_storage_bytes, // temp_storage_bytes
-  //                                             cellsLUTs, // d_in
-  //                                             cellsLUTs, // d_out
-  //                                             nCells + 1,           // num_items
-  //                                             0));
-  // discardResult(cudaMalloc(&d_temp_storage, temp_storage_bytes));
-  // gpuCheckError(cub::DeviceScan::ExclusiveSum(d_temp_storage,     // d_temp_storage
-  //                                             temp_storage_bytes, // temp_storage_bytes
-  //                                             cellsLUTs, // d_in
-  //                                             cellsLUTs, // d_out
-  //                                             nCells + 1,           // num_items
-  //                                             0));
-  // gpuCheckError(cudaFree(d_temp_storage));
+  void* d_temp_storage = nullptr;
+  size_t temp_storage_bytes = 0;
+  gpuCheckError(cub::DeviceScan::ExclusiveSum(d_temp_storage,     // d_temp_storage
+                                              temp_storage_bytes, // temp_storage_bytes
+                                              cellsLUTsHost,      // d_in
+                                              cellsLUTsHost,      // d_out
+                                              nTracklets + 1,     // num_items
+                                              0));
+  discardResult(cudaMalloc(&d_temp_storage, temp_storage_bytes));
+  gpuCheckError(cub::DeviceScan::ExclusiveSum(d_temp_storage,     // d_temp_storage
+                                              temp_storage_bytes, // temp_storage_bytes
+                                              cellsLUTsHost,      // d_in
+                                              cellsLUTsHost,      // d_out
+                                              nTracklets + 1,     // num_items
+                                              0));
+  // gpu::printBufferLayerOnThread<<<1, 1>>>(layer, cellsLUTsHost, nTracklets + 1);
+  gpuCheckError(cudaFree(d_temp_storage));
+}
+
+void computeCellsHandler(
+  const Cluster** sortedClusters,
+  const Cluster** unsortedClusters,
+  const TrackingFrameInfo** tfInfo,
+  const Tracklet** tracklets,
+  const int** trackletsLUT,
+  const int nTracklets,
+  const int layer,
+  CellSeed* cells,
+  int** cellsLUTsArrayDevice,
+  int* cellsLUTsHost,
+  const float bz,
+  const float maxChi2ClusterAttachment,
+  const float cellDeltaTanLambdaSigma,
+  const float nSigmaCut,
+  const int nBlocks,
+  const int nThreads)
+{
+  gpu::computeLayerCellsKernel<false><<<nBlocks, nThreads>>>(
+    sortedClusters,           // const Cluster**
+    unsortedClusters,         // const Cluster**
+    tfInfo,                   // const TrackingFrameInfo**
+    tracklets,                // const Tracklets**
+    trackletsLUT,             // const int**
+    nTracklets,               // const int
+    layer,                    // const int
+    cells,                    // CellSeed*
+    cellsLUTsArrayDevice,     // int**
+    bz,                       // const float
+    maxChi2ClusterAttachment, // const float
+    cellDeltaTanLambdaSigma,  // const float
+    nSigmaCut);               // const float
 }
 
 void countCellNeighboursHandler(CellSeed** cellsLayersDevice,

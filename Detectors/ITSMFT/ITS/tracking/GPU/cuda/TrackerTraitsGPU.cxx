@@ -349,12 +349,30 @@ void TrackerTraitsGPU<nLayers>::computeCellsHybrid(const int iteration)
                       iLayer,
                       nullptr,
                       mTimeFrameGPU->getDeviceArrayCellsLUT(),
+                      mTimeFrameGPU->getDeviceCellLUTs()[iLayer],
                       mBz,
                       mTrkParams[iteration].MaxChi2ClusterAttachment,
                       mTrkParams[iteration].CellDeltaTanLambdaSigma,
                       mTrkParams[iteration].NSigmaCut,
                       conf.nBlocks,
                       conf.nThreads);
+    mTimeFrameGPU->createCellsBuffers(iLayer);
+    computeCellsHandler(mTimeFrameGPU->getDeviceArrayClusters(),
+                        mTimeFrameGPU->getDeviceArrayUnsortedClusters(),
+                        mTimeFrameGPU->getDeviceArrayTrackingFrameInfo(),
+                        mTimeFrameGPU->getDeviceArrayTracklets(),
+                        mTimeFrameGPU->getDeviceArrayTrackletsLUT(),
+                        mTimeFrameGPU->getTracklets()[iLayer].size(),
+                        iLayer,
+                        mTimeFrameGPU->getDeviceCells()[iLayer],
+                        mTimeFrameGPU->getDeviceArrayCellsLUT(),
+                        mTimeFrameGPU->getDeviceCellLUTs()[iLayer],
+                        mBz,
+                        mTrkParams[iteration].MaxChi2ClusterAttachment,
+                        mTrkParams[iteration].CellDeltaTanLambdaSigma,
+                        mTrkParams[iteration].NSigmaCut,
+                        conf.nBlocks,
+                        conf.nThreads);
   }
 }
 
@@ -362,11 +380,12 @@ template <int nLayers>
 void TrackerTraitsGPU<nLayers>::findCellsNeighboursHybrid(const int iteration)
 {
   mTimeFrameGPU->loadCellsDevice();
+  mTimeFrameGPU->createNeighboursDevice();
   mTimeFrameGPU->loadCellsLUTDevice();
   auto& conf = o2::its::ITSGpuTrackingParamConfig::Instance();
   std::vector<std::vector<std::pair<int, int>>> cellsNeighboursLayer(mTrkParams[iteration].CellsPerRoad() - 1);
   for (int iLayer{0}; iLayer < mTrkParams[iteration].CellsPerRoad() - 1; ++iLayer) {
-    const int nextLayerCellsNum{static_cast<int>(mTimeFrameGPU->getCells()[iLayer + 1].size())};
+    const int nextLayerCellsNum{static_cast<int>(mTimeFrameGPU->getNCellsDevice()[iLayer + 1])};
     mTimeFrameGPU->getCellsNeighboursLUT()[iLayer].clear();
     mTimeFrameGPU->getCellsNeighboursLUT()[iLayer].resize(nextLayerCellsNum, 0);
 
@@ -410,12 +429,12 @@ void TrackerTraitsGPU<nLayers>::findCellsNeighboursHybrid(const int iteration)
                                  conf.nThreads);
     mTimeFrameGPU->getCellsNeighbours()[iLayer].clear();
     mTimeFrameGPU->getCellsNeighbours()[iLayer].reserve(cellsNeighboursLayer[iLayer].size());
-    mTimeFrameGPU->downloadCellsDevice(iLayer + 1); // Cells on layer 0 did not change.
 
     filterCellNeighboursHandler(mTimeFrameGPU->getCellsNeighbours()[iLayer],
                                 mTimeFrameGPU->getDeviceNeighbours(iLayer),
                                 cellsNeighboursLayer[iLayer].size());
   }
+  mTimeFrameGPU->downloadCellsDevice();
   mTimeFrameGPU->unregisterRest();
 };
 

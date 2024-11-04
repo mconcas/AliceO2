@@ -62,15 +62,17 @@ class TimeFrameGPU : public TimeFrame
   void loadTrackSeedsChi2Device();
   void loadRoadsDevice();
   void loadTrackSeedsDevice(std::vector<CellSeed>&);
+  void createCellsBuffers(const int);
   void createCellsDevice();
   void createCellsLUTDevice();
+  void createNeighboursDevice();
   void createNeighboursDevice(const unsigned int& layer, std::vector<std::pair<int, int>>& neighbours);
   void createNeighboursLUTDevice(const int, const unsigned int);
   void createTrackITSExtDevice(std::vector<CellSeed>&);
   void downloadTrackITSExtDevice(std::vector<CellSeed>&);
   void downloadCellsNeighboursDevice(std::vector<std::vector<std::pair<int, int>>>&, const int);
   void downloadNeighboursLUTDevice(std::vector<int>&, const int);
-  void downloadCellsDevice(const int);
+  void downloadCellsDevice();
   void unregisterRest();
   void initDeviceChunks(const int, const int);
   template <Task task>
@@ -120,12 +122,20 @@ class TimeFrameGPU : public TimeFrame
   gsl::span<int> getHostNTracklets(const int chunkId);
   gsl::span<int> getHostNCells(const int chunkId);
 
+  // Host-available device getters
+  gsl::span<int*> getDeviceCellLUTs() { return mCellsLUTDevice; }
+  gsl::span<CellSeed*> getDeviceCells() { return mCellsDevice; }
+  gsl::span<int, nLayers - 2> getNCellsDevice() { return mNCells; }
+
  private:
   void allocMemAsync(void**, size_t, Stream*, bool); // Abstract owned and unowned memory allocations
   bool mHostRegistered = false;
   std::vector<GpuTimeFrameChunk<nLayers>> mMemChunks;
   TimeFrameGPUParameters mGpuParams;
   StaticTrackingParameters<nLayers> mStaticTrackingParams;
+
+  // Host-available device buffer sizes
+  std::array<int, nLayers - 2> mNCells;
 
   // Device pointers
   StaticTrackingParameters<nLayers>* mTrackingParamsDevice;
