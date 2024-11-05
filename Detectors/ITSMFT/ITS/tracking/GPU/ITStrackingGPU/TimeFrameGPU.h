@@ -73,6 +73,7 @@ class TimeFrameGPU : public TimeFrame
   void downloadCellsNeighboursDevice(std::vector<std::vector<std::pair<int, int>>>&, const int);
   void downloadNeighboursLUTDevice(std::vector<int>&, const int);
   void downloadCellsDevice();
+  void downloadCellsLUTDevice();
   void unregisterRest();
   void initDeviceChunks(const int, const int);
   template <Task task>

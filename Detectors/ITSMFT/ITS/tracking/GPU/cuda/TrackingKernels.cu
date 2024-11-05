@@ -423,6 +423,21 @@ GPUhd() float Sq(float q)
   return q * q;
 }
 
+template <typename T>
+GPUd() void pPointer(T* ptr)
+{
+  printf("[%p]\t", ptr);
+}
+
+template <typename... Args>
+GPUg() void printPointersKernel(std::tuple<Args...> args)
+{
+  auto print_all = [&](auto... ptrs) {
+    (pPointer(ptrs), ...);
+  };
+  std::apply(print_all, args);
+}
+
 // Functors to sort tracklets
 template <typename T>
 struct trackletSortEmptyFunctor : public thrust::binary_function<T, T, bool> {
@@ -449,6 +464,32 @@ GPUg() void printBufferLayerOnThread(const int layer, const int* v, unsigned int
         printf("\n layer %d: ===> %d/%d\t", layer, i, (int)size);
       }
       printf("%d\t", v[i]);
+    }
+    printf("\n");
+  }
+}
+
+GPUg() void printMatrixRow(const int row, int** mat, const unsigned int rowLength, const int len = 150, const unsigned int tId = 0)
+{
+  if (blockIdx.x * blockDim.x + threadIdx.x == tId) {
+    for (int i{0}; i < rowLength; ++i) {
+      if (!(i % len)) {
+        printf("\n row %d: ===> %d/%d\t", row, i, (int)rowLength);
+      }
+      printf("%d\t", mat[row][i]);
+    }
+    printf("\n");
+  }
+}
+
+GPUg() void printBufferPointersLayerOnThread(const int layer, void** v, unsigned int size, const int len = 150, const unsigned int tId = 0)
+{
+  if (blockIdx.x * blockDim.x + threadIdx.x == tId) {
+    for (int i{0}; i < size; ++i) {
+      if (!(i % len)) {
+        printf("\n layer %d: ===> %d/%d\t", layer, i, (int)size);
+      }
+      printf("%p\t", (void*)v[i]);
     }
     printf("\n");
   }
@@ -810,7 +851,6 @@ void countCellsHandler(
                                               cellsLUTsHost,      // d_out
                                               nTracklets + 1,     // num_items
                                               0));
-  // gpu::printBufferLayerOnThread<<<1, 1>>>(layer, cellsLUTsHost, nTracklets + 1);
   gpuCheckError(cudaFree(d_temp_storage));
 }
 
@@ -846,6 +886,7 @@ void computeCellsHandler(
     maxChi2ClusterAttachment, // const float
     cellDeltaTanLambdaSigma,  // const float
     nSigmaCut);               // const float
+  // gpu::printBufferPointersLayerOnThread<<<1, 1>>>(0, (void**)cellsLUTsArrayDevice, 5);
 }
 
 void countCellNeighboursHandler(CellSeed** cellsLayersDevice,
@@ -862,6 +903,7 @@ void countCellNeighboursHandler(CellSeed** cellsLayersDevice,
                                 const int nBlocks,
                                 const int nThreads)
 {
+  gpu::printMatrixRow<<<1, 1>>>(layerIndex, cellsLUTs, nCells);
   gpu::computeLayerCellNeighboursKernel<true><<<nBlocks, nThreads>>>(
     cellsLayersDevice,
     neighboursLUT,
