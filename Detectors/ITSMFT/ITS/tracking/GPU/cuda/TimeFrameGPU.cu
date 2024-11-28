@@ -259,7 +259,8 @@ void TimeFrameGPU<nLayers>::createTrackletsLUTDevice()
   STOP_GPU_STREAM_TIMER(mGpuStreams[0].get());
 }
 
-template<int nLayers> void TimeFrameGPU<nLayers>::createTrackletsBuffers()
+template <int nLayers>
+void TimeFrameGPU<nLayers>::createTrackletsBuffers()
 {
   START_GPU_STREAM_TIMER(mGpuStreams[0].get(), "creating cells buffers");
   for (auto iLayer{0}; iLayer < nLayers - 1; ++iLayer) {
