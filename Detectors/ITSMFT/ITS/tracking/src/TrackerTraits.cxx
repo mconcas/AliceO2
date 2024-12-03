@@ -226,7 +226,6 @@ void TrackerTraits::computeLayerTracklets(const int iteration, int iROFslice, in
     /// Compute LUT
     std::exclusive_scan(lut.begin(), lut.end(), lut.begin(), 0);
     lut.push_back(trkl.size());
-     LOGP(info, "CPU layer {} -> old size: {} - new size: {}", iLayer, oldsize, trkl.size());
   }
   /// Layer 0 is done outside the loop
   std::sort(tf->getTracklets()[0].begin(), tf->getTracklets()[0].end(), [](const Tracklet& a, const Tracklet& b) {

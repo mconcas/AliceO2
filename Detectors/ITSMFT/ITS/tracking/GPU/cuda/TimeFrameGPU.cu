@@ -341,9 +341,9 @@ void TimeFrameGPU<nLayers>::createCellsLUTDevice()
 {
   START_GPU_STREAM_TIMER(mGpuStreams[0].get(), "creating cells LUTs");
   for (auto iLayer{0}; iLayer < nLayers - 2; ++iLayer) {
-    LOGP(debug, "gpu-transfer: creating cell LUT for {} elements on layer {}, for {} MB.", mTracklets[iLayer].size() + 1, iLayer, (mTracklets[iLayer].size() + 1) * sizeof(int) / MB);
-    allocMemAsync(reinterpret_cast<void**>(&mCellsLUTDevice[iLayer]), (mTracklets[iLayer].size() + 1) * sizeof(int), nullptr, getExtAllocator());
-    checkGPUError(cudaMemsetAsync(mCellsLUTDevice[iLayer], 0, (mTracklets[iLayer].size() + 1) * sizeof(int), mGpuStreams[0].get()));
+    LOGP(debug, "gpu-transfer: creating cell LUT for {} elements on layer {}, for {} MB.", mNTracklets[iLayer] + 1, iLayer, (mNTracklets[iLayer] + 1) * sizeof(int) / MB);
+    allocMemAsync(reinterpret_cast<void**>(&mCellsLUTDevice[iLayer]), (mNTracklets[iLayer] + 1) * sizeof(int), nullptr, getExtAllocator());
+    checkGPUError(cudaMemsetAsync(mCellsLUTDevice[iLayer], 0, (mNTracklets[iLayer] + 1) * sizeof(int), mGpuStreams[0].get()));
   }
   allocMemAsync(reinterpret_cast<void**>(&mCellsLUTDeviceArray), (nLayers - 2) * sizeof(int*), nullptr, getExtAllocator());
   checkGPUError(cudaMemcpyAsync(mCellsLUTDeviceArray, mCellsLUTDevice.data(), mCellsLUTDevice.size() * sizeof(int*), cudaMemcpyHostToDevice, mGpuStreams[0].get()));
@@ -355,7 +355,7 @@ void TimeFrameGPU<nLayers>::createCellsBuffers(const int layer)
 {
   START_GPU_STREAM_TIMER(mGpuStreams[0].get(), "creating cells buffers");
   mNCells[layer] = 0;
-  checkGPUError(cudaMemcpyAsync(&mNCells[layer], mCellsLUTDevice[layer] + mTracklets[layer].size(), sizeof(int), cudaMemcpyDeviceToHost));
+  checkGPUError(cudaMemcpyAsync(&mNCells[layer], mCellsLUTDevice[layer] +  mNTracklets[layer], sizeof(int), cudaMemcpyDeviceToHost));
   LOGP(debug, "gpu-transfer: creating cell buffer for {} elements on layer {}, for {} MB.", mNCells[layer], layer, mNCells[layer] * sizeof(CellSeed) / MB);
   allocMemAsync(reinterpret_cast<void**>(&mCellsDevice[layer]), mNCells[layer] * sizeof(CellSeed), nullptr, getExtAllocator());
 
@@ -446,9 +446,9 @@ void TimeFrameGPU<nLayers>::downloadCellsLUTDevice()
 {
   START_GPU_STREAM_TIMER(mGpuStreams[0].get(), "downloading cell luts");
   for (auto iLayer{0}; iLayer < nLayers - 3; ++iLayer) {
-    LOGP(debug, "gpu-transfer: downloading cells lut on layer {} for {} elements", iLayer, (mTracklets[iLayer + 1].size() + 1));
-    mCellsLookupTable[iLayer].resize(mTracklets[iLayer + 1].size() + 1);
-    checkGPUError(cudaMemcpyAsync(mCellsLookupTable[iLayer].data(), mCellsLUTDevice[iLayer + 1], (mTracklets[iLayer + 1].size() + 1) * sizeof(int), cudaMemcpyDeviceToHost, mGpuStreams[0].get()));
+    LOGP(debug, "gpu-transfer: downloading cells lut on layer {} for {} elements", iLayer, (mNTracklets[iLayer + 1] + 1));
+    mCellsLookupTable[iLayer].resize(mNTracklets[iLayer + 1] + 1);
+    checkGPUError(cudaMemcpyAsync(mCellsLookupTable[iLayer].data(), mCellsLUTDevice[iLayer + 1], (mNTracklets[iLayer + 1] + 1) * sizeof(int), cudaMemcpyDeviceToHost, mGpuStreams[0].get()));
   }
   STOP_GPU_STREAM_TIMER(mGpuStreams[0].get());
 }

@@ -136,8 +136,6 @@ class TimeFrameGPU : public TimeFrame
   void setDevicePropagator(const o2::base::PropagatorImpl<float>*) override;
 
   // Host-specific getters
-  gsl::span<int> getHostNTracklets(const int chunkId);
-  gsl::span<int> getHostNCells(const int chunkId);
   gsl::span<int, nLayers - 1> getNTracklets() { return mNTracklets; }
   gsl::span<int, nLayers - 2> getNCells() { return mNCells; }
 

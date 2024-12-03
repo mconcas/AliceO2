@@ -76,7 +76,7 @@ int TrackerTraitsGPU<nLayers>::getTFNumberOfClusters() const
 template <int nLayers>
 int TrackerTraitsGPU<nLayers>::getTFNumberOfTracklets() const
 {
-  return mTimeFrameGPU->getNumberOfTracklets();
+  return std::accumulate(mTimeFrameGPU->getNTracklets().begin(), mTimeFrameGPU->getNTracklets().end(), 0);
 }
 
 template <int nLayers>
@@ -91,7 +91,7 @@ template <int nLayers>
 void TrackerTraitsGPU<nLayers>::computeTrackletsHybrid(const int iteration, int iROFslice, int iVertex)
 {
   auto& conf = o2::its::ITSGpuTrackingParamConfig::Instance();
-  TrackerTraits::computeLayerTracklets(iteration, iROFslice, iVertex);
+  // TrackerTraits::computeLayerTracklets(iteration, iROFslice, iVertex);
   mTimeFrameGPU->createTrackletsLUTDevice(iteration);
 
   const Vertex diamondVert({mTrkParams[iteration].Diamond[0], mTrkParams[iteration].Diamond[1], mTrkParams[iteration].Diamond[2]}, {25.e-6f, 0.f, 0.f, 25.e-6f, 0.f, 36.f}, 1, 1.f);
@@ -169,10 +169,8 @@ void TrackerTraitsGPU<nLayers>::computeCellsHybrid(const int iteration)
 
   for (int iLayer = 0; iLayer < mTrkParams[iteration].CellsPerRoad(); ++iLayer) {
     if (!mTimeFrameGPU->getNTracklets()[iLayer + 1] || !mTimeFrameGPU->getNTracklets()[iLayer]) {
-      LOGP(info, "continuing here");
       continue;
     }
-    LOGP(info, "+> {}", mTimeFrameGPU->getNTracklets()[iLayer]);
     const int currentLayerTrackletsNum{static_cast<int>(mTimeFrameGPU->getNTracklets()[iLayer])};
     countCellsHandler(mTimeFrameGPU->getDeviceArrayClusters(),
                       mTimeFrameGPU->getDeviceArrayUnsortedClusters(),

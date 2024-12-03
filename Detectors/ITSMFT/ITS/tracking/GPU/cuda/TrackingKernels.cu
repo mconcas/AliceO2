@@ -863,7 +863,6 @@ void computeTrackletsInROFsHandler(const IndexTableUtils* utils,
     thrust::sort(thrust::device, tracklets_ptr, tracklets_ptr + nTracklets[iLayer], gpu::sort_tracklets());
     auto unique_end = thrust::unique(thrust::device, tracklets_ptr, tracklets_ptr + nTracklets[iLayer], gpu::equal_tracklets());
     nTracklets[iLayer] = unique_end - tracklets_ptr;
-    LOGP(info, "=> {} {}", nTracklets[iLayer], unique_end - tracklets_ptr);
     if (iLayer > 0) {
       gpuCheckError(cudaMemset(trackletsLUTsHost[iLayer], 0, nClusters[iLayer] * sizeof(int)));
       gpu::compileTrackletsLookupTableKernel<<<nBlocks, nThreads>>>(spanTracklets[iLayer], trackletsLUTsHost[iLayer], nTracklets[iLayer]);
