@@ -625,5 +625,16 @@ void TimeFrame::printSliceInfo(const int startROF, const int sliceSize)
   }
 }
 
+size_t TimeFrame::dropTracks(const int iSlice, const int sliceSize)
+{
+  size_t removed{0};
+  for (auto& v : gsl::span<std::vector<TrackITSExt>>{&mTracks[iSlice], static_cast<gsl::span<TrackITSExt>::size_type>(sliceSize > 0 ? sliceSize : mTracks.size())}) {
+    removed += v.size();
+    v.clear();
+  }
+  LOGP(warning, "... dropping {} tracks in {} ...", removed, sliceSize > 0 ? "timeframe" : "slice");
+
+  return removed;
+}
 } // namespace its
 } // namespace o2

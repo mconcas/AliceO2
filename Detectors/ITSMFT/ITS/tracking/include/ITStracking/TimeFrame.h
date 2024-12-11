@@ -297,12 +297,8 @@ class TimeFrame
   std::vector<uint8_t> mMultiplicityCutMask;
 
   const o2::base::PropagatorImpl<float>* mPropagatorDevice = nullptr; // Needed only for GPU
-  void dropTracks()
-  {
-    for (auto& v : mTracks) {
-      deepVectorClear(v);
-    }
-  }
+  size_t dropTracks(const int iSlice = 0, const int sliceSize = -1);
+
 
  protected:
   template <typename T>

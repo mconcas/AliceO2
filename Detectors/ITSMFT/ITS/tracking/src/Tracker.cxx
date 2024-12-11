@@ -74,16 +74,18 @@ void Tracker::clustersToTracks(std::function<void(std::string s)> logger, std::f
       for (int iROFs{0}; iROFs < nROFsIterations; ++iROFs) {
         timeTracklets += evaluateTask(
           &Tracker::computeTracklets, "Tracklet finding", [](std::string) {}, iteration, iROFs, iVertex);
-        nTracklets += mTraits->getTFNumberOfTracklets();
         if (!mTimeFrame->checkMemory(mTrkParams[iteration].MaxMemory)) {
-          mTimeFrame->printSliceInfo(iROFs, mTrkParams[iteration].nROFsPerIterations);
+          // mTimeFrame->printSliceInfo(iROFs, mTrkParams[iteration].nROFsPerIterations);
           error(fmt::format("Too much memory used during trackleting in iteration {} in ROF span {}-{}: {:.2f} GB. Current limit is {:.2f} GB, check the detector status and/or the selections.",
                             iteration, iROFs, iROFs + mTrkParams[iteration].nROFsPerIterations, mTimeFrame->getArtefactsMemory() / GB, mTrkParams[iteration].MaxMemory / GB));
           if (mTrkParams[iteration].DropTFUponFailure) {
             dropTF = true;
+          } else {
+            nTracks += mTimeFrame->dropTracks(iROFs, mTrkParams[iteration].nROFsPerIterations);
           }
           break;
         }
+        nTracklets += mTraits->getTFNumberOfTracklets();
         float trackletsPerCluster = mTraits->getTFNumberOfClusters() > 0 ? float(mTraits->getTFNumberOfTracklets()) / mTraits->getTFNumberOfClusters() : 0.f;
         if (trackletsPerCluster > mTrkParams[iteration].TrackletsPerClusterLimit) {
           error(fmt::format("Too many tracklets per cluster ({}) in iteration {} in ROF span {}-{}:, check the detector status and/or the selections. Current limit is {}",
@@ -93,17 +95,19 @@ void Tracker::clustersToTracks(std::function<void(std::string s)> logger, std::f
 
         timeCells += evaluateTask(
           &Tracker::computeCells, "Cell finding", [](std::string) {}, iteration);
-        nCells += mTraits->getTFNumberOfCells();
         if (!mTimeFrame->checkMemory(mTrkParams[iteration].MaxMemory)) {
-          mTimeFrame->printSliceInfo(iROFs, mTrkParams[iteration].nROFsPerIterations);
+          // mTimeFrame->printSliceInfo(iROFs, mTrkParams[iteration].nROFsPerIterations);
           error(fmt::format("Too much memory used during cell finding in iteration {} in ROF span {}-{}: {:.2f} GB. Current limit is {:.2f} GB, check the detector status and/or the selections.",
                             iteration, iROFs, iROFs + mTrkParams[iteration].nROFsPerIterations, mTimeFrame->getArtefactsMemory() / GB, mTrkParams[iteration].MaxMemory / GB));
           if (mTrkParams[iteration].DropTFUponFailure) {
             dropTF = true;
+          } else {
+            nTracks += mTimeFrame->dropTracks(iROFs, mTrkParams[iteration].nROFsPerIterations);
+            error(fmt::format("=> {} {}", mTimeFrame->getNumberOfTracks(), nTracks));
           }
-          dropTF = true;
           break;
         }
+        nCells += mTraits->getTFNumberOfCells();
         float cellsPerCluster = mTraits->getTFNumberOfClusters() > 0 ? float(mTraits->getTFNumberOfCells()) / mTraits->getTFNumberOfClusters() : 0.f;
         if (cellsPerCluster > mTrkParams[iteration].CellsPerClusterLimit) {
           error(fmt::format("Too many cells per cluster ({}) in iteration {} in ROF span {}-{}, check the detector status and/or the selections. Current limit is {}",
@@ -131,7 +135,6 @@ void Tracker::clustersToTracks(std::function<void(std::string s)> logger, std::f
       logger(fmt::format(" - Extending Tracks: {} extended tracks using {} clusters found in {:.2f} ms", nExtendedTracks + mTimeFrame->mNExtendedTracks, nExtendedClusters + mTimeFrame->mNExtendedUsedClusters, timeExtending));
     }
     if (dropTF) {
-      error(fmt::format("...Dropping Timeframe..."));
       mTimeFrame->dropTracks();
       break; // breaking out the iterations loop
     }
