@@ -124,7 +124,7 @@ void ClustererDPL::updateTimeDependentParams(ProcessingContext& pc)
     if (clParams.maxBCDiffToMaskBias > 0 && clParams.maxBCDiffToSquashBias > 0) {
       LOGP(fatal, "maxBCDiffToMaskBias = {} and maxBCDiffToSquashBias = {} cannot be set at the same time. Either set masking or squashing with a BCDiff > 0", clParams.maxBCDiffToMaskBias, clParams.maxBCDiffToSquashBias);
     }
-     mClusterer->setDropHugeClusters(clParams.dropHugeClusters);
+    mClusterer->setDropHugeClusters(clParams.dropHugeClusters);
     auto nbc = clParams.maxBCDiffToMaskBias;
     nbc += mClusterer->isContinuousReadOut() ? alpParams.roFrameLengthInBC : (alpParams.roFrameLengthTrig / o2::constants::lhc::LHCBunchSpacingNS);
     mClusterer->setMaxBCSeparationToMask(nbc);
