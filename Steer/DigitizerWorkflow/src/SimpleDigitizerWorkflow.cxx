@@ -638,7 +638,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
   }
 
   // the ALICE 3 TRK part
-    if (isEnabled(o2::detectors::DetID::TRK)) {
+  if (isEnabled(o2::detectors::DetID::TRK)) {
     detList.emplace_back(o2::detectors::DetID::TRK);
     // connect the ALICE 3 TRK digitization
     specs.emplace_back(o2::trk::getTRKDigitizerSpec(fanoutsize++, mctruth));

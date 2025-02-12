@@ -78,7 +78,6 @@ class TRKDPLDigitizerTask : BaseDPLDigitizer
     }
     updateTimeDependentParams(pc);
 
-
     // read collision context from input
     auto context = pc.inputs().get<o2::steer::DigitizationContext*>("collisioncontext");
     context->initSimChains(mID, mSimChains);
@@ -302,4 +301,4 @@ DataProcessorSpec getTRKDigitizerSpec(int channel, bool mctruth)
                            Options{{"disable-qed", o2::framework::VariantType::Bool, false, {"disable QED handling"}}}};
 }
 
-} // namespace oTRK
+} // namespace o2::trk
