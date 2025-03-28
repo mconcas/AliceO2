@@ -41,7 +41,7 @@ using constants::MB;
 namespace gpu
 {
 
-  template <int nLayers>
+template <int nLayers>
 GpuTimeFrameChunk<nLayers>::~GpuTimeFrameChunk()
 {
   if (mAllocated) {
