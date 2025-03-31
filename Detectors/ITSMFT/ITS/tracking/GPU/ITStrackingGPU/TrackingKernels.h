@@ -16,9 +16,12 @@
 #include "DetectorsBase/Propagator.h"
 #include "GPUCommonDef.h"
 
-namespace o2::its
+namespace o2
+{
+namespace its
 {
 class CellSeed;
+class ExternalAllocator;
 namespace gpu
 {
 #ifdef GPUCA_GPUCODE // GPUg() global kernels must only when compiled by GPU compiler
@@ -178,7 +181,8 @@ void computeCellNeighboursHandler(CellSeed** cellsLayersDevice,
 
 int filterCellNeighboursHandler(gpuPair<int, int>*,
                                 int*,
-                                unsigned int);
+                                unsigned int,
+                                o2::its::ExternalAllocator* = nullptr);
 
 template <int nLayers = 7>
 void processNeighboursHandler(const int startLayer,
@@ -191,6 +195,7 @@ void processNeighboursHandler(const int startLayer,
                               gsl::span<int*> neighboursDeviceLUTs,
                               const TrackingFrameInfo** foundTrackingFrameInfo,
                               bounded_vector<CellSeed>& seedsHost,
+                              o2::its::ExternalAllocator*,
                               const float bz,
                               const float MaxChi2ClusterAttachment,
                               const float maxChi2NDF,
@@ -212,5 +217,6 @@ void trackSeedHandler(CellSeed* trackSeeds,
                       const o2::base::PropagatorF::MatCorrType matCorrType,
                       const int nBlocks,
                       const int nThreads);
-} // namespace o2::its
+} // namespace its
+} // namespace o2
 #endif // ITSTRACKINGGPU_TRACKINGKERNELS_H_
