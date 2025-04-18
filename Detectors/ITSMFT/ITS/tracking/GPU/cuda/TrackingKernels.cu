@@ -84,7 +84,7 @@ GPUd() const int4 getBinsRect(const Cluster& currentCluster, const int layerInde
 
   return int4{o2::gpu::CAMath::Max(0, utils.getZBinIndex(layerIndex + 1, zRangeMin)),
               utils.getPhiBinIndex(math_utils::getNormalizedPhi(phiRangeMin)),
-              o2::gpu::CAMath::Min(ZBins - 1, utils.getZBinIndex(layerIndex + 1, zRangeMax)),
+              o2::gpu::CAMath::Min(utils.getNzBins() - 1, utils.getZBinIndex(layerIndex + 1, zRangeMax)),
               utils.getPhiBinIndex(math_utils::getNormalizedPhi(phiRangeMax))};
 }
 
@@ -1248,7 +1248,7 @@ void processNeighboursHandler(const int startLayer,
                                                              maxChi2ClusterAttachment,
                                                              propagator,
                                                              matCorrType);
-  auto t1 = updatedCellSeed.size();
+
   GPUChkErrS(cudaFree(d_temp_storage));
   int level = startLevel;
   for (int iLayer{startLayer - 1}; iLayer > 0 && level > 2; --iLayer) {
@@ -1258,7 +1258,7 @@ void processNeighboursHandler(const int startLayer,
     thrust::device_vector<CellSeed>().swap(updatedCellSeed);
     thrust::device_vector<int>().swap(updatedCellId);
     auto lastCellSeedSize{lastCellSeed.size()};
-    foundSeedsTable.resize(nCells[iLayer] + 1);
+    foundSeedsTable.resize(lastCellSeedSize + 1);
     thrust::fill(foundSeedsTable.begin(), foundSeedsTable.end(), 0);
     --level;
     gpu::processNeighboursKernel<true><<<nBlocks, nThreads>>>(iLayer,
@@ -1282,14 +1282,14 @@ void processNeighboursHandler(const int startLayer,
                                              temp_storage_bytes,                            // temp_storage_bytes
                                              thrust::raw_pointer_cast(&foundSeedsTable[0]), // d_in
                                              thrust::raw_pointer_cast(&foundSeedsTable[0]), // d_out
-                                             nCells[iLayer] + 1,                            // num_items
+                                             foundSeedsTable.size(),                        // num_i_items
                                              0));                                           // NOLINT: this is the offset of the sum, not a pointer
     GPUChkErrS(cudaMalloc(&d_temp_storage, temp_storage_bytes));
     GPUChkErrS(cub::DeviceScan::ExclusiveSum(d_temp_storage,                                // d_temp_storage
                                              temp_storage_bytes,                            // temp_storage_bytes
                                              thrust::raw_pointer_cast(&foundSeedsTable[0]), // d_in
                                              thrust::raw_pointer_cast(&foundSeedsTable[0]), // d_out
-                                             nCells[iLayer] + 1,                            // num_items
+                                             foundSeedsTable.size(),                        // num_i_items
                                              0));                                           // NOLINT: this is the offset of the sum, not a pointer
     auto foundSeeds{foundSeedsTable.back()};
     updatedCellId.resize(foundSeeds);
