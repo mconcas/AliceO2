@@ -68,7 +68,7 @@ endfunction()
 STRING(REGEX REPLACE "\-std=[^ ]*" "" O2_GPU_CMAKE_CXX_FLAGS_NOSTD "${CMAKE_CXX_FLAGS}")
 
 # ---------------------------------- Fast Math / Deterministic Mode ----------------------------------
-# set(GPUCA_DETERMINISTIC_MODE WHOLEO2)          # Override
+set(GPUCA_DETERMINISTIC_MODE WHOLEO2)          # Override
 set(GPUCA_DETERMINISTIC_MODE_MAP_OFF 0)
 set(GPUCA_DETERMINISTIC_MODE_MAP_NO_FAST_MATH 1) # No -ffast-math and similar compile flags for GPU folder
 set(GPUCA_DETERMINISTIC_MODE_MAP_OPTO2 2)        # In addition, -O2 optimization on host for GPU folder

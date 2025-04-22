@@ -42,25 +42,8 @@ Tracker::Tracker(o2::its::TrackerTraits* traits) : mTraits(traits)
   mTrkParams.resize(1);
 }
 
-template <Tracker::TrackerType T>
-void Tracker::clusterToTracksImpl(LogFunc logger, LogFunc error)
+void Tracker::clustersToTracks(LogFunc logger, LogFunc error)
 {
-  constexpr auto pickFunc = []<typename F1, typename F2>(F1&& cpu, F2&& hybrid) {
-    if constexpr (T == TrackerType::CPU) {
-      return std::forward<F1>(cpu);
-    } else if constexpr (T == TrackerType::Hybrid) {
-      return std::forward<F2>(hybrid);
-    } else {
-      static_assert(false, "Wrong TrackerType!");
-    }
-  };
-  constexpr auto initialiseTimeFrame = pickFunc(&Tracker::initialiseTimeFrame, &Tracker::initialiseTimeFrameHybrid);
-  constexpr auto computeTracklets = pickFunc(&Tracker::computeTracklets, &Tracker::computeTrackletsHybrid);
-  constexpr auto computeCells = pickFunc(&Tracker::computeCells, &Tracker::computeCellsHybrid);
-  constexpr auto findCellsNeighbours = pickFunc(&Tracker::findCellsNeighbours, &Tracker::findCellsNeighboursHybrid);
-  constexpr auto findRoads = pickFunc(&Tracker::findRoads, &Tracker::findRoadsHybrid);
-  constexpr auto extendTracks = pickFunc(&Tracker::extendTracks, nullptr);
-  constexpr auto findShortPrimaries = pickFunc(&Tracker::findShortPrimaries, nullptr);
   LogFunc evalLog = [](const std::string&) {};
 
   double total{0};
@@ -81,12 +64,12 @@ void Tracker::clusterToTracksImpl(LogFunc logger, LogFunc error)
     int nTracklets{0}, nCells{0}, nNeighbours{0}, nTracks{-static_cast<int>(mTimeFrame->getNumberOfTracks())};
     int nROFsIterations = mTrkParams[iteration].nROFsPerIterations > 0 ? mTimeFrame->getNrof() / mTrkParams[iteration].nROFsPerIterations + bool(mTimeFrame->getNrof() % mTrkParams[iteration].nROFsPerIterations) : 1;
     int iVertex{std::min(maxNvertices, 0)};
-    logger(std::format("==== ITS {} Tracking iteration {} summary ====", sTrackerNames[T], iteration));
+    logger(std::format("==== ITS {} Tracking iteration {} summary ====", mTraits->getName(), iteration));
 
-    total += evaluateTask(initialiseTimeFrame, "Timeframe initialisation", logger, iteration);
+    total += evaluateTask(&Tracker::initialiseTimeFrame, "Timeframe initialisation", logger, iteration);
     do {
       for (int iROFs{0}; iROFs < nROFsIterations; ++iROFs) {
-        timeTracklets += evaluateTask(computeTracklets, "Tracklet finding", evalLog, iteration, iROFs, iVertex);
+        timeTracklets += evaluateTask(&Tracker::computeTracklets, "Tracklet finding", evalLog, iteration, iROFs, iVertex);
         nTracklets += mTraits->getTFNumberOfTracklets();
         if (!mTimeFrame->checkMemory(mTrkParams[iteration].MaxMemory)) {
           mTimeFrame->printSliceInfo(iROFs, mTrkParams[iteration].nROFsPerIterations);
@@ -104,7 +87,7 @@ void Tracker::clusterToTracksImpl(LogFunc logger, LogFunc error)
           break;
         }
 
-        timeCells += evaluateTask(computeCells, "Cell finding", evalLog, iteration);
+        timeCells += evaluateTask(&Tracker::computeCells, "Cell finding", evalLog, iteration);
         nCells += mTraits->getTFNumberOfCells();
         if (!mTimeFrame->checkMemory(mTrkParams[iteration].MaxMemory)) {
           mTimeFrame->printSliceInfo(iROFs, mTrkParams[iteration].nROFsPerIterations);
@@ -122,25 +105,22 @@ void Tracker::clusterToTracksImpl(LogFunc logger, LogFunc error)
           break;
         }
 
-        timeNeighbours += evaluateTask(findCellsNeighbours, "Neighbour finding", evalLog, iteration);
+        timeNeighbours += evaluateTask(&Tracker::findCellsNeighbours, "Neighbour finding", evalLog, iteration);
         nNeighbours += mTimeFrame->getNumberOfNeighbours();
-        timeRoads += evaluateTask(findRoads, "Road finding", evalLog, iteration);
+        timeRoads += evaluateTask(&Tracker::findRoads, "Road finding", evalLog, iteration);
       }
       iVertex++;
     } while (iVertex < maxNvertices && !dropTF);
-    logger(std::format(" - {} tracklet finding: {} tracklets found in {:.2f} ms", sTrackerNames[T], nTracklets, timeTracklets));
-    logger(std::format(" - {} cell finding: {} cells found in {:.2f} ms", sTrackerNames[T], nCells, timeCells));
-    logger(std::format(" - {} neighbours finding: {} neighbours found in {:.2f} ms", sTrackerNames[T], nNeighbours, timeNeighbours));
-    logger(std::format(" - {} track finding: {} tracks found in {:.2f} ms", sTrackerNames[T], nTracks + mTimeFrame->getNumberOfTracks(), timeRoads));
+    logger(std::format(" - Tracklet finding: {} tracklets found in {:.2f} ms", nTracklets, timeTracklets));
+    logger(std::format(" - Cell finding: {} cells found in {:.2f} ms", nCells, timeCells));
+    logger(std::format(" - Meighbours finding: {} neighbours found in {:.2f} ms", nNeighbours, timeNeighbours));
+    logger(std::format(" - Track finding: {} tracks found in {:.2f} ms", nTracks + mTimeFrame->getNumberOfTracks(), timeRoads));
     total += timeTracklets + timeCells + timeNeighbours + timeRoads;
-    if constexpr (extendTracks != nullptr) {
-      if (mTrkParams[iteration].UseTrackFollower && !dropTF) {
-        int nExtendedTracks{-mTimeFrame->mNExtendedTracks}, nExtendedClusters{-mTimeFrame->mNExtendedUsedClusters};
-        auto timeExtending = evaluateTask(
-          extendTracks, "Extending tracks", [](const std::string&) {}, iteration);
-        total += timeExtending;
-        logger(std::format(" - Extending Tracks: {} extended tracks using {} clusters found in {:.2f} ms", nExtendedTracks + mTimeFrame->mNExtendedTracks, nExtendedClusters + mTimeFrame->mNExtendedUsedClusters, timeExtending));
-      }
+    if (mTraits->supportsExtendTracks() && mTrkParams[iteration].UseTrackFollower && !dropTF) {
+      int nExtendedTracks{-mTimeFrame->mNExtendedTracks}, nExtendedClusters{-mTimeFrame->mNExtendedUsedClusters};
+      auto timeExtending = evaluateTask(&Tracker::extendTracks, "Extending tracks", [](const std::string&) {}, iteration);
+      total += timeExtending;
+      logger(std::format(" - Extending Tracks: {} extended tracks using {} clusters found in {:.2f} ms", nExtendedTracks + mTimeFrame->mNExtendedTracks, nExtendedClusters + mTimeFrame->mNExtendedUsedClusters, timeExtending));
     }
     if (dropTF) {
       error("...Dropping Timeframe...");
@@ -150,13 +130,11 @@ void Tracker::clusterToTracksImpl(LogFunc logger, LogFunc error)
     }
   }
 
-  if constexpr (findShortPrimaries != nullptr) {
-    if (mTrkParams[0].FindShortTracks) {
-      auto nTracksB = mTimeFrame->getNumberOfTracks();
-      total += evaluateTask(findShortPrimaries, "Short primaries finding", logger);
-      auto nTracksA = mTimeFrame->getNumberOfTracks();
-      logger(std::format("  `-> found {} additional tracks", nTracksA - nTracksB));
-    }
+  if (mTraits->supportsFindShortPrimaries() && mTrkParams[0].FindShortTracks) {
+    auto nTracksB = mTimeFrame->getNumberOfTracks();
+    total += evaluateTask(&Tracker::findShortPrimaries, "Short primaries finding", logger);
+    auto nTracksA = mTimeFrame->getNumberOfTracks();
+    logger(std::format("  `-> found {} additional tracks", nTracksA - nTracksB));
   }
 
   if constexpr (constants::DoTimeBenchmarks) {
@@ -168,16 +146,6 @@ void Tracker::clusterToTracksImpl(LogFunc logger, LogFunc error)
   }
   rectifyClusterIndices();
   ++mTimeFrameCounter;
-}
-
-void Tracker::clustersToTracks(LogFunc logger, LogFunc error)
-{
-  clusterToTracksImpl<TrackerType::CPU>(logger, error);
-}
-
-void Tracker::clustersToTracksHybrid(LogFunc logger, LogFunc error)
-{
-  clusterToTracksImpl<TrackerType::Hybrid>(logger, error);
 }
 
 void Tracker::initialiseTimeFrame(int& iteration)
@@ -213,31 +181,6 @@ void Tracker::extendTracks(int& iteration)
 void Tracker::findShortPrimaries()
 {
   mTraits->findShortPrimaries();
-}
-
-void Tracker::initialiseTimeFrameHybrid(int& iteration)
-{
-  mTraits->initialiseTimeFrameHybrid(iteration);
-}
-
-void Tracker::computeTrackletsHybrid(int& iteration, int& iROFslice, int& iVertex)
-{
-  mTraits->computeTrackletsHybrid(iteration, iROFslice, iVertex); // placeholder for the proper ROF/vertex slicing
-}
-
-void Tracker::computeCellsHybrid(int& iteration)
-{
-  mTraits->computeCellsHybrid(iteration);
-}
-
-void Tracker::findCellsNeighboursHybrid(int& iteration)
-{
-  mTraits->findCellsNeighboursHybrid(iteration);
-}
-
-void Tracker::findRoadsHybrid(int& iteration)
-{
-  mTraits->findRoadsHybrid(iteration);
 }
 
 void Tracker::computeRoadsMClabels()

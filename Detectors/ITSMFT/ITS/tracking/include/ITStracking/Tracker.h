@@ -57,11 +57,7 @@ class Tracker
 
   void adoptTimeFrame(TimeFrame& tf);
 
-  void clustersToTracks(
-    LogFunc = [](std::string s) { std::cout << s << std::endl; }, LogFunc = [](std::string s) { std::cerr << s << std::endl; });
-  void clustersToTracksHybrid(
-    LogFunc = [](std::string s) { std::cout << s << std::endl; }, LogFunc = [](std::string s) { std::cerr << s << std::endl; });
-  std::vector<TrackITSExt>& getTracks();
+  void clustersToTracks(LogFunc = [](std::string s) { std::cout << s << std::endl; }, LogFunc = [](std::string s) { std::cerr << s << std::endl; });
 
   void setParameters(const std::vector<TrackingParameters>&);
   std::vector<TrackingParameters>& getParameters() { return mTrkParams; }
@@ -74,14 +70,6 @@ class Tracker
   void printSummary() const;
 
  private:
-  enum TrackerType : uint8_t { CPU = 0,
-                               Hybrid,
-                               NSize };
-  template <TrackerType>
-  void clusterToTracksImpl(LogFunc, LogFunc);
-  static constexpr const char* sTrackerNames[TrackerType::NSize] = {"CPU", "Hybrid"};
-
-  // CPU
   void initialiseTimeFrame(int& iteration);
   void computeTracklets(int& iteration, int& iROFslice, int& iVertex);
   void computeCells(int& iteration);
@@ -89,13 +77,6 @@ class Tracker
   void findRoads(int& iteration);
   void findShortPrimaries();
   void extendTracks(int& iteration);
-  // Hyrbid
-  void initialiseTimeFrameHybrid(int& iteration);
-  void computeTrackletsHybrid(int& iteration, int& iROFslice, int& iVertex);
-  void computeCellsHybrid(int& iteration);
-  void findCellsNeighboursHybrid(int& iteration);
-  void findRoadsHybrid(int& iteration);
-  void findTracksHybrid(int& iteration);
 
   // MC interaction
   void computeRoadsMClabels();

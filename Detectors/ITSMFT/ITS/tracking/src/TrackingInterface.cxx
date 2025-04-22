@@ -310,18 +310,10 @@ void ITSTrackingInterface::run(framework::ProcessingContext& pc)
     mTimeFrame->setMultiplicityCutMask(processingMask);
     mTimeFrame->setROFMask(processUPCMask);
     // Run CA tracker
-    if constexpr (isGPU) {
-      if (mMode == o2::its::TrackingMode::Async && o2::its::TrackerParamConfig::Instance().fataliseUponFailure) {
-        mTracker->clustersToTracksHybrid(logger, fatalLogger);
-      } else {
-        mTracker->clustersToTracksHybrid(logger, errorLogger);
-      }
+    if (mMode == o2::its::TrackingMode::Async && o2::its::TrackerParamConfig::Instance().fataliseUponFailure) {
+      mTracker->clustersToTracks(logger, fatalLogger);
     } else {
-      if (mMode == o2::its::TrackingMode::Async && o2::its::TrackerParamConfig::Instance().fataliseUponFailure) {
-        mTracker->clustersToTracks(logger, fatalLogger);
-      } else {
-        mTracker->clustersToTracks(logger, errorLogger);
-      }
+      mTracker->clustersToTracks(logger, errorLogger);
     }
     size_t totTracks{mTimeFrame->getNumberOfTracks()}, totClusIDs{mTimeFrame->getNumberOfUsedClusters()};
     allTracks.reserve(totTracks);

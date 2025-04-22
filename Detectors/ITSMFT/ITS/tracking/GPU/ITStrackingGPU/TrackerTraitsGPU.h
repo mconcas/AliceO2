@@ -13,11 +13,8 @@
 #ifndef ITSTRACKINGGPU_TRACKERTRAITSGPU_H_
 #define ITSTRACKINGGPU_TRACKERTRAITSGPU_H_
 
-#include "ITStracking/Configuration.h"
-#include "ITStracking/Definitions.h"
 #include "ITStracking/TrackerTraits.h"
 #include "ITStrackingGPU/TimeFrameGPU.h"
-#include "Framework/Logger.h"
 
 namespace o2
 {
@@ -33,20 +30,19 @@ class TrackerTraitsGPU final : public TrackerTraits
 
   void adoptTimeFrame(TimeFrame* tf) final;
   void initialiseTimeFrame(const int iteration) final;
+
+  void computeLayerTracklets(const int iteration, int, int) final;
+  void computeLayerCells(const int iteration) final;
+  void findCellsNeighbours(const int iteration) final;
+  void findRoads(const int iteration) final;
+
+  bool supportsExtendTracks() const noexcept final { return false; }
+  bool supportsFindShortPrimaries() const noexcept final { return false; }
+
   void setBz(float) final;
 
-  void computeLayerTracklets(const int iteration, int, int) final { LOGP(fatal, "computeLayerTracklers must never be called from Hybrid traits!"); };
-  void computeLayerCells(const int iteration) final { LOGP(fatal, "computeLayerCells must never be called from Hybrid traits!"); };
-  void findCellsNeighbours(const int iteration) final { LOGP(fatal, "findCellsNeighbours must never be called from Hybrid traits!"); };
-  void findRoads(const int iteration) final { LOGP(fatal, "findRoads must never be called from Hybrid traits!"); };
-  void extendTracks(const int iteration) final { LOGP(fatal, "extendTracks must never be called from Hybrid traits!"); };
-  void findShortPrimaries() final { LOGP(fatal, "findShortPrimaries must never be called from Hybrid traits!"); };
-
-  void initialiseTimeFrameHybrid(const int iteration) final { initialiseTimeFrame(iteration); };
-  void computeTrackletsHybrid(const int iteration, int, int) final;
-  void computeCellsHybrid(const int iteration) final;
-  void findCellsNeighboursHybrid(const int iteration) final;
-  void findRoadsHybrid(const int iteration) final;
+  const char* getName() const noexcept final { return "GPU"; }
+  bool isGPU() const noexcept final { return true; }
 
   // TimeFrameGPU information forwarding
   int getTFNumberOfClusters() const override;
