@@ -182,6 +182,11 @@ struct equal_tracklets {
 };
 
 template <typename T1, typename T2>
+struct sort_by_second {
+  GPUhd() bool operator()(const gpuPair<T1, T2>& a, const gpuPair<T1, T2>& b) const { return a.second < b.second; }
+};
+
+template <typename T1, typename T2>
 struct pair_to_first {
   GPUhd() int operator()(const gpuPair<T1, T2>& a) const
   {
@@ -1110,32 +1115,18 @@ void computeCellNeighboursHandler(CellSeed** cellsLayersDevice,
   GPUChkErrS(cudaDeviceSynchronize());
 }
 
-int filterCellNeighboursHandler(std::vector<int>& neighHost, // TODO: eventually remove this!
-                                gpuPair<int, int>* cellNeighbourPairs,
+int filterCellNeighboursHandler(gpuPair<int, int>* cellNeighbourPairs,
                                 int* cellNeighbours,
                                 unsigned int nNeigh)
 {
   thrust::device_ptr<gpuPair<int, int>> neighVectorPairs(cellNeighbourPairs);
   thrust::device_ptr<int> validNeighs(cellNeighbours);
-  thrust::device_vector<int> keys(nNeigh); // TODO: externally allocate.
-  thrust::device_vector<int> vals(nNeigh); // TODO: externally allocate.
-  thrust::copy(thrust::make_transform_iterator(neighVectorPairs, gpu::pair_to_second<int, int>()),
-               thrust::make_transform_iterator(neighVectorPairs + nNeigh, gpu::pair_to_second<int, int>()),
-               keys.begin());
-  thrust::sequence(vals.begin(), vals.end());
-  thrust::sort_by_key(keys.begin(), keys.end(), vals.begin());
-  thrust::device_vector<gpuPair<int, int>> sortedNeigh(nNeigh);
-  thrust::copy(thrust::make_permutation_iterator(neighVectorPairs, vals.begin()),
-               thrust::make_permutation_iterator(neighVectorPairs, vals.end()),
-               sortedNeigh.begin());
-  GPUChkErrS(cudaDeviceSynchronize());
-  auto trimmedBegin = thrust::find_if(sortedNeigh.begin(), sortedNeigh.end(), gpu::is_valid_pair<int, int>()); // trim leading -1s
-  auto trimmedSize = sortedNeigh.end() - trimmedBegin;
-  neighHost.resize(trimmedSize);
-  thrust::transform(trimmedBegin, sortedNeigh.end(), validNeighs, gpu::pair_to_first<int, int>());
-  GPUChkErrS(cudaMemcpy(neighHost.data(), cellNeighbours, trimmedSize * sizeof(int), cudaMemcpyDeviceToHost));
+  auto updatedEnd = thrust::remove_if(neighVectorPairs, neighVectorPairs + nNeigh, gpu::is_invalid_pair<int, int>());
+  size_t newSize = updatedEnd - neighVectorPairs;
+  thrust::stable_sort(neighVectorPairs, neighVectorPairs + newSize, gpu::sort_by_second<int, int>());
+  thrust::transform(neighVectorPairs, neighVectorPairs + newSize, validNeighs, gpu::pair_to_first<int, int>());
 
-  return trimmedSize;
+  return newSize;
 }
 
 template <int nLayers>
@@ -1267,7 +1258,7 @@ void processNeighboursHandler(const int startLayer,
   auto end = thrust::copy_if(updatedCellSeed.begin(), updatedCellSeed.end(), outSeeds.begin(), gpu::seed_selector(1.e3, maxChi2NDF * ((startLevel + 2) * 2 - 5)));
   auto s{end - outSeeds.begin()};
   std::vector<CellSeed> outSeedsHost(s);
-  thrust::copy(updatedCellSeed.begin(), updatedCellSeed.begin() + s, outSeedsHost.begin());
+  thrust::copy(outSeeds.begin(), outSeeds.begin() + s, outSeedsHost.begin());
   seedsHost.insert(seedsHost.end(), outSeedsHost.begin(), outSeedsHost.end());
 }
 

@@ -200,8 +200,7 @@ void TrackerTraitsGPU<nLayers>::findCellsNeighbours(const int iteration)
                                  conf.nBlocks,
                                  conf.nThreads);
 
-    filterCellNeighboursHandler(mTimeFrameGPU->getCellsNeighbours()[iLayer],
-                                mTimeFrameGPU->getDeviceNeighbourPairs(iLayer),
+    filterCellNeighboursHandler(mTimeFrameGPU->getDeviceNeighbourPairs(iLayer),
                                 mTimeFrameGPU->getDeviceNeighbours(iLayer),
                                 nNeigh);
   }
@@ -220,9 +219,6 @@ void TrackerTraitsGPU<nLayers>::findRoads(const int iteration)
       if ((mTrkParams[iteration].StartLayerMask & (1 << (startLayer + 2))) == 0) {
         continue;
       }
-      std::vector<int> lastCellId, updatedCellId;
-      std::vector<CellSeed> lastCellSeed, updatedCellSeed;
-
       processNeighboursHandler<nLayers>(startLayer,
                                         startLevel,
                                         mTimeFrameGPU->getDeviceArrayCells(),
