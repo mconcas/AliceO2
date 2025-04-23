@@ -113,7 +113,7 @@ void Tracker::clustersToTracks(LogFunc logger, LogFunc error)
     } while (iVertex < maxNvertices && !dropTF);
     logger(std::format(" - Tracklet finding: {} tracklets found in {:.2f} ms", nTracklets, timeTracklets));
     logger(std::format(" - Cell finding: {} cells found in {:.2f} ms", nCells, timeCells));
-    logger(std::format(" - Meighbours finding: {} neighbours found in {:.2f} ms", nNeighbours, timeNeighbours));
+    logger(std::format(" - Neighbours finding: {} neighbours found in {:.2f} ms", nNeighbours, timeNeighbours));
     logger(std::format(" - Track finding: {} tracks found in {:.2f} ms", nTracks + mTimeFrame->getNumberOfTracks(), timeRoads));
     total += timeTracklets + timeCells + timeNeighbours + timeRoads;
     if (mTraits->supportsExtendTracks() && mTrkParams[iteration].UseTrackFollower && !dropTF) {
@@ -138,7 +138,7 @@ void Tracker::clustersToTracks(LogFunc logger, LogFunc error)
   }
 
   if constexpr (constants::DoTimeBenchmarks) {
-    logger(std::format("=== TimeFrame {} processing completed in: {:.2f} ms using {} threads ===", mTimeFrameCounter, total, mTraits->getNThreads()));
+    logger(std::format("=== TimeFrame {} processing completed in: {:.2f} ms using {} thread(s) ===", mTimeFrameCounter, total, mTraits->getNThreads()));
   }
 
   if (mTimeFrame->hasMCinformation()) {
@@ -146,6 +146,7 @@ void Tracker::clustersToTracks(LogFunc logger, LogFunc error)
   }
   rectifyClusterIndices();
   ++mTimeFrameCounter;
+  mTotalTime += total;
 }
 
 void Tracker::initialiseTimeFrame(int& iteration)
@@ -459,7 +460,7 @@ int Tracker::getNThreads() const
 
 void Tracker::printSummary() const
 {
-  LOGP(info, "Tracker summary: Processed {} TFs (dropped {})", mTimeFrameCounter, mNumberOfDroppedTFs);
+  LOGP(info, "Tracker summary: Processed {} TFs (dropped {}) in TOT={:.2f} s, AVG/TF={:.2f} s", mTimeFrameCounter, mNumberOfDroppedTFs, mTotalTime * 1.e-3, mTotalTime * 1.e-3 / ((mTimeFrameCounter > 0) ? (double)mTimeFrameCounter : -1.0));
 }
 
 } // namespace its

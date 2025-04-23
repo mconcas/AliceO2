@@ -94,6 +94,7 @@ class Tracker
 
   unsigned int mNumberOfDroppedTFs{0};
   unsigned int mTimeFrameCounter{0};
+  double mTotalTime{0};
 };
 
 inline void Tracker::setParameters(const std::vector<TrackingParameters>& trkPars)
