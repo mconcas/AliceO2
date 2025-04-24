@@ -77,12 +77,12 @@ DataProcessorSpec getTrackerSpec(bool useMC, o2::gpu::GPUDataTypes::DeviceType d
 
   // inputs.emplace_back("itscldict", "TRK", "CLUSDICT", 0, Lifetime::Condition, ccdbParamSpec("ITS/Calib/ClusterDictionary"));
   // inputs.emplace_back("itsalppar", "TRK", "ALPIDEPARAM", 0, Lifetime::Condition, ccdbParamSpec("ITS/Config/AlpideParam"));
-  auto ggRequest = std::make_shared<o2::base::GRPGeomRequest>(false, // orbitResetTime
-                                                              false, // GRPECS=true
-                                                              false, // GRPLHCIF
-                                                              false, // GRPMagField
-                                                              false, // askMatLUT
-                                                              o2::base::GRPGeomRequest::None,  // geometry, but ignored until it will be put in the CCDB
+  auto ggRequest = std::make_shared<o2::base::GRPGeomRequest>(false,                          // orbitResetTime
+                                                              false,                          // GRPECS=true
+                                                              false,                          // GRPLHCIF
+                                                              false,                          // GRPMagField
+                                                              false,                          // askMatLUT
+                                                              o2::base::GRPGeomRequest::None, // geometry, but ignored until it will be put in the CCDB
                                                               inputs,
                                                               true);
   std::vector<OutputSpec> outputs;
@@ -112,5 +112,5 @@ DataProcessorSpec getTrackerSpec(bool useMC, o2::gpu::GPUDataTypes::DeviceType d
     Options{}};
 }
 
-} // namespace its
+} // namespace trk
 } // namespace o2
