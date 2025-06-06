@@ -1230,7 +1230,7 @@ void processNeighboursHandler(const int startLayer,
 
   int level = startLevel;
   thrust::device_vector<int, gpu::TypedAllocator<int>> lastCellId(allocInt);
-  thrust::device_vector<CellSeed,gpu::TypedAllocator<CellSeed>> lastCellSeed(allocCellSeed);
+  thrust::device_vector<CellSeed, gpu::TypedAllocator<CellSeed>> lastCellSeed(allocCellSeed);
   for (int iLayer{startLayer - 1}; iLayer > 0 && level > 2; --iLayer) {
     lastCellSeed.swap(updatedCellSeed);
     lastCellId.swap(updatedCellId);
