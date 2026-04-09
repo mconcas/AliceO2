@@ -194,11 +194,21 @@ struct DPLTracingService {
   /// Returns the current span context as a TraceContextHeader for injection into
   /// outgoing message headers. Call this while a span is active (between beginSpan
   /// and endSpan). Returns an empty/invalid header when no span is active.
+  ///
+  /// A fresh CLIENT child span (dpl/send) is created and immediately closed for
+  /// every call. Service-map processors require a CLIENT→SERVER pair across a
+  /// service boundary to draw a topology edge. Creating one span per output call
+  /// (rather than a shared singleton) ensures that fan-out devices sending to
+  /// multiple downstream services each produce a distinct CLIENT span, allowing
+  /// the service-map processor to independently correlate each edge.
   o2::header::TraceContextHeader currentOutgoingContext() const
   {
 #ifdef O2_WITH_DPL_TRACING
-    if (currentSpan) {
-      auto ctx = currentSpan->context();
+    if (currentSpan && tracer) {
+      auto sendSpan = tracer->startSpan("dpl/send", currentSpan->context(),
+                                        o2::tracing::SpanKind::Client);
+      auto ctx = sendSpan->context();
+      sendSpan->end();
       if (ctx.valid()) {
         auto w3c = ctx.toW3C();
         return o2::header::TraceContextHeader(w3c.c_str());
@@ -206,6 +216,33 @@ struct DPLTracingService {
     }
 #endif
     return o2::header::TraceContextHeader{};
+  }
+
+  /// Called by DataRelayer when a timeslice slot is dropped because it can never
+  /// be completed (missing upstream inputs). Emits a SERVER span with
+  /// SpanStatus::Error so that APM error-rate (RED) metrics capture the failure.
+  /// partialTch may be default-constructed (invalid) when none of the expected
+  /// inputs arrived; in that case the span has no upstream parent.
+  void emitDroppedSlot(uint64_t timeslice,
+                       const o2::header::TraceContextHeader& partialTch,
+                       std::string_view missingInputs)
+  {
+#ifdef O2_WITH_DPL_TRACING
+    if (!tracer) {
+      return;
+    }
+    o2::tracing::SpanContext parentCtx{};
+    if (partialTch.valid()) {
+      parentCtx = o2::tracing::SpanContext::fromW3C(partialTch.traceparent);
+    }
+    auto span = tracer->startSpan("dpl/process", parentCtx, o2::tracing::SpanKind::Server);
+    span->setAttribute(o2::tracing::tags::kTimeslice, static_cast<int64_t>(timeslice));
+    if (!missingInputs.empty()) {
+      span->setAttribute("dpl.missing_inputs", std::string(missingInputs));
+    }
+    span->setStatus(o2::tracing::SpanStatus::Error, "incomplete slot dropped");
+    span->end();
+#endif
   }
 
   /// Called in postProcessing: end the span and return the propagatable context.

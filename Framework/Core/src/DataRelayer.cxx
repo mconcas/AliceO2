@@ -41,6 +41,8 @@
 #include "Framework/DataModelViews.h"
 
 #include "Headers/DataHeaderHelpers.h"
+#include "Headers/TraceContextHeader.h"
+#include "DPLTracingService.h"
 #include "Framework/Formatters.h"
 
 #include <Monitoring/Metric.h>
@@ -332,12 +334,25 @@ void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex chan
     }
     mPruneOps.push_back(PruneOp{si});
     bool didDrop = false;
+    // Partial trace context from the first input that DID arrive (used below to
+    // parent the error span so the drop is visible in the upstream trace tree).
+    o2::header::TraceContextHeader partialTch{};
     for (size_t mi = 0; mi < mInputs.size(); ++mi) {
       auto& input = mInputs[mi];
       auto& element = mCache[si * mInputs.size() + mi];
       if (!element.empty()) {
         if (input.lifetime != Lifetime::Condition && mCompletionPolicy.name != "internal-dpl-injected-dummy-sink") {
           didDrop = true;
+          // Extract trace context from first partial arrival so the error span
+          // can be linked into the upstream trace tree.
+          if (!partialTch.valid()) {
+            auto& hdrMsg = element | get_header{0};
+            if (hdrMsg != nullptr) {
+              if (auto* tch = o2::header::get<o2::header::TraceContextHeader*>(hdrMsg->GetData())) {
+                partialTch = *tch;
+              }
+            }
+          }
           auto& state = mContext.get<DeviceState>();
           if (state.transitionHandling != TransitionHandlingState::NoTransition && DefaultsHelpers::onlineDeploymentMode()) {
             LOGP(warning, "Stop transition requested. Dropping incomplete {} Lifetime::{} data in slot {} with timestamp {} < {} as it will never be completed.", DataSpecUtils::describe(input), input.lifetime, si, timestamp.value, newOldest.timeslice.value);
@@ -355,6 +370,7 @@ void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex chan
     }
     // We did drop some data. Let's print what was missing.
     if (didDrop) {
+      std::string missingInputs;
       for (size_t mi = 0; mi < mInputs.size(); ++mi) {
         auto& input = mInputs[mi];
         if (input.lifetime == Lifetime::Timer) {
@@ -362,6 +378,10 @@ void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex chan
         }
         auto& element = mCache[si * mInputs.size() + mi];
         if (element.empty()) {
+          if (!missingInputs.empty()) {
+            missingInputs += ',';
+          }
+          missingInputs += DataSpecUtils::describe(input);
           auto& state = mContext.get<DeviceState>();
           if (state.transitionHandling != TransitionHandlingState::NoTransition && DefaultsHelpers::onlineDeploymentMode()) {
             if (state.allowedProcessing == DeviceState::CalibrationOnly) {
@@ -382,6 +402,10 @@ void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex chan
           }
         }
       }
+      // Emit an error span so APM RED metrics capture the incomplete slot.
+      // The span is parented to whatever partial context arrived (if any),
+      // linking the failure into the upstream trace tree.
+      mContext.get<DPLTracingService>().emitDroppedSlot(timestamp.value, partialTch, missingInputs);
     }
   }
 }
