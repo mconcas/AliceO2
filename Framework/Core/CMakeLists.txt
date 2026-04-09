@@ -179,6 +179,7 @@ o2_add_library(Framework
                                      Arrow::arrow_shared
                                      ArrowDataset::arrow_dataset_shared
                                      $<$<TARGET_EXISTS:ArrowCompute::arrow_compute_shared>:ArrowCompute::arrow_compute_shared>
+                                     $<$<TARGET_EXISTS:AliceO2::Tracing>:AliceO2::Tracing>
                                      Microsoft.GSL::GSL
                                      O2::FrameworkLogger
                                      Gandiva::gandiva_shared
@@ -187,6 +188,11 @@ o2_add_library(Framework
 
 # To get the necessary include for the MC status codes. Needs to be public, for instance O2Physics heavily depends on Framework
 target_include_directories(${targetName} PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/DataFormats/simulation/include>)
+
+# Propagate whether the Tracing library is available so DPLTracingService can be compiled in.
+if(TARGET AliceO2::Tracing)
+  target_compile_definitions(${targetName} PRIVATE O2_WITH_DPL_TRACING)
+endif()
 
 o2_target_root_dictionary(Framework
                           HEADERS test/TestClasses.h

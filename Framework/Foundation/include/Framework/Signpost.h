@@ -24,6 +24,21 @@ struct o2_log_handle_t {
   o2_log_handle_t* next = nullptr;
 };
 
+// Optional hooks for bridging O2_SIGNPOST_START / O2_SIGNPOST_END to an
+// external span backend (e.g. OpenTelemetry). Set these function pointers
+// at process startup (e.g. from DPLTracingService::init) to receive a
+// callback for every signpost interval.
+//
+// Signature: (span_name, signpost_id_value)
+//   - span_name  : the `name` literal passed to O2_SIGNPOST_START/END
+//   - id_value   : the unique int64 id of the interval (from _o2_signpost_id_t)
+//
+// Both pointers default to nullptr (no-op). Reads are relaxed loads on the
+// hot path so the overhead when hooks are null is a single atomic load + branch.
+using o2_signpost_hook_fn = void (*)(const char* name, int64_t id);
+extern std::atomic<o2_signpost_hook_fn> o2_signpost_start_hook;
+extern std::atomic<o2_signpost_hook_fn> o2_signpost_end_hook;
+
 // Helper function which replaces engineering types with a printf
 // compatible format string.
 template <auto N>
@@ -56,6 +71,10 @@ std::atomic<o2_log_handle_t*>& o2_get_logs_tail();
 o2_log_handle_t* o2_walk_logs(bool (*callback)(char const* name, void* log, void* context), void* context = nullptr);
 
 #ifdef O2_SIGNPOST_IMPLEMENTATION
+// Definitions of the optional OTEL hook pointers (null by default).
+std::atomic<o2_signpost_hook_fn> o2_signpost_start_hook{nullptr};
+std::atomic<o2_signpost_hook_fn> o2_signpost_end_hook{nullptr};
+
 // The first log of the list. We make it atomic,
 // so that we can add new logs from different threads.
 std::atomic<o2_log_handle_t*>& o2_get_logs_tail()
@@ -604,14 +623,26 @@ void o2_debug_log_set_stacktrace(_o2_log_t* log, int stacktrace)
     O2_SIGNPOST_START_MAC(log, id, name, format, ##__VA_ARGS__);                                                        \
   } else if (O2_BUILTIN_UNLIKELY(private_o2_log_##log->stacktrace)) {                                                   \
     _o2_signpost_interval_begin(private_o2_log_##log, id, name, remove_engineering_type(format).data(), ##__VA_ARGS__); \
-  }
+  }                                                                                                                     \
+  do {                                                                                                                  \
+    auto o2_sp_start_hook_ = o2_signpost_start_hook.load(std::memory_order_relaxed);                                    \
+    if (O2_BUILTIN_UNLIKELY(o2_sp_start_hook_ != nullptr)) {                                                            \
+      o2_sp_start_hook_(name, (id).value);                                                                              \
+    }                                                                                                                   \
+  } while (0)
 #define O2_SIGNPOST_END(log, id, name, format, ...)                                                                   \
   if (O2_BUILTIN_UNLIKELY(O2_SIGNPOST_ENABLED_MAC(log))) {                                                            \
     O2_SIGNPOST_END_MAC(log, id, name, format, ##__VA_ARGS__);                                                        \
   } else if (O2_BUILTIN_UNLIKELY(private_o2_log_##log->stacktrace)) {                                                 \
     _o2_signpost_interval_end(private_o2_log_##log, id, name, remove_engineering_type(format).data(), ##__VA_ARGS__); \
-  }
-// Print out a message at error level in any case even if the signpost is not enable.
+  }                                                                                                                   \
+  do {                                                                                                                \
+    auto o2_sp_end_hook_ = o2_signpost_end_hook.load(std::memory_order_relaxed);                                      \
+    if (O2_BUILTIN_UNLIKELY(o2_sp_end_hook_ != nullptr)) {                                                            \
+      o2_sp_end_hook_(name, (id).value);                                                                              \
+    }                                                                                                                 \
+  } while (0)
+// Print out a message at error level in any case even if the signpost is not enabled.
 // If it is enabled, behaves like O2_SIGNPOST_END.
 #define O2_SIGNPOST_END_WITH_ERROR(log, id, name, format, ...)                                                        \
   if (O2_BUILTIN_UNLIKELY(O2_SIGNPOST_ENABLED_MAC(log))) {                                                            \
@@ -620,7 +651,13 @@ void o2_debug_log_set_stacktrace(_o2_log_t* log, int stacktrace)
     _o2_signpost_interval_end(private_o2_log_##log, id, name, remove_engineering_type(format).data(), ##__VA_ARGS__); \
   } else {                                                                                                            \
     O2_LOG_MACRO_RAW(error, remove_engineering_type(format).data(), ##__VA_ARGS__);                                   \
-  }
+  }                                                                                                                   \
+  do {                                                                                                                \
+    auto o2_sp_end_hook_ = o2_signpost_end_hook.load(std::memory_order_relaxed);                                     \
+    if (O2_BUILTIN_UNLIKELY(o2_sp_end_hook_ != nullptr)) {                                                           \
+      o2_sp_end_hook_(name, (id).value);                                                                              \
+    }                                                                                                                 \
+  } while (0)
 #else // This is the release implementation, it does nothing.
 #define O2_DECLARE_DYNAMIC_LOG(x)
 #define O2_DECLARE_DYNAMIC_STACKTRACE_LOG(x)

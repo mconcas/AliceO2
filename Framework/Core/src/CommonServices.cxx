@@ -54,8 +54,10 @@
 #include "DecongestionService.h"
 #include "ArrowSupport.h"
 #include "DPLMonitoringBackend.h"
+#include "DPLTracingService.h"
 #include "Headers/STFHeader.h"
 #include "Headers/DataHeader.h"
+#include "Headers/TraceContextHeader.h"
 
 #include <Configuration/ConfigurationInterface.h>
 #include <Configuration/ConfigurationFactory.h>
@@ -448,26 +450,41 @@ o2::framework::ServiceSpec CommonServices::dataSender()
     .kind = ServiceKind::Serial};
 }
 
-struct TracingInfrastructure {
-  int processingCount;
-};
-
 o2::framework::ServiceSpec CommonServices::tracingSpec()
 {
   return ServiceSpec{
     .name = "tracing",
-    .init = [](ServiceRegistryRef, DeviceState&, fair::mq::ProgOptions&) -> ServiceHandle {
-      return ServiceHandle{.hash = TypeIdHelpers::uniqueId<TracingInfrastructure>(),
-                           .instance = new TracingInfrastructure(),
+    .init = [](ServiceRegistryRef registry, DeviceState&, fair::mq::ProgOptions& options) -> ServiceHandle {
+      auto* svc = new DPLTracingService();
+      auto backend = options.GetPropertyAsString("tracing-backend");
+      if (backend != "no-op://") {
+        auto& spec = registry.get<DeviceSpec const>();
+        // TimingInfo is stream-local and not available during init; run number
+        // is captured as a span attribute per-invocation in beginSpan instead.
+        svc->init(backend, spec.name, static_cast<uint32_t>(-1));
+      }
+      return ServiceHandle{.hash = TypeIdHelpers::uniqueId<DPLTracingService>(),
+                           .instance = svc,
                            .kind = ServiceKind::Serial};
     },
     .configure = noConfiguration(),
-    .preProcessing = [](ProcessingContext&, void* service) {
-      auto* t = reinterpret_cast<TracingInfrastructure*>(service);
-      t->processingCount += 1; },
-    .postProcessing = [](ProcessingContext&, void* service) {
-      auto* t = reinterpret_cast<TracingInfrastructure*>(service);
-      t->processingCount += 1; },
+    .preProcessing = [](ProcessingContext& ctx, void* service) {
+      auto* svc = reinterpret_cast<DPLTracingService*>(service);
+      svc->beginSpan(ctx);
+    },
+    .postProcessing = [](ProcessingContext& ctx, void* service) {
+      auto* svc = reinterpret_cast<DPLTracingService*>(service);
+      // End the span; the resulting TraceContextHeader is available for
+      // downstream injection — Phase 3 will wire this into DataAllocator.
+      [[maybe_unused]] auto tch = svc->endSpan();
+    },
+    .exit = [](ServiceRegistryRef, void* service) {
+      // Uninstall signpost hooks before destroying the service to prevent
+      // any late-firing signpost from calling into freed memory.
+      o2_signpost_start_hook.store(nullptr, std::memory_order_relaxed);
+      o2_signpost_end_hook.store(nullptr, std::memory_order_relaxed);
+      delete reinterpret_cast<DPLTracingService*>(service);
+    },
     .kind = ServiceKind::Serial};
 }
 
@@ -1332,6 +1349,7 @@ std::vector<ServiceSpec> CommonServices::defaultServices(std::string extraPlugin
     driverClientSpec(),
     datatakingContextSpec(),
     monitoringSpec(),
+    tracingSpec(),
     configurationSpec(),
     controlSpec(),
     rootFileSpec(),

@@ -13,6 +13,7 @@ o2_add_library(Headers
                SOURCES src/DataHeader.cxx src/NameHeader.cxx
                        src/HeartbeatFrame.cxx src/TimeStamp.cxx
                        src/DAQID.cxx src/RDHAny.cxx src/STFHeader.cxx
+                       src/TraceContextHeader.cxx
                PUBLIC_LINK_LIBRARIES O2::MemoryResources
                                      O2::GPUCommon)
 

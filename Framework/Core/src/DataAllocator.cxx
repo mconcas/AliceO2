@@ -25,6 +25,8 @@
 #include "Headers/DataHeader.h"
 #include "Headers/DataHeaderHelpers.h"
 #include "Headers/Stack.h"
+#include "Headers/TraceContextHeader.h"
+#include "DPLTracingService.h"
 
 #include <fairmq/Device.h>
 
@@ -131,6 +133,10 @@ fair::mq::MessagePtr DataAllocator::headerMessageFromOutput(Output const& spec, 
   auto* transport = proxy.getOutputTransport(routeIndex);
 
   auto channelAlloc = o2::pmr::getTransportAllocator(transport);
+  auto tch = mRegistry.get<DPLTracingService>().currentOutgoingContext();
+  if (tch.valid()) {
+    return o2::pmr::getMessage(o2::header::Stack{channelAlloc, dh, dph, spec.metaHeader, tch});
+  }
   return o2::pmr::getMessage(o2::header::Stack{channelAlloc, dh, dph, spec.metaHeader});
 }
 
