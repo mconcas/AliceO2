@@ -55,7 +55,8 @@ namespace o2::framework
 #ifdef O2_WITH_DPL_TRACING
 /// Thread-local context of the current device-level span, updated by
 /// beginSpan / endSpan so that signpost hooks can create proper child spans.
-inline thread_local o2::tracing::SpanContext tDPLCurrentSpanCtx{};
+/// Defined in CommonServices.cxx; extern so DataTakingSupport can link to it.
+extern thread_local o2::tracing::SpanContext tDPLCurrentSpanCtx;
 
 /// Process-global map from signpost id → active sub-span.
 /// Protected by a mutex; reads on the hot-path are fast (span create/end

@@ -55,6 +55,13 @@
 #include "ArrowSupport.h"
 #include "DPLMonitoringBackend.h"
 #include "DPLTracingService.h"
+
+#ifdef O2_WITH_DPL_TRACING
+namespace o2::framework
+{
+thread_local o2::tracing::SpanContext tDPLCurrentSpanCtx{};
+} // namespace o2::framework
+#endif
 #include "Headers/STFHeader.h"
 #include "Headers/DataHeader.h"
 #include "Headers/TraceContextHeader.h"

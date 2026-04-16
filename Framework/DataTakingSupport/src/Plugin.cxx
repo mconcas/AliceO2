@@ -34,7 +34,10 @@ using namespace o2::framework;
 #ifdef O2_WITH_DPL_TRACING
 // Thread-local span context set by DPLTracingService during processing.
 // Declared in DPLTracingService.h — we forward-declare to avoid a Core dependency.
+namespace o2::framework
+{
 extern thread_local o2::tracing::SpanContext tDPLCurrentSpanCtx;
+} // namespace o2::framework
 #endif
 
 namespace o2::framework
