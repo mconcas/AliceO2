@@ -11,4 +11,11 @@
 o2_add_library(FrameworkDataTakingSupport
                SOURCES src/Plugin.cxx
                PRIVATE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_LIST_DIR}/src
-               PUBLIC_LINK_LIBRARIES O2::Framework AliceO2::InfoLogger)
+               PUBLIC_LINK_LIBRARIES O2::Framework AliceO2::InfoLogger
+               PRIVATE_LINK_LIBRARIES $<$<TARGET_EXISTS:AliceO2::Tracing>:AliceO2::Tracing>
+               TARGETVARNAME targetName)
+
+# Propagate tracing support so Plugin.cxx can inject traceid/spanid into InfoLogger messages.
+if(TARGET AliceO2::Tracing)
+  target_compile_definitions(${targetName} PRIVATE O2_WITH_DPL_TRACING)
+endif()

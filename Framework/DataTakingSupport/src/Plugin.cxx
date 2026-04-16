@@ -22,10 +22,20 @@
 #include <fairmq/shmem/Common.h>
 #include <fairmq/ProgOptions.h>
 
+#ifdef O2_WITH_DPL_TRACING
+#include "Tracing/SpanContext.h"
+#endif
+
 using AliceO2::InfoLogger::InfoLogger;
 using AliceO2::InfoLogger::InfoLoggerContext;
 
 using namespace o2::framework;
+
+#ifdef O2_WITH_DPL_TRACING
+// Thread-local span context set by DPLTracingService during processing.
+// Declared in DPLTracingService.h — we forward-declare to avoid a Core dependency.
+extern thread_local o2::tracing::SpanContext tDPLCurrentSpanCtx;
+#endif
 
 namespace o2::framework
 {
@@ -133,12 +143,23 @@ auto createInfoLoggerSinkHelper(InfoLogger* logger, InfoLoggerContext* ctx)
     }
 
     if (logger) {
+      InfoLoggerContext msgCtx = *ctx;
+#ifdef O2_WITH_DPL_TRACING
+      if (tDPLCurrentSpanCtx.valid()) {
+        auto w3c = tDPLCurrentSpanCtx.toW3C();
+        // W3C format: "00-<32hex traceId>-<16hex spanId>-<02hex flags>"
+        if (w3c.size() >= 55) {
+          msgCtx.setField(InfoLoggerContext::FieldName::TraceId, w3c.substr(3, 32));
+          msgCtx.setField(InfoLoggerContext::FieldName::SpanId, w3c.substr(36, 16));
+        }
+      }
+#endif
       logger->log({severity,
                    level,
                    InfoLogger::undefinedMessageOption.errorCode,
                    std::string(metadata.file).c_str(),
                    atoi(std::string(metadata.line).c_str())},
-                  *ctx, "%s", content.c_str());
+                  msgCtx, "%s", content.c_str());
     }
   };
 };
