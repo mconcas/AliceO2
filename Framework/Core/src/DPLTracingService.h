@@ -176,10 +176,7 @@ struct DPLTracingService {
     // SERVER = receiving upstream data; CLIENT = originating (no upstream context).
     auto kind = parentCtx.valid() ? o2::tracing::SpanKind::Server
                                   : o2::tracing::SpanKind::Client;
-    currentSpan = tracer->startSpan("dpl/process", parentCtx, kind);
-    for (auto& lctx : linkCtxs) {
-      currentSpan->addLink(lctx);
-    }
+    currentSpan = tracer->startSpan("dpl/process", parentCtx, kind, linkCtxs);
     currentSpan->setAttribute(o2::tracing::tags::kTimeslice,
                               static_cast<int64_t>(timing.timeslice));
     if (timing.runNumber != static_cast<uint32_t>(-1)) {

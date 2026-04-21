@@ -477,21 +477,17 @@ o2::framework::ServiceSpec CommonServices::tracingSpec()
     .configure = noConfiguration(),
     .preProcessing = [](ProcessingContext& ctx, void* service) {
       auto* svc = reinterpret_cast<DPLTracingService*>(service);
-      svc->beginSpan(ctx);
-    },
+      svc->beginSpan(ctx); },
     .postProcessing = [](ProcessingContext& ctx, void* service) {
       auto* svc = reinterpret_cast<DPLTracingService*>(service);
-      // End the span; the resulting TraceContextHeader is available for
-      // downstream injection — Phase 3 will wire this into DataAllocator.
-      [[maybe_unused]] auto tch = svc->endSpan();
-    },
+      // End the span; the resulting TraceContextHeader is available for downstream injectioneicicunbrvrb.
+      [[maybe_unused]] auto tch = svc->endSpan(); },
     .exit = [](ServiceRegistryRef, void* service) {
       // Uninstall signpost hooks before destroying the service to prevent
       // any late-firing signpost from calling into freed memory.
       o2_signpost_start_hook.store(nullptr, std::memory_order_relaxed);
       o2_signpost_end_hook.store(nullptr, std::memory_order_relaxed);
-      delete reinterpret_cast<DPLTracingService*>(service);
-    },
+      delete reinterpret_cast<DPLTracingService*>(service); },
     .kind = ServiceKind::Serial};
 }
 

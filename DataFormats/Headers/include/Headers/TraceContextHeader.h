@@ -30,9 +30,7 @@ namespace o2::header
 ///
 /// Wire format of the traceparent field:
 ///   "00-<32 hex traceId>-<16 hex spanId>-<02 hex flags>\0"
-///
-/// The struct is fixed-size and trivially copyable so it is safe to
-/// embed directly in a FairMQ message header region.
+
 struct TraceContextHeader : public BaseHeader {
   static const uint32_t sVersion;
   static const o2::header::HeaderType sHeaderType;
